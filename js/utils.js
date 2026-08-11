@@ -7,17 +7,41 @@
 var Utils = (function() {
   'use strict';
 
+  var _toastTimer = null;
+
   /**
-   * 显示 Toast 消息
+   * 显示 Toast 消息（右下角浮现，3 秒自动消失）
    * @param {string} msg - 消息文本
    * @param {string} [type='success'] - 类型：'success' | 'error' | 'warning'
    */
   function showToast(msg, type) {
     var t = document.getElementById('toast');
     if (!t) return;
+
+    // 清除上一个定时器，避免旧 toast 意外关闭新 toast
+    if (_toastTimer) {
+      clearTimeout(_toastTimer);
+      _toastTimer = null;
+    }
+
+    // 如果当前有 toast 显示中，先隐藏再显示新消息（避免生硬跳变）
+    if (t.classList.contains('visible')) {
+      t.classList.remove('visible');
+      setTimeout(function() {
+        _showToastNow(t, msg, type);
+      }, 280); // 等待滑出动画完成（略短于 CSS transition 300ms）
+    } else {
+      _showToastNow(t, msg, type);
+    }
+  }
+
+  function _showToastNow(t, msg, type) {
     t.textContent = msg;
     t.className = 'toast toast-' + (type || 'success') + ' visible';
-    setTimeout(function() { t.classList.remove('visible'); }, 3000);
+    _toastTimer = setTimeout(function() {
+      t.classList.remove('visible');
+      _toastTimer = null;
+    }, 3000);
   }
 
   /**
