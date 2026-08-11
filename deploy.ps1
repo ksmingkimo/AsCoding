@@ -60,19 +60,20 @@ foreach ($f in $cssFiles) {
 # -- JS files (in dependency order) --
 $jsFiles = @(
     "utils.js",
+    "settings-store.js",
+    "datasource-store.js",
     "auth.js",
     "api.js",
-    "settings-store.js",
     "reports.js",
-    "datasource-store.js",
     "datasource-list.js",
     "tabs.js",
     "chat-ui.js",
+    "ai-client.js",
     "ai-parser.js",
     "ai-chart.js",
     "export.js",
-    "deepseek-client.js",
     "chat-core.js",
+    "ai-suggestions.js",
     "settings-ui.js",
     "app.js"
 )
@@ -117,7 +118,7 @@ Write-Host "==============================================" -ForegroundColor Cya
 Write-Host ""
 Write-Host "  Output file :  $outputPath" -ForegroundColor White
 Write-Host "  File size   :  $zipSize KB" -ForegroundColor White
-Write-Host "  Contents    :  20 files (1 html + 3 css + 16 js)" -ForegroundColor White
+Write-Host "  Contents    :  21 files (1 html + 3 css + 17 js)" -ForegroundColor White
 Write-Host ""
 Write-Host "  Next steps:" -ForegroundColor Yellow
 Write-Host "  1. Extract $OutputZip to your web server directory" -ForegroundColor Yellow

@@ -59,16 +59,26 @@ var Api = (function() {
   }
 
   /**
-   * 调用报表查询 API
+   * 通用 POST 请求（支持完整路径，用于非标准端点）
+   * @param {string} apiPath 完整 API 路径（如 "mrppu/getList"）
+   * @param {object} body 请求体
+   * @returns {Promise<object>} 响应数据
+   */
+  function post(apiPath, body) {
+    return fetchApi(apiPath, {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+  }
+
+  /**
+   * 调用报表查询 API（标准 getReport 端点）
    * @param {string} module 模块名（如 "invso"）
    * @param {object} params 查询参数 { PGM, SEARCH_INFO, DISPLAY_FIELDS }
    * @returns {Promise<object>} 响应数据 { code, message, data }
    */
   function getReport(module, params) {
-    return fetchApi(module + '/getReport', {
-      method: 'POST',
-      body: JSON.stringify(params)
-    });
+    return post(module + '/getReport', params);
   }
 
   /**
@@ -110,6 +120,7 @@ var Api = (function() {
   return {
     getBaseUrl: getBaseUrl,
     fetch: fetchApi,
+    post: post,
     getReport: getReport,
     validateServer: validateServer
   };

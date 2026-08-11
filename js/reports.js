@@ -162,6 +162,123 @@ var ReportEngine = (function() {
         { index: 6, field: 'YW_TYPE', operator: 'in',    checkUnder: null,label: '业务类型' },
         { index: 7, field: 'KB',      operator: 'in',    checkUnder: null,label: '付款方式' }
       ]
+    },
+
+    // ─── 生产制造报表 (v2 API) ──────────────────────────────────────
+
+    mrpPK: {
+      name: '工单完成情况表',
+      endpoint: 'mrppk',
+      apiPath: 'mrppk/getReport',
+      pgm: 'MRPPK',
+      dateField: 'MO_DD',
+      deptField: 'DEP',
+      filterLayout: 'mrpPK',
+      fixCondition: { REPORT_DD_FIELD: 'MO_DD' },
+      orderBy: { MO_DD: 'asc', MO_NO: 'asc', ZC_ITM: 'asc' },
+      displayFields: [
+        'MO_NO','MO_DD','MRP_NO','MRP_NAME','SPC','UNIT','ZC_ITM',
+        'TZ_NO','ZC_NO','ZC_NAME','DEP_NAME','CUS_NAME_TW','QTY_MO',
+        'QTY_PRC','QTY_FIN','QTY_LOST','QTY_MV','QTY_WWG','STA_DD',
+        'OPN_DD','REM'
+      ],
+      filters: [
+        { index: 4, field: 'MO_NO',  operator: 'in', checkUnder: null, label: '生产子工单', filterId: 'filterDocNo' },
+        { index: 5, field: 'MRP_NO', operator: 'in', checkUnder: null, label: '生产成品',   filterId: 'filterMrpNo' },
+        { index: 6, field: 'DEP',    operator: 'in', checkUnder: 'T',  label: '部门/产线',  filterId: 'filterDep' }
+      ]
+    },
+
+    mrpPS: {
+      name: '完工入库报表',
+      endpoint: 'mrpafc',
+      apiPath: 'mrpafc/getReport',
+      pgm: 'MRPPS',
+      dateField: 'MM_DD',
+      deptField: 'DEP',
+      filterLayout: 'mrpPS',
+      fixCondition: {
+        REPORT_DD_FIELD: 'MM_DD',
+        COMBOFCP: '1',
+        WL_CHK: 'F',
+        COMBODATE: '1'
+      },
+      displayFields: [
+        'MM_NO','MM_DD','MRP_NO','MRP_NAME','MRP_SPC','PRD_MARK',
+        'A001','ID_NO','QTY','UNIT','USED_TIME','QTY_MO','QTY_MO_FIN',
+        'QTY_LOST','CST_MAKE','CST_PRD','CST_MAN','CST_OUT','CST',
+        'CST_ALL','REM_B'
+      ],
+      filters: [
+        { index: 4, field: 'MM_NO',      operator: 'in',    checkUnder: null, label: '入库单号', filterId: 'filterDocNo',  extra: { fieldType: 'bilNo' } },
+        { index: 5, field: 'MRP_NO',     operator: 'in',    checkUnder: null, label: '成品代号', filterId: 'filterMrpNo' },
+        { index: 6, field: 'DEP',        operator: 'in',    checkUnder: 'T',  label: '部门',     filterId: 'filterDep' },
+        { index: 7, field: 'WH',         operator: 'in',    checkUnder: 'T',  label: '仓库',     filterId: 'filterWh' },
+        { index: 8, field: 'CHK_STATUS', operator: 'equal', checkUnder: null, label: '审核状态', filterId: 'filterStatus' }
+      ]
+    },
+
+    mrppu: {
+      name: '产品成本分析表',
+      endpoint: 'mrppu',
+      apiPath: 'mrppu/getList',
+      apiMethod: 'getList',
+      pgm: 'MRPPU',
+      dateField: 'DATE_CST',
+      deptField: 'DEP',
+      filterLayout: 'mrppu',
+      hasDisplayFields: false,
+      responseDataKey: 'TRANS',
+      otherInfo: { DEP_GROUP: '00000000', INCLUDESON: 'F' },
+      fixCondition: { CHK_ALL: 'F' },
+      displayFields: [
+        'BIL_DD','BIL_NO','ITM','PRD_NO','PRD_NAME','A001','BAT_NO',
+        'WH','UNIT_NAME','QTY','QTY1','CST','CST_OUT','CST_ALL',
+        'SO_NO','JH_NO','MO_NO','TW_NO','TZ_NO','DATE_CST','CST_MAN1','CST_MAK1'
+      ],
+      filters: [
+        { index: 6, field: 'DEP',    operator: 'in', checkUnder: 'T',  label: '部门',       filterId: 'filterDep' },
+        { index: 7, field: 'PRD_NO', operator: 'in', checkUnder: null, label: '生产货品',   filterId: 'filterPrd' }
+      ],
+      searchInfoExtra: [
+        { field: 'DEP_GROUP', operator: 'contain', fieldDisabled: true, value: '' },
+        { field: 'BIL_ID',    operator: 'in',      fieldType: 'select', fieldDisabled: true, value: '' },
+        { field: 'DATE_CST',  operator: 'equal',   fieldType: 'date',   fieldDisabled: true, value: '' },
+        { field: 'CLOSE_ID',  operator: 'equal',   fieldType: 'string', fieldDisabled: true, value: '' }
+      ]
+    },
+
+    // ─── 人力资源报表 (v2 API) ──────────────────────────────────────
+
+    wagCG3: {
+      name: '员工年度薪资清册',
+      endpoint: 'rptwagcg3',
+      apiPath: 'rptwagcg3/getReport',
+      pgm: 'REP_WAGCG3',
+      dateField: 'YEARS',
+      deptField: null,
+      filterLayout: 'wagCG3',
+      showLadder: 'T',
+      dateFilter: { operator: 'equal', singleValue: true, fieldDisabled: true, operatorDisabled: true, value: '2025' },
+      fixCondition: {
+        SZ_NO_TYPE: '2',
+        SZ_NO: 'AMTN_ADD;AMTN_SUB;AMTN_TAX;AMTN_NET',
+        CHK_TYPE: 'T',
+        LOCK_TYPE: '',
+        OTR_NO_TYPE: '1',
+        OTR_NO: '',
+        REPORT_DD_FIELD: 'YEARS'
+      },
+      displayFields: [
+        'YG_NO','NAME','DEP_NAME','SZ_NAME_1',
+        'AMTN_1','AMTN_2','AMTN_3','AMTN_4','AMTN_5','AMTN_6',
+        'AMTN_7','AMTN_8','AMTN_9','AMTN_10','AMTN_11','AMTN_12',
+        'AMTN_TOTAL'
+      ],
+      filters: [
+        { index: 4, field: 'YG_NO',        operator: 'equal', checkUnder: null, label: '员工代号', filterId: 'filterYgNo', defaultValue: '' },
+        { index: 5, field: 'OUT_DAY_TYPE',  operator: 'equal', checkUnder: null, label: '在职状态', filterId: 'filterOutDayType', defaultValue: '1' }
+      ]
     }
   };
 
@@ -215,7 +332,68 @@ var ReportEngine = (function() {
     'SAL_NAME':     '销售员名称',
     'YW_TYPE':      '业务类型',
     'KB':           '收/付款方式',
-    'CHK_STATUS':   '审核状态'
+    'CHK_STATUS':   '审核状态',
+    // 工单完成情况表 (mrpPK)
+    'MO_NO':        '工单号',
+    'MO_DD':        '工单日期',
+    'MRP_NO':       'MRP单号',
+    'MRP_NAME':     'MRP名称',
+    'SPC':          '规格',
+    'ZC_ITM':       '制程项次',
+    'TZ_NO':        '图号',
+    'ZC_NO':        '制程代号',
+    'ZC_NAME':      '制程名称',
+    'DEP_NAME':     '部门名称',
+    'CUS_NAME_TW':  '客户名称',
+    'QTY_MO':       '工单数量',
+    'QTY_PRC':      '加工数量',
+    'QTY_FIN':      '完成数量',
+    'QTY_LOST':     '损耗数量',
+    'QTY_MV':       '移转数量',
+    'QTY_WWG':      '委外加工量',
+    'STA_DD':       '开工日期',
+    'OPN_DD':       '结案日期',
+    // 完工入库报表 (mrpPS)
+    'MM_NO':        '入库单号',
+    'MM_DD':        '入库日期',
+    'MRP_SPC':      'MRP规格',
+    'ID_NO':        '识别号',
+    'USED_TIME':    '耗用工时',
+    'QTY_MO_FIN':   '工单完成数',
+    'CST_MAKE':     '制造费用',
+    'CST_PRD':      '生产成本',
+    'CST_MAN':      '管理费用',
+    'CST_OUT':      '外包费用',
+    'CST':          '单位成本',
+    'CST_ALL':      '总成本',
+    // 产品成本分析表 (mrppu)
+    'BIL_DD':       '单据日期',
+    'BIL_NO':       '单据号',
+    'BAT_NO':       '批号',
+    'UNIT_NAME':    '单位',
+    'SO_NO':        '受订单号',
+    'JH_NO':        '交货单号',
+    'TW_NO':        '托工单号',
+    'DATE_CST':     '成本年月',
+    'CST_MAN1':     '人工成本',
+    'CST_MAK1':     '制造费用',
+    // 员工年度薪资清册 (wagCG3)
+    'YG_NO':        '员工代号',
+    'NAME':         '姓名',
+    'SZ_NAME_1':    '薪资项目',
+    'AMTN_1':       '一月金额',
+    'AMTN_2':       '二月金额',
+    'AMTN_3':       '三月金额',
+    'AMTN_4':       '四月金额',
+    'AMTN_5':       '五月金额',
+    'AMTN_6':       '六月金额',
+    'AMTN_7':       '七月金额',
+    'AMTN_8':       '八月金额',
+    'AMTN_9':       '九月金额',
+    'AMTN_10':      '十月金额',
+    'AMTN_11':      '十一月金额',
+    'AMTN_12':      '十二月金额',
+    'AMTN_TOTAL':   '年度合计'
   };
 
   // Decimal-type fields (right-aligned, numeric formatting)
@@ -228,7 +406,16 @@ var ReportEngine = (function() {
     'QTY_JD','RATE_JH','QTY_DELAY','AMTN_NET_ZDZK','TAX_ZDZK','AMT_ZDZK',
     'RATE_PC_UNPS','RATE_PC_OVER','RATE_RK','RATE_CST_PO','QTY_YS','QTY_YS_UNSH',
     'UP_TYDJ','AMTN_TYDJ','UP_EXPECT','SUP_REP_QTY1','SUP_REP_QTY2','SUP_REP_QTY3',
-    'PAK_EXC','PAK_NW','PAK_GW','PAK_MEAST','UP_QTY1','QTY1_SPLIT','QTY2_SPLIT','QTY3_SPLIT'
+    'PAK_EXC','PAK_NW','PAK_GW','PAK_MEAST','UP_QTY1','QTY1_SPLIT','QTY2_SPLIT','QTY3_SPLIT',
+    // 生产制造报表
+    'QTY_MO','QTY_PRC','QTY_FIN','QTY_LOST','QTY_MV','QTY_WWG',
+    'USED_TIME','QTY_MO_FIN',
+    'CST_MAKE','CST_PRD','CST_MAN','CST_OUT','CST','CST_ALL',
+    // 产品成本分析
+    'CST_MAN1','CST_MAK1',
+    // 薪资报表 (AMTN_1 ~ AMTN_12, AMTN_TOTAL)
+    'AMTN_1','AMTN_2','AMTN_3','AMTN_4','AMTN_5','AMTN_6',
+    'AMTN_7','AMTN_8','AMTN_9','AMTN_10','AMTN_11','AMTN_12','AMTN_TOTAL'
   ];
 
   // Currency fields (prefix with ¥)
@@ -236,7 +423,8 @@ var ReportEngine = (function() {
     'UP','AMT_DIS_CNT','AMTN','AMTN_NET','TAX','AMTN_WITHTAX',
     'AMTN_BC','AMTN_BB','AMTN_CHK','AMTN_OTHER','AMTN_IRP','AMTN_ARP','AMTN_ZRP',
     'AMT','AMT_NET','AMT_TAX','AMT_WITHTAX','AMT_DIS_CNT','CSTN_SAL',
-    'AMTN_NET_ZDZK','TAX_ZDZK','AMT_ZDZK','AMTN_TYDJ','UP_TYDJ','UP_EXPECT'
+    'AMTN_NET_ZDZK','TAX_ZDZK','AMT_ZDZK','AMTN_TYDJ','UP_TYDJ','UP_EXPECT',
+    'CST_MAKE','CST_PRD','CST_MAN','CST_OUT','CST','CST_ALL'
   ];
 
   /* ================================================================
@@ -342,10 +530,10 @@ var ReportEngine = (function() {
   /**
    * Build the SEARCH_INFO array for a given report + filters
    * @param {string} reportKey
-   * @param {object} filters { dateFrom, dateTo, cust, prd, dep, wh, status, ywType, kb }
+   * @param {object} filters { dateFrom, dateTo, cust, prd, dep, wh, status, ywType, kb, mono, mrpno, mmno, ygno, outDayType }
    * @param {number} page 1-indexed
    * @param {number} pageSize
-   * @returns {object} { PGM, SEARCH_INFO, DISPLAY_FIELDS }
+   * @returns {object} { PGM, SEARCH_INFO, DISPLAY_FIELDS } (mrppu also has OTHERINFO, PAGE_INFO; no DISPLAY_FIELDS)
    */
   function buildRequest(reportKey, filters, page, pageSize) {
     var cfg = REPORT_CONFIG[reportKey];
@@ -355,7 +543,12 @@ var ReportEngine = (function() {
     page = page || 1;
     pageSize = pageSize || 20;
 
-    // Pagination offsets (0-based, inclusive end)
+    // ── MRPPU special case: completely different body structure ──
+    if (cfg.apiMethod === 'getList') {
+      return buildRequestMrppu(cfg, filters);
+    }
+
+    // ── Standard getReport-style reports (v1 + v2) ──
     var offsetStart = (page - 1) * pageSize;
     var offsetEnd = offsetStart + pageSize - 1;
 
@@ -364,29 +557,42 @@ var ReportEngine = (function() {
       { offset: [offsetStart, offsetEnd], temp: true }
     ];
 
-    // SEARCH_INFO [1] — display fields config
+    // SEARCH_INFO [1] — display fields config (use configurable showLadder)
+    var showLadder = cfg.showLadder || 'F';
     searchInfo.push({
-      showLadder: 'F',
+      showLadder: showLadder,
       displayFields: cfg.displayFields.slice(),
-      sumFields: []
+      sumFields: cfg.sumFields || []
     });
 
     // SEARCH_INFO [2] — fixCondition
     searchInfo.push({ fixCondition: cfg.fixCondition });
 
-    // SEARCH_INFO [3] — date range
-    var dateFrom = filters.dateFrom || '';
-    var dateTo = filters.dateTo || '';
-    searchInfo.push({
-      field: cfg.dateField,
-      operator: 'range',
-      fieldType: 'date',
-      need: true,
-      fieldDisabled: true,
-      value: [dateFrom || null, dateTo || null]
-    });
+    // SEARCH_INFO [3] — date filter (configurable via cfg.dateFilter for non-standard types)
+    if (cfg.dateField) {
+      var dFilter = cfg.dateFilter || {};
+      var dateElem = {
+        field: cfg.dateField,
+        operator: dFilter.operator || 'range',
+        fieldType: dFilter.fieldType || 'date',
+        need: dFilter.need !== false,
+        fieldDisabled: dFilter.fieldDisabled !== false
+      };
+      if (dFilter.operatorDisabled) { dateElem.operatorDisabled = true; }
+      // Resolve value: use dateFilter.value if set, otherwise read from filters
+      if (dFilter.value !== undefined) {
+        dateElem.value = dFilter.value;
+      } else if (dFilter.singleValue) {
+        dateElem.value = (filters.dateFrom || filters[cfg.dateField] || '');
+      } else {
+        var dateFrom = filters.dateFrom || '';
+        var dateTo = filters.dateTo || '';
+        dateElem.value = [dateFrom || null, dateTo || null];
+      }
+      searchInfo.push(dateElem);
+    }
 
-    // SEARCH_INFO [4]~[8] — dynamic filters from config
+    // SEARCH_INFO [4]~[N] — dynamic filters from config
     cfg.filters.forEach(function(f) {
       var filterObj = {
         field: f.field,
@@ -394,30 +600,117 @@ var ReportEngine = (function() {
         fieldDisabled: false
       };
       if (f.checkUnder) { filterObj.checkUnder = f.checkUnder; }
+      if (f.fieldType)  { filterObj.fieldType = f.fieldType; }
+      if (f.operatorDisabled) { filterObj.operatorDisabled = true; }
+      // Extra properties (e.g. fieldType: 'bilNo' for MM_NO)
+      if (f.extra) {
+        Object.keys(f.extra).forEach(function(k) { filterObj[k] = f.extra[k]; });
+      }
 
-      // Map filter values
-      var val = '';
-      if (f.field === 'CUS_NO')       { val = filters.cust  || ''; }
-      else if (f.field === 'PRD_NO')  { val = filters.prd   || ''; }
-      else if (f.field === 'DEP' || f.field === 'PO_DEP') { val = filters.dep || ''; }
-      else if (f.field === 'WH')      { val = filters.wh    || ''; }
-      else if (f.field === 'CHK_STATUS') { val = filters.status || ''; }
-      else if (f.field === 'YW_TYPE') { val = filters.ywType || ''; }
-      else if (f.field === 'KB')      { val = filters.kb     || ''; }
-
+      // Resolve value via filterId mapping
+      var val = resolveFilterValue(f, filters);
       filterObj.value = val;
       searchInfo.push(filterObj);
     });
 
-    // Last element — orderBy
-    var orderBy = {};
-    orderBy[cfg.dateField] = 'asc';
+    // Last element — orderBy (configurable)
+    var orderBy = cfg.orderBy || {};
+    if (Object.keys(orderBy).length === 0 && cfg.dateField) {
+      orderBy[cfg.dateField] = 'asc';
+    }
     searchInfo.push({ orderBy: orderBy });
 
-    return {
+    var body = {
       PGM: cfg.pgm,
       SEARCH_INFO: searchInfo,
       DISPLAY_FIELDS: cfg.displayFields.join(',')
+    };
+
+    return body;
+  }
+
+  /**
+   * Resolve a filter's value from the filters object
+   * Uses filterId mapping if present, falls back to field name
+   */
+  function resolveFilterValue(f, filters) {
+    // Map by filterId first, then by field name
+    var filterId = f.filterId;
+    var val = '';
+    if (filterId && filters[filterId] !== undefined) {
+      val = filters[filterId];
+    }
+    if (!val) {
+      // Fallback: map by field name (for legacy v1 reports)
+      var fieldToKey = {
+        'CUS_NO': 'cust', 'PRD_NO': 'prd', 'PO_DEP': 'dep', 'DEP': 'dep',
+        'WH': 'wh', 'CHK_STATUS': 'status', 'YW_TYPE': 'ywType', 'KB': 'kb',
+        'MO_NO': 'filterDocNo', 'MRP_NO': 'filterMrpNo', 'MM_NO': 'filterDocNo',
+        'YG_NO': 'filterYgNo', 'OUT_DAY_TYPE': 'filterOutDayType'
+      };
+      var key = fieldToKey[f.field];
+      if (key && filters[key] !== undefined) {
+        val = filters[key];
+      }
+    }
+    // Use defaultValue only as fallback when value is truly empty
+    if (!val && f.defaultValue !== undefined && f.defaultValue !== null) {
+      return f.defaultValue;
+    }
+    return val || '';
+  }
+
+  /**
+   * Build request body for the MRPPU report (getList endpoint, different structure)
+   */
+  function buildRequestMrppu(cfg, filters) {
+    filters = filters || {};
+
+    var searchInfo = [];
+
+    // [0] — showBody + displayFields config (NO offset/temp)
+    searchInfo.push({
+      showBody: 'T',
+      showLadder: 'F',
+      displayFields: cfg.displayFields.slice()
+    });
+
+    // [1] — fixCondition (only CHK_ALL)
+    searchInfo.push({ fixCondition: cfg.fixCondition });
+
+    // [2]~[5] — fixed disabled filters (from searchInfoExtra)
+    if (cfg.searchInfoExtra) {
+      cfg.searchInfoExtra.forEach(function(extra) {
+        var elem = {};
+        Object.keys(extra).forEach(function(k) { elem[k] = extra[k]; });
+        // Resolve DATE_CST value from filters
+        if (extra.field === 'DATE_CST') {
+          elem.value = filters.dateCst || extra.value || '';
+        }
+        searchInfo.push(elem);
+      });
+    }
+
+    // [6]~[7] — user-editable filters
+    cfg.filters.forEach(function(f) {
+      var filterObj = {
+        field: f.field,
+        operator: f.operator,
+        fieldType: f.fieldType || 'string',
+        fieldDisabled: f.fieldDisabled !== false
+      };
+      if (f.checkUnder) { filterObj.checkUnder = f.checkUnder; }
+      filterObj.value = resolveFilterValue(f, filters);
+      searchInfo.push(filterObj);
+    });
+
+    // NO orderBy for mrppu
+
+    return {
+      PGM: cfg.pgm,
+      OTHERINFO: cfg.otherInfo,
+      SEARCH_INFO: searchInfo,
+      PAGE_INFO: { PAGE_SIZE: -1, CURRENT_PAGE: 1 }
     };
   }
 
@@ -435,14 +728,33 @@ var ReportEngine = (function() {
 
     var request = buildRequest(reportKey, filters, page, pageSize);
 
-    return Api.getReport(cfg.endpoint, request).then(function(response) {
+    // Choose API method: apiPath (v2 non-standard) > endpoint (v1 standard)
+    var promise;
+    if (cfg.apiPath) {
+      promise = Api.post(cfg.apiPath, request);
+    } else {
+      promise = Api.getReport(cfg.endpoint, request);
+    }
+
+    return promise.then(function(response) {
       if (response.code !== 0) {
         throw new Error(response.message || '查询失败 (code: ' + response.code + ')');
       }
 
-      var data = (response.data && response.data.REPORT__TAB) ? response.data.REPORT__TAB : [];
-      var columnInfo = (response.data && response.data.COLUMN_INFO && response.data.COLUMN_INFO.REPORT__TAB)
-        ? response.data.COLUMN_INFO.REPORT__TAB : [];
+      var data, columnInfo;
+
+      // MRPPU uses TRANS instead of REPORT__TAB, and flat COLUMN_INFO
+      var dataKey = cfg.responseDataKey || 'REPORT__TAB';
+      data = (response.data && response.data[dataKey]) ? response.data[dataKey] : [];
+
+      if (cfg.apiMethod === 'getList') {
+        // MRPPU: flat COLUMN_INFO array
+        columnInfo = (response.data && response.data.COLUMN_INFO) ? response.data.COLUMN_INFO : [];
+      } else {
+        // Standard: nested COLUMN_INFO.REPORT__TAB
+        columnInfo = (response.data && response.data.COLUMN_INFO && response.data.COLUMN_INFO.REPORT__TAB)
+          ? response.data.COLUMN_INFO.REPORT__TAB : [];
+      }
 
       return {
         data: data,
@@ -513,51 +825,99 @@ var ReportEngine = (function() {
    * Read filter values from the current filter panel DOM
    */
   function readFilters() {
+    function _val(id) { var el = document.getElementById(id); return el ? el.value : ''; }
     return {
-      dateFrom: (document.getElementById('filterDateFrom') || {}).value || '',
-      dateTo:   (document.getElementById('filterDateTo') || {}).value || '',
-      cust:     (document.getElementById('filterCust') || {}).value || '',
-      prd:      (document.getElementById('filterPrd') || {}).value || '',
-      dep:      (document.getElementById('filterDep') || {}).value || '',
-      wh:       (document.getElementById('filterWh') || {}).value || '',
-      status:   (document.getElementById('filterStatus') || {}).value || '',
-      ywType:   (document.getElementById('filterYwType') || {}).value || '',
-      kb:       (document.getElementById('filterKb') || {}).value || ''
+      dateFrom:  _val('filterDateFrom'),
+      dateTo:    _val('filterDateTo'),
+      cust:      _val('filterCust'),
+      prd:       _val('filterPrd'),
+      dep:       _val('filterDep'),
+      wh:        _val('filterWh'),
+      status:    _val('filterStatus'),
+      ywType:    _val('filterYwType'),
+      kb:        _val('filterKb'),
+      // v2 新增筛选器
+      filterDocNo:     _val('filterDocNo'),
+      filterMrpNo:     _val('filterMrpNo'),
+      filterYgNo:      _val('filterYgNo'),
+      filterOutDayType:_val('filterOutDayType'),
+      dateCst:         _val('filterDateCst')
     };
   }
 
   /**
    * Update the filter panel visibility based on report type
-   * 进销存报表 (invpo/invpc/invSO/invSa): CUS_NO, PRD_NO, DEP, WH, CHK_STATUS
-   * 收付款报表 (monAA/monBA): CUS_NO, DEP, YW_TYPE, KB
+   * Uses cfg.filterLayout to determine which filter groups to show/hide
    */
   function updateFilterPanel(reportKey) {
     var cfg = REPORT_CONFIG[reportKey];
     if (!cfg) return;
 
-    // Find filter groups
-    var groups = {
-      prd:    document.querySelector('.filter-group-prd'),
-      wh:     document.querySelector('.filter-group-wh'),
-      status: document.querySelector('.filter-group-status'),
-      ywType: document.querySelector('.filter-group-ywtype'),
-      kb:     document.querySelector('.filter-group-kb')
+    var layout = cfg.filterLayout;
+    // Fallback to heuristic for backward compatibility
+    if (!layout) {
+      layout = (reportKey === 'monAA' || reportKey === 'monBA') ? 'payment' : 'inv';
+    }
+
+    // All filter groups by CSS class
+    var allGroups = {
+      cust:    document.querySelector('.filter-group-cust'),
+      prd:     document.querySelector('.filter-group-prd'),
+      wh:      document.querySelector('.filter-group-wh'),
+      status:  document.querySelector('.filter-group-status'),
+      ywType:  document.querySelector('.filter-group-ywtype'),
+      kb:      document.querySelector('.filter-group-kb'),
+      docNo:   document.querySelector('.filter-group-docno'),
+      mrpNo:   document.querySelector('.filter-group-mrpno'),
+      ygNo:    document.querySelector('.filter-group-ygno'),
+      outDay:  document.querySelector('.filter-group-outdaytype'),
+      dateCst: document.querySelector('.filter-group-datecst'),
+      dateRange: document.querySelector('.filter-date-group')
     };
 
-    var isPayment = (reportKey === 'monAA' || reportKey === 'monBA');
+    // Hide all optional groups first
+    Object.keys(allGroups).forEach(function(k) {
+      if (allGroups[k]) allGroups[k].style.display = 'none';
+    });
 
-    // Toggle visibility
-    if (groups.prd)    groups.prd.style.display    = isPayment ? 'none' : '';
-    if (groups.wh)     groups.wh.style.display     = isPayment ? 'none' : '';
-    if (groups.status) groups.status.style.display = isPayment ? 'none' : '';
-    if (groups.ywType) groups.ywType.style.display = isPayment ? '' : 'none';
-    if (groups.kb)     groups.kb.style.display     = isPayment ? '' : 'none';
+    // Layout → visible groups
+    var layoutMap = {
+      'inv':     ['cust','prd','wh','status','dateRange'],
+      'payment': ['cust','ywType','kb','dateRange'],
+      'mrpPK':   ['docNo','mrpNo','dateRange'],
+      'mrpPS':   ['docNo','mrpNo','wh','status','dateRange'],
+      'mrppu':   ['prd','dateCst'],
+      'wagCG3':  ['ygNo','outDay']
+    };
 
-    // Update label for CUS_NO (客户 vs 厂商)
+    var visible = layoutMap[layout] || [];
+    visible.forEach(function(key) {
+      if (allGroups[key]) allGroups[key].style.display = '';
+    });
+    // DEP is always visible (present in all layouts)
+    // Date range: shown for inv/payment/mrpPK/mrpPS, hidden for mrppu/wagCG3
+
+    // Update label for filterCust
     var custLabel = document.querySelector('label[for="filterCust"]');
     if (custLabel) {
       var isPurchase = (reportKey === 'invpo' || reportKey === 'invpc');
       custLabel.textContent = isPurchase ? '厂商代号' : '客户代号';
+    }
+
+    // Update label for filterDocNo based on active report
+    var docNoLabel = document.querySelector('label[for="filterDocNo"]');
+    if (docNoLabel) {
+      if (reportKey === 'mrpPK') { docNoLabel.textContent = '生产子工单'; }
+      else if (reportKey === 'mrpPS') { docNoLabel.textContent = '入库单号'; }
+      else { docNoLabel.textContent = '单号'; }
+    }
+
+    // Update label for filterPrd based on active report
+    var prdLabel = document.querySelector('label[for="filterPrd"]');
+    if (prdLabel) {
+      if (reportKey === 'mrppu') { prdLabel.textContent = '生产货品'; }
+      else if (reportKey === 'mrpPK' || reportKey === 'mrpPS') { prdLabel.textContent = '成品代号'; }
+      else { prdLabel.textContent = '货品代号'; }
     }
   }
 

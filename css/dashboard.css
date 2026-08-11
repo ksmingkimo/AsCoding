@@ -85,8 +85,7 @@ body {
   position: fixed;
   top: 0; left: 0; bottom: 0;
   z-index: 100;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   transition: width var(--transition-normal);
 }
 .sidebar.collapsed { width: 56px; }
@@ -121,6 +120,7 @@ body {
 .sidebar-brand {
   padding: var(--space-lg) var(--space-xl);
   border-bottom: 1px solid rgba(255,255,255,0.1);
+  flex-shrink: 0;
 }
 .sidebar-brand h2 {
   font-size: var(--text-lg);
@@ -139,6 +139,7 @@ body {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  flex-shrink: 0;
 }
 .sidebar-user .avatar {
   width: 30px; height: 30px;
@@ -156,7 +157,13 @@ body {
   font-size: var(--text-xs);
   color: rgba(255,255,255,0.45);
 }
-.sidebar-nav { flex: 1; padding: var(--space-sm) 0; }
+.sidebar-nav { flex: 1; padding: var(--space-sm) 0; overflow-y: auto; min-height: 0; }
+/* Sidebar nav scrollbar — thin, transparent track, blends into dark sidebar */
+.sidebar-nav::-webkit-scrollbar { width: 5px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 9999px; }
+.sidebar-nav::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+.sidebar-nav { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.15) transparent; }
 .sidebar-nav .nav-section {
   padding: var(--space-md) var(--space-xl) var(--space-xs);
   font-size: var(--text-xs);
@@ -191,6 +198,7 @@ body {
 .sidebar-footer {
   padding: var(--space-md) var(--space-xl);
   border-top: 1px solid rgba(255,255,255,0.1);
+  flex-shrink: 0;
 }
 .btn-logout {
   width: 100%;

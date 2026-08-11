@@ -3,7 +3,7 @@
 > 为 Sunlike ERP 构建的现代化 Web 报表查询平台，集成 AI 数据分析助手（Deepseek）。
 
 [![Tech](https://img.shields.io/badge/tech-vanilla--js-blue)](#)
-[![AI](https://img.shields.io/badge/AI-Deepseek%20V3-6C47FF)](#)
+[![AI](https://img.shields.io/badge/AI-4%20Models-6C47FF)](#)
 [![Charts](https://img.shields.io/badge/charts-Chart.js-FF6384)](#)
 [![Status](https://img.shields.io/badge/status-production%20ready-brightgreen)](#)
 
@@ -39,7 +39,7 @@
 ┌─────────────────────────────────────────────────────────┐
 │                     Browser (SPA)                        │
 │  ┌──────────┐  ┌──────────┐  ┌──────────────────────┐  │
-│  │  Login   │  │  6 报表   │  │   AI 数据分析         │  │
+│  │  Login   │  │ 10 报表   │  │   AI 数据分析         │  │
 │  │  Auth    │  │  查询     │  │   Chat + Chart + 导出 │  │
 │  └────┬─────┘  └────┬─────┘  └──────────┬───────────┘  │
 │       │              │                    │              │
@@ -69,17 +69,17 @@
 
 ## 📊 业务流程图
 
-> 以下 9 张流程图覆盖系统全链路。点击图片可查看原图，`.drawio` 文件可用 [Draw.io](https://app.diagrams.net/) 打开编辑。
+> 以下 10 张流程图覆盖系统全链路。点击图片可查看原图，`.drawio` 文件可用 [Draw.io](https://app.diagrams.net/) 打开编辑。
 
 ### 01 — 系统整体流程
 
-从登录认证、Token 管理，到 6 大报表查询、AI 数据分析的端到端全链路。
+从登录认证、Token 管理，到 10 大报表查询、AI 数据分析的端到端全链路（含 MRPPU getList 特殊路径）。
 
 ![系统整体流程](流程图/流程图_01_系统整体流程.png)
 
 ### 02 — 单报表查询流程
 
-选择报表 → 构造 SEARCH_INFO 参数 → 调 API → 解析响应 → 渲染表格/分页。
+标准 getReport 路径（9 报表通用）与 MRPPU getList 特殊路径（产品成本分析表）的分叉查询流程。
 
 ![单报表查询流程](流程图/流程图_02_单报表查询流程.png)
 
@@ -97,13 +97,13 @@ SEARCH_INFO 10 元素数组按索引 [0]~[9] 固定顺序组装，displayFields 
 
 ### 05 — API 差异对照
 
-6 个报表的 PGM / 日期字段 / 日期运算符 / 业务筛选器差异矩阵一览。
+10 个报表的 PGM / 日期字段 / fixCondition / 额外筛选 / 特殊点差异矩阵一览（含 MRPPU getList 架构标注）。
 
 ![API差异对照](流程图/流程图_05_API差异对照.png)
 
 ### 06 — UI 页面流
 
-登录页 → Dashboard 主界面 → 侧边栏导航（6 报表切换） → Tab 页签 → 设置面板弹窗。
+登录页 → Dashboard 主界面 → 侧边栏导航（4 分组 10 报表切换） → 6 布局筛选面板 → Tab 页签 → 多模型 AI。
 
 ![UI页面流](流程图/流程图_06_UI页面流.png)
 
@@ -124,6 +124,10 @@ SEARCH_INFO 10 元素数组按索引 [0]~[9] 固定顺序组装，displayFields 
 API Key / 服务器地址配置 → 在线验证（Deepseek API + ERP Server）→ 保存到 localStorage → 立即生效。
 
 ![设置面板流程](流程图/流程图_09_设置面板流程.png)
+
+### 10 — 多模型 AI 架构
+
+AIClient 统一客户端 → 4 模型路由（Deepseek / QWen / Gemini / Claude），统一 Key 管理 + 验证 + 向后兼容。
 
 ---
 
@@ -176,14 +180,16 @@ AsCoding/
 │   │
 │   ├── auth.js                 ← 认证模块（登录/登出/Token/会话恢复）
 │   ├── api.js                  ← API 客户端（fetch 封装/认证注入/错误拦截）
-│   ├── reports.js              ← 报表引擎（6 报表配置/SEARCH_INFO 构造/动态表格）
+│   ├── reports.js              ← 报表引擎（10 报表配置/SEARCH_INFO 构造/动态表格/6 布局筛选）
 │   │
 │   ├── datasource-list.js      ← 数据源列表 UI（卡片渲染/筛选摘要）
 │   ├── tabs.js                 ← Tab 页签切换（数据查询 ↔ AI 分析）
 │   │
 │   ├── chat-ui.js              ← Chat 消息气泡/操作按钮/滚动
 │   ├── chat-core.js            ← Chat 发送流程编排
-│   ├── deepseek-client.js      ← Deepseek API + System Prompt 注入
+│   ├── deepseek-client.js      ← Deepseek API 兼容别名 → AIClient
+│   ├── ai-client.js             ← 多模型 AI 统一客户端（Deepseek/QWen/Gemini/Claude）
+│   ├── ai-suggestions.js        ← AI 推荐提问（🧠 大脑按钮）
 │   ├── ai-parser.js            ← Markdown/表格/图表标记解析
 │   ├── ai-chart.js             ← Chart.js 图表渲染
 │   ├── export.js               ← CSV Excel / HTML PPTX 导出
@@ -191,7 +197,7 @@ AsCoding/
 │   ├── settings-ui.js          ← 设置面板弹窗/验证
 │   └── app.js                  ← 主入口（AppState/查询/分页/初始化）
 │
-├── 流程图/                      ← 9 张 Draw.io 业务流程图
+├── 流程图/                      ← 10 张 Draw.io 业务流程图
 ├── scripts/
 │   └── build_drawio.py         ← 流程图自动生成脚本
 │
@@ -202,7 +208,8 @@ AsCoding/
     ├── 进度追踪表.md            ← 任务进度 & 风险追踪
     ├── 对话记录.md              ← 每轮对话的完整流水账
     ├── API服务调用说明文档.md    ← Login + 报表 API 实测文档
-    ├── 标准报表制表API.md        ← 6 个 API 原始文档
+    ├── 标准报表制表API.md        ← v1 6 个 API 原始文档
+    ├── 标准报表制表API2.md       ← v2 4 个 API 原始文档（生产制造 + 人力资源）
     ├── 流程图.md                ← 流程图文字参考
     └── 项目经验行动指南.md       ← 通用开发纪律速查卡
 ```
@@ -247,30 +254,47 @@ Authorization: Bearer {TOKEN}
 # 成功 → { code: 0, data: { REPORT__TAB: [...], COLUMN_INFO: {...} } }
 ```
 
-### 6 报表速查
+### 10 报表速查
 
-| 报表 | 端点 | PGM | 日期字段 |
-|------|------|-----|---------|
-| 采购报表 | `/invpo/getReport` | `REP_POLIST` | `OS_DD` |
-| 进货报表 | `/invpc/getReport` | `REP_PCLIST` | `PS_DD` |
-| 受订报表 | `/invSO/getReport` | `REP_SOLIST` | `OS_DD` |
-| 销货报表 | `/invSa/getReport` | `REP_SALIST` | `PS_DD` |
-| 收款明细 | `/monAA/getReport` | `REP_RTLIST` | `RP_DD` |
-| 付款明细 | `/monBA/getReport` | `REP_PTLIST` | `RP_DD` |
+| 报表 | 端点 | PGM | 日期字段 | 分类 |
+|------|------|-----|---------|------|
+| 采购报表 | `/invpo/getReport` | `REP_POLIST` | `OS_DD` | 进销存 |
+| 进货报表 | `/invpc/getReport` | `REP_PCLIST` | `PS_DD` | 进销存 |
+| 受订报表 | `/invSO/getReport` | `REP_SOLIST` | `OS_DD` | 进销存 |
+| 销货报表 | `/invSa/getReport` | `REP_SALIST` | `PS_DD` | 进销存 |
+| 收款明细 | `/monAA/getReport` | `REP_RTLIST` | `RP_DD` | 财务 |
+| 付款明细 | `/monBA/getReport` | `REP_PTLIST` | `RP_DD` | 财务 |
+| 工单完成情况 | `/mrppk/getReport` | `MRPPK` | `MO_DD` | 生产制造 |
+| 完工入库报表 | `/mrpafc/getReport` | `MRPPS` | `MM_DD` | 生产制造 |
+| 产品成本分析 | `/mrppu/getList` ⚠️ | `MRPPU` | `DATE_CST` | 生产制造 |
+| 员工薪资清册 | `/rptwagcg3/getReport` | `REP_WAGCG3` | `YEARS` | 人力资源 |
 
 > ⚠️ **关键**：成功判断用 `response.code === 0`，不是 `response.ok`！
+> ⚠️ **MRPPU** 使用 `getList` 端点（非 `getReport`），请求体含 OTHERINFO + PAGE_INFO，响应数据在 `data.TRANS`。
 
 ---
 
 ## 🤖 AI 数据分析功能
+
+### 支持模型
+
+| Provider | 模型 | 端点 | 说明 |
+|----------|------|------|------|
+| Deepseek | `deepseek-v4-flash` | api.deepseek.com | thinking: disabled |
+| QWen (通义千问) | `qwen-plus` | dashscope.aliyuncs.com | OpenAI 兼容 |
+| Gemini (谷歌) | `gemini-3.6-flash` | generativelanguage.googleapis.com | OpenAI 兼容 |
+| Claude (Anthropic) | `claude-sonnet-5` | api.anthropic.com | 原生 API + CORS header |
+
+> 通过 AIClient 统一客户端，一个函数调用所有模型。详见 `js/ai-client.js`。
 
 ### 工作流程
 
 1. **数据查询** Tab → 筛选条件 → 点击"查转入数据源"
 2. 自动切换到 **AI数据分析** Tab
 3. 在 Chat 输入框用自然语言提问
-4. AI (Deepseek V3) 结合所有数据源进行分析
+4. AI 结合所有数据源进行分析（支持 4 个模型切换）
 5. 回复支持 **表格** / **图表** / **Markdown**，可导出 Excel / PPTX
+6. 🧠 **AI 推荐提问**：点击大脑图标，AI 根据当前数据源自动生成深度分析问题
 
 ### System Prompt 定制
 
@@ -279,6 +303,7 @@ AI 被训练为 ERP 数据分析专家，会：
 - 📊 自动选择合适的图表类型
 - 🔢 引用具体数字，不凭空编造
 - 📝 按"结论→数据→图表→建议"的结构回复
+- ⚠️ 严禁输出思考过程/格式自检/推理链条
 
 ---
 
@@ -289,7 +314,7 @@ AI 被训练为 ERP 数据分析专家，会：
 | **前端** | Vanilla JS (ES5) | 零框架依赖，IIFE 模块化 |
 | **样式** | CSS3 + Design Tokens | Inter 字体，CSS 变量体系 |
 | **图表** | Chart.js 4.x | CDN 加载，bar/line/pie/doughnut |
-| **AI** | Deepseek Chat V3 | 非流式调用，4096 tokens |
+| **AI** | Deepseek/QWen/Gemini/Claude | 4 模型统一客户端，非流式调用 |
 | **存储** | localStorage | 认证/设置/数据源持久化 |
 | **导出** | CSV + HTML | Excel (CSV UTF-8 BOM) / PPTX (HTML 降级) |
 
@@ -308,11 +333,14 @@ AI 被训练为 ERP 数据分析专家，会：
 | 阶段 | 状态 |
 |------|------|
 | 登录 & 认证模块 | ✅ 已完成 |
-| 6 大报表查询 | ✅ 已完成 |
+| 10 大报表查询 | ✅ 已完成 |
 | CSS/JS 模块化拆分 | ✅ 已完成 |
 | 移动端响应式 | ✅ 已完成 |
 | Toast 通知重设计 | ✅ 已完成 |
 | AI 数据分析 (Phase A+B) | ✅ 已完成 |
+| 多模型 AI 支持 | ✅ 已完成 |
+| 生产制造报表 (3 个) | ✅ 已完成 |
+| 人力资源报表 (1 个) | ✅ 已完成 |
 | AI 流式响应 | ⬜ 待开发 |
 | IndexedDB 迁移 | ⬜ 待开发 |
 | 正式 .pptx 导出 | ⬜ 待开发 |

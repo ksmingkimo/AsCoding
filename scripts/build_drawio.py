@@ -155,11 +155,11 @@ class DrawioBuilder:
 
 def diagram_01_system_overview():
     """系统整体流程"""
-    b = DrawioBuilder(900, 750)
+    b = DrawioBuilder(1400, 850)
     cx = 450  # 中心 X
 
     # 标题
-    b.title_node("系统整体流程", cx - 100, 20)
+    b.title_node("系统整体流程（含 10 报表 + MRPPU 特殊路径）", cx - 150, 20)
 
     # 节点
     start = b.start_end("打开应用", cx - 80, 70)
@@ -170,15 +170,19 @@ def diagram_01_system_overview():
     err = b.failure_node("显示错误", cx - 400, 440)
     store = b.success_node("存储 TOKEN", cx - 80, 440)
     dash = b.start_end("进入 Dashboard", cx - 80, 520)
-    sidebar = b.node("侧边栏选择报表", cx - 80, 600)
-    filter_cond = b.node("设置筛选条件 & 查询", cx - 80, 680)
+    sidebar = b.node("侧边栏选择报表", cx - 80, 590)
+    # 筛选+查询
+    filter_9 = b.node("设置筛选条件\n&amp; getReport 查询", 100, 700)
+    filter_mrppu = b.api_node("MRPPU getList\n特殊查询路径", 680, 700)
 
-    # 6 个报表节点 (横向排列)
-    reports = ["采购报表", "进货报表", "受订报表", "销货报表", "收款明细", "付款明细"]
+    # 10 个报表节点 (2 行排列)
+    row1 = ["采购报表", "进货报表", "受订报表", "销货报表", "收款明细"]
+    row2 = ["付款明细", "工单完成", "完工入库", "成本分析", "薪资清册"]
     r_nodes = []
-    start_x = 30
-    for i, r in enumerate(reports):
-        r_nodes.append(b.node(r, start_x + i * 145, 520, w=130))
+    for i, r in enumerate(row1):
+        r_nodes.append(b.node(r, 20 + i * 145, 520, w=130))
+    for i, r in enumerate(row2):
+        r_nodes.append(b.node(r, 20 + i * 145, 575, w=130))
 
     # 连线
     b.edge(start, d1)
@@ -190,50 +194,83 @@ def diagram_01_system_overview():
     b.edge(err, login)  # 回到登录
     b.edge_yes(d2, store)
     b.edge(store, dash)
-    # sidebars report nodes
+    # sidebar → report nodes → filter
     for rn in r_nodes:
         b.edge(sidebar, rn)
-        b.edge(rn, filter_cond)
+    # 9 standard reports → getReport
+    for rn in r_nodes[:-1]:  # all except cost analysis (mrppu)
+        b.edge(rn, filter_9)
+    # MRPPU (9th node = 成本分析) → getList special path
+    mrppu_node = r_nodes[8]  # 成本分析
+    b.edge(mrppu_node, filter_mrppu)
 
     return b.save("系统整体流程", "流程图_01_系统整体流程.drawio")
 
 
 def diagram_02_single_report():
-    """单报表查询流程（以采购报表为例）"""
-    b = DrawioBuilder(800, 900)
+    """单报表查询流程（标准 getReport + MRPPU getList）"""
+    b = DrawioBuilder(900, 1100)
     cx = 200
 
-    b.title_node("单报表查询流程（以采购报表为例）", 150, 20)
+    b.title_node("单报表查询流程（标准 getReport + MRPPU getList）", 120, 20)
 
-    enter = b.start_end("进入采购报表", cx, 70)
-    build = b.node("构建查询条件", cx, 150)
-    # 筛选条件 (右侧平行节点)
-    date = b.node("日期范围: OS_DD", cx - 180, 250, w=170)
-    cust = b.node("客户/厂商: CUS_NO", cx + 10, 250, w=170)
-    prd = b.node("货品: PRD_NO", cx - 180, 330, w=170)
-    dep = b.node("部门: PO_DEP", cx + 10, 330, w=170)
-    wh = b.node("仓库: WH", cx - 180, 410, w=170)
-    status = b.node("审核状态: CHK_STATUS", cx + 10, 410, w=170)
-    fields = b.node("选择展示字段 + 排序", cx - 80, 490)
-    assemble = b.node("组装 SEARCH_INFO 数组", cx - 80, 560)
-    api = b.api_node("POST /invpo/getReport", cx - 80, 630)
-    d_code = b.decision("code === 0?", cx - 80, 720)
-    err_msg = b.failure_node("显示错误: message", cx - 280, 720)
-    table = b.node("渲染数据表格", cx - 80, 820)
-    user = b.decision("用户操作?", cx - 80, 910)
-    back_build = b.node("改筛选", cx - 300, 990, h=50)
-    paginate = b.node("翻页", cx - 80, 990, h=50)
+    # ═══ 标准 getReport 路径（左侧）═══
+    enter = b.start_end("进入报表", cx, 70)
+    d_type = b.decision("报表类型?", cx - 80, 150)
 
-    b.edge(enter, build)
-    for c in [date, cust, prd, dep, wh, status]:
+    # ── 标准 getReport 分支 ──
+    build = b.node("构建查询条件", cx - 250, 230)
+    date = b.node("日期范围", cx - 430, 310, w=160)
+    cust = b.node("筛选条件\n(客户/货品/部门/仓库/审核)", cx - 250, 310, w=160)
+    order_by = b.node("排序 orderBy", cx - 70, 310, w=160)
+    assemble = b.node("组装 SEARCH_INFO\n[0]~[9] 固定索引", cx - 250, 410, w=340)
+    api = b.api_node("POST /{module}/getReport\n+ DISPLAY_FIELDS", cx - 250, 500, w=340, h=56)
+    d_code = b.decision("code === 0?", cx - 250, 590)
+    err_msg = b.failure_node("显示错误", cx - 440, 590)
+    data_report = b.success_node("解析 REPORT__TAB\n+ COLUMN_INFO.REPORT__TAB", cx - 250, 690, w=340, h=56)
+
+    # ── MRPPU getList 分支 ──
+    build_mrppu = b.node("构建 MRPPU 请求", cx + 400, 230)
+    otherinfo = b.node("OTHERINFO\nDEP_GROUP + INCLUDESON", cx + 280, 310, w=180, h=56)
+    page_info = b.node("PAGE_INFO\nPAGE_SIZE + CURRENT_PAGE", cx + 480, 310, w=180, h=56)
+    si_mrppu = b.node("SEARCH_INFO\nshowBody + 4 固定元素 + DEP + PRD_NO\n(无 orderBy)", cx + 280, 390, w=380, h=56)
+    api_mrppu = b.api_node("POST /mrppu/getList\n(无 DISPLAY_FIELDS)", cx + 280, 480, w=380, h=56)
+    d_code_mrppu = b.decision("code === 0?", cx + 280, 570)
+    err_mrppu = b.failure_node("显示错误", cx + 90, 570)
+    data_trans = b.success_node("解析 TRANS\n+ COLUMN_INFO（扁平）\n+ PAGE_INFO", cx + 280, 670, w=380, h=56)
+
+    # ── 汇聚：渲染 + 用户操作 ──
+    table = b.node("渲染数据表格（动态列头）", 200, 800)
+    user = b.decision("用户操作?", 200, 910)
+    back_build = b.node("改筛选", -20, 1000, h=50)
+    paginate = b.node("翻页", 200, 1000, h=50)
+
+    # 连线 — 入口
+    b.edge(enter, d_type)
+    # 标准路径
+    b.edge(d_type, build, "getReport")
+    for c in [date, cust, order_by]:
         b.edge(build, c)
-        b.edge(c, fields)
-    b.edge(fields, assemble)
+        b.edge(c, assemble)
     b.edge(assemble, api)
     b.edge(api, d_code)
     b.edge_no(d_code, err_msg)
     b.edge(err_msg, enter)
-    b.edge_yes(d_code, table)
+    b.edge_yes(d_code, data_report)
+    # MRPPU 路径
+    b.edge(d_type, build_mrppu, "getList (MRPPU)")
+    b.edge(build_mrppu, otherinfo)
+    b.edge(build_mrppu, page_info)
+    b.edge(otherinfo, si_mrppu)
+    b.edge(page_info, si_mrppu)
+    b.edge(si_mrppu, api_mrppu)
+    b.edge(api_mrppu, d_code_mrppu)
+    b.edge_no(d_code_mrppu, err_mrppu)
+    b.edge(err_mrppu, enter)
+    b.edge_yes(d_code_mrppu, data_trans)
+    # 汇聚渲染
+    b.edge(data_report, table)
+    b.edge(data_trans, table)
     b.edge(table, user)
     b.edge(user, back_build, "改筛选")
     b.edge(user, paginate, "翻页")
@@ -327,31 +364,54 @@ def diagram_04_auth():
 
 
 def diagram_05_api_comparison():
-    """各报表 API 差异对照（可视对照图）"""
-    b = DrawioBuilder(1100, 700)
+    """各报表 API 差异对照（可视对照图）— 10 报表"""
+    b = DrawioBuilder(1700, 780)
 
-    b.title_node("各报表 API 差异对照", 350, 15)
+    b.title_node("各报表 API 差异对照（10 报表）", 500, 15)
 
-    # 表头
-    headers = ["要素", "采购", "进货", "受订", "销货", "收款", "付款"]
-    col_w = [100, 140, 140, 140, 140, 140, 140]
+    # 表头 — 11 columns (要素 + 10 报表)
+    headers = ["要素", "采购", "进货", "受订", "销货", "收款", "付款", "工单", "完工入库", "成本分析", "薪资"]
+    col_w = [90, 120, 120, 120, 120, 120, 120, 120, 120, 120, 120]
     header_x = [30]
     for cw in col_w[:-1]:
         header_x.append(header_x[-1] + cw + 5)
 
     for i, (h, hx) in enumerate(zip(headers, header_x)):
         b.node(h, hx, 55, w=col_w[i], h=32,
-               style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#6c8ebf;fontColor=#ffffff;fontSize=12;fontStyle=1;fontFamily=Courier New;")
+               style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6c8ebf;strokeColor=#6c8ebf;fontColor=#ffffff;fontSize=11;fontStyle=1;fontFamily=Courier New;")
 
     # 行数据
     rows = [
-        ("端点", ["/invpo", "/invpc", "/invSO", "/invSa", "/monAA", "/monBA"]),
-        ("PGM", ["REP_POLIST", "REP_PCLIST", "REP_SOLIST", "REP_SALIST", "REP_RTLIST", "REP_PTLIST"]),
-        ("日期字段", ["OS_DD", "PS_DD", "OS_DD", "PS_DD", "RP_DD", "RP_DD"]),
-        ("日期含义", ["采购日期", "进货日期", "受订日期", "销货日期", "单据日期", "单据日期"]),
-        ("部门字段", ["PO_DEP", "DEP", "DEP", "DEP", "DEP", "DEP"]),
-        ("fixCondition\n特殊字段", ["无", "SA_BILLS", "SUB_CUS", "SA_BILLS +\nSEND_GROUP_FIELD\n+ SUB_CUS", "LINE +\nSHOW_LSIT×3\n+ INCLUDESON", "LINE +\nSHOW_LSIT×3\n+ INCLUDESON"]),
-        ("额外筛选", ["-", "-", "-", "-", "YW_TYPE\n+ KB", "YW_TYPE\n+ KB"]),
+        ("端点", ["/invpo", "/invpc", "/invSO", "/invSa", "/monAA", "/monBA", "/mrppk", "/mrpafc", "/mrppu", "/rptwagcg3"]),
+        ("PGM", ["REP_POLIST", "REP_PCLIST", "REP_SOLIST", "REP_SALIST", "REP_RTLIST", "REP_PTLIST", "MRPPK", "MRPPS", "MRPPU", "REP_WAGCG3"]),
+        ("日期字段", ["OS_DD", "PS_DD", "OS_DD", "PS_DD", "RP_DD", "RP_DD", "MO_DD", "MM_DD", "DATE_CST", "YEARS"]),
+        ("日期含义", ["采购日期", "进货日期", "受订日期", "销货日期", "单据日期", "单据日期", "工单日期", "入库日期", "成本年月", "年度"]),
+        ("部门字段", ["PO_DEP", "DEP", "DEP", "DEP", "DEP", "DEP", "DEP", "DEP", "DEP", "-"]),
+        ("fixCondition\n特殊字段", [
+            "无", "SA_BILLS", "SUB_CUS",
+            "SA_BILLS +\nSEND_GROUP\n+ SUB_CUS",
+            "LINE +\nSHOW_LSIT×3\n+ INCLUDESON",
+            "LINE +\nSHOW_LSIT×3\n+ INCLUDESON",
+            "无",
+            "COMBOFCP\n+ WL_CHK\n+ COMBODATE",
+            "CHK_ALL\n(7 字段)",
+            "SZ_NO_TYPE\n等 7 字段",
+        ]),
+        ("额外筛选", [
+            "-", "-", "-", "-",
+            "YW_TYPE\n+ KB", "YW_TYPE\n+ KB",
+            "MO_NO\n+ MRP_NO",
+            "MM_NO\n+ MRP_NO",
+            "PRD_NO",
+            "YG_NO\n+ OUT_DAY_TYPE",
+        ]),
+        ("特殊点", [
+            "-", "-", "-", "-", "-", "-",
+            "SEARCH_INFO\n8 元素",
+            "fieldType:\nbilNo",
+            "⚠️ getList\n+ OTHERINFO\n+ TRANS 响应",
+            "showLadder:T\n年度筛选",
+        ]),
     ]
 
     for ri, (label, values) in enumerate(rows):
@@ -362,66 +422,89 @@ def diagram_05_api_comparison():
         # 值
         for vi, val in enumerate(values):
             b.node(val, header_x[vi + 1], y, w=col_w[vi + 1], h=68,
-                   style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;fontSize=10;fontFamily=Courier New;")
+                   style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#cccccc;fontSize=9;fontFamily=Courier New;")
 
     # 底部提醒
     y_bottom = 100 + len(rows) * 78 + 20
-    b.node("⚠️ 每个报表的 SEARCH_INFO 结构看似相同，实则细节差异多，必须逐报表对照 API 文档，不可复制粘贴后直接改 PGM。",
-           30, y_bottom, w=1000, h=40,
+    b.node("⚠️ 每个报表的 SEARCH_INFO 结构看似相同，实则细节差异多。MRPPU 使用 getList 端点，架构完全不同（OTHERINFO + PAGE_INFO + TRANS 响应）。",
+           30, y_bottom, w=1600, h=40,
            style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontFamily=Courier New;align=left;spacingLeft=10;")
 
     return b.save("API差异对照", "流程图_05_API差异对照.drawio")
 
 
 def diagram_06_ui_pages():
-    """UI 页面流"""
-    b = DrawioBuilder(1100, 600)
+    """UI 页面流（10 报表 + 6 布局筛选系统）"""
+    b = DrawioBuilder(1400, 700)
 
-    b.title_node("UI 页面流", 400, 20)
+    b.title_node("UI 页面流（10 报表 + 6 布局筛选系统）", 400, 20)
 
     login = b.start_end("登录页", 30, 80, w=120)
     dash = b.node("Dashboard 主界面", 210, 80, w=160)
 
     b.edge(login, dash)
 
-    # 侧边栏分组
-    b.group("侧边栏导航", 30, 170, 200, 380)
-    reports = ["采购报表", "进货报表", "受订报表", "销货报表", "收款明细", "付款明细"]
-    r_nodes = []
-    for i, r in enumerate(reports):
-        r_nodes.append(b.node(r, 60, 210 + i * 50, w=140, h=36))
+    # 侧边栏分组 — 4 sections
+    b.group("侧边栏导航（4 分组，10 报表）", 30, 170, 200, 490)
+    # 进销存
+    reports_p1 = ["采购报表", "进货报表", "受订报表", "销货报表"]
+    r1_nodes = []
+    for i, r in enumerate(reports_p1):
+        r1_nodes.append(b.node(r, 60, 210 + i * 45, w=140, h=32))
+    # 财务
+    reports_p2 = ["收款明细", "付款明细"]
+    r2_nodes = []
+    for i, r in enumerate(reports_p2):
+        r2_nodes.append(b.node(r, 60, 395 + i * 45, w=140, h=32))
+    # 生产制造
+    reports_p3 = ["工单完成情况", "完工入库报表", "成本分析表"]
+    r3_nodes = []
+    for i, r in enumerate(reports_p3):
+        r3_nodes.append(b.node(r, 60, 490 + i * 45, w=140, h=32))
+    # 人力资源
+    r4_node = b.node("薪资清册", 60, 630, w=140, h=32)
+    all_r_nodes = r1_nodes + r2_nodes + r3_nodes + [r4_node]
 
-    # 筛选面板
-    filter_group = b.group("筛选面板", 270, 170, 220, 380)
-    filters = ["日期范围", "客户/厂商", "货品", "部门", "仓库", "审核状态"]
+    # 筛选面板 — 6 布局说明
+    filter_group = b.group("筛选面板（6 布局配置驱动）", 270, 170, 280, 490)
+    layouts = [
+        "inv: date+cust+prd+dep+wh+status",
+        "payment: date+cust+dep+ywType+kb",
+        "mrpPK: date+docNo+mrpNo+dep",
+        "mrpPS: date+docNo+mrpNo+dep+wh+status",
+        "mrppu: dateCst+dep+prd",
+        "wagCG3: dateYear+ygNo+outDayType",
+    ]
     f_nodes = []
-    for i, f in enumerate(filters):
-        f_nodes.append(b.node(f, 300, 210 + i * 50, w=160, h=36))
+    for i, f in enumerate(layouts):
+        f_nodes.append(b.node(f, 285, 210 + i * 65, w=250, h=50))
 
-    # 数据表格
-    table = b.node("数据表格", 530, 280, w=160, h=50)
-    pagination = b.node("分页组件", 530, 370, w=160, h=40)
+    # 数据表格 & 分页
+    table = b.node("数据表格（动态列头，10 报表共享）", 600, 280, w=280, h=50)
+    pagination = b.node("分页组件", 600, 370, w=160, h=40)
 
-    for rn in r_nodes:
-        for fn in f_nodes:
+    for rn in all_r_nodes:
+        for fn in f_nodes[:1]:  # all reports use inv layout by default
             b.edge(rn, fn)
         b.edge(rn, dash)
     for fn in f_nodes:
         b.edge(fn, table)
     b.edge(table, pagination)
 
-    # AI Tab (右侧)
-    b.group("AI 数据分析 Tab", 750, 170, 300, 380)
-    ai_source = b.node("数据源列表", 780, 210, w=140, h=36)
-    ai_chat = b.node("Chat 对话界面", 780, 270, w=140, h=36)
-    ai_ds = b.node("Deepseek LLM", 780, 330, w=140, h=50, style=S_API)
-    ai_export = b.node("导出 Excel/PPTX", 780, 400, w=140, h=36)
+    # AI Tab (右侧) + 多模型 AI
+    b.group("AI 数据分析 Tab（多模型：Deepseek/QWen/Gemini/Claude）", 620, 170, 360, 490)
+    ai_source = b.node("数据源列表", 650, 210, w=140, h=36)
+    ai_chat = b.node("Chat 对话界面", 650, 270, w=140, h=36)
+    ai_llm = b.node("多模型 LLM\nDeepseek/QWen/Gemini/Claude", 650, 330, w=180, h=56, style=S_API)
+    ai_export = b.node("导出 Excel/PPTX", 650, 410, w=140, h=36)
+    ai_brain = b.node("🧠 AI 推荐提问", 650, 480, w=140, h=36)
 
     b.edge(dash, ai_source)
     b.edge(ai_source, ai_chat)
-    b.edge(ai_chat, ai_ds)
-    b.edge(ai_ds, ai_chat)
-    b.edge(ai_ds, ai_export)
+    b.edge(ai_chat, ai_llm)
+    b.edge(ai_llm, ai_chat)
+    b.edge(ai_llm, ai_export)
+    b.edge(ai_llm, ai_brain)
 
     return b.save("UI页面流", "流程图_06_UI页面流.drawio")
 
@@ -570,6 +653,38 @@ def diagram_09_settings():
     return b.save("设置面板流程", "流程图_09_设置面板流程.drawio")
 
 
+def diagram_10_multi_model_ai():
+    """多模型 AI 架构"""
+    b = DrawioBuilder(900, 600)
+
+    b.title_node("多模型 AI 调用架构（4 模型统一客户端）", 180, 20)
+
+    caller = b.node("AIClient.call()\n统一入口", 320, 70, w=200, h=56)
+
+    # 4 个模型节点
+    ds = b.node("Deepseek V4 Flash\nOpenAI 兼容\nthinking: disabled", 30, 190, w=190, h=68)
+    qwen = b.node("QWen Plus\nOpenAI 兼容\n(aliyuncs.com)", 240, 190, w=190, h=68)
+    gemini = b.node("Gemini 3.6 Flash\nOpenAI 兼容\n(googleapis.com)", 450, 190, w=190, h=68)
+    claude = b.node("Claude Sonnet 5\nAnthropic 原生\nx-api-key + thinking:disabled", 660, 190, w=210, h=68)
+
+    b.edge(caller, ds)
+    b.edge(caller, qwen)
+    b.edge(caller, gemini)
+    b.edge(caller, claude)
+
+    # 特性标注
+    b.node("🔑 统一 Key 管理\nSettingsStore.aiConfig", 30, 320, w=190, h=56,
+           style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontFamily=Courier New;")
+    b.node("🔧 统一验证\nAIClient.validateKey()", 240, 320, w=190, h=56,
+           style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontFamily=Courier New;")
+    b.node("🔄 向后兼容\nvar DeepseekClient = AIClient", 450, 320, w=190, h=56,
+           style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontFamily=Courier New;")
+    b.node("🌐 浏览器直连\nCORS + cephalic-dangerous", 660, 320, w=210, h=56,
+           style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontFamily=Courier New;")
+
+    return b.save("多模型AI架构", "流程图_10_多模型AI架构.drawio")
+
+
 # ═══════════════════════════════════════════════════════════════
 # 主入口
 # ═══════════════════════════════════════════════════════════════
@@ -588,6 +703,7 @@ def main():
         diagram_07_ai_analysis,
         diagram_08_tab_switch,
         diagram_09_settings,
+        diagram_10_multi_model_ai,
     ]
 
     for fn in diagrams:

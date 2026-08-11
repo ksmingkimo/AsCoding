@@ -291,12 +291,76 @@ curl -s -X POST 'http://localhost/SUNFUSION/API/invso/getReport' \
 | 销货 | `/invSa` | `REP_SALIST` | `PS_DD` | + SA_BILLS + SUB_CUS | `DEP` |
 | 收款 | `/monAA` | `REP_RTLIST` | `RP_DD` | + LINE + SHOW_LSIT×3 + INCLUDESON | `DEP` |
 | 付款 | `/monBA` | `REP_PTLIST` | `RP_DD` | + LINE + SHOW_LSIT×3 + INCLUDESON | `DEP` |
+| 工单 | `/mrppk` | `MRPPK` | `MO_DD` | 只有 REPORT_DD_FIELD | `DEP` |
+| 完工入库 | `/mrpafc` | `MRPPS` | `MM_DD` | + COMBOFCP + WL_CHK + COMBODATE | `DEP` |
+| 成本分析 | `/mrppu` | `MRPPU` | `DATE_CST` | **getList 端点**，OTHERINFO + PAGE_INFO，响应为 TRANS | `DEP` |
+| 薪资 | `/rptwagcg3` | `REP_WAGCG3` | `YEARS` | showLadder="T"，年度筛选，SEARCH_INFO 仅 7 元素 | - |
 
 > ⚠️ 端点大小写：Postman 实测 `/invso` 为全小写。其余报表端点大小写以实际 Postman 验证为准。
 
 ---
 
-## 六、前端对接 Checklist
+## 六、生产制造 & 人力资源报表（v2 API，2026-08-11 新增）
+
+### 6.1 工单完成情况表
+
+```
+POST /mrppk/getReport
+```
+
+- **PGM**: `MRPPK`
+- **日期字段**: `MO_DD`（工单日期）
+- **fixCondition**: `{ REPORT_DD_FIELD: "MO_DD" }`
+- **SEARCH_INFO**: 8 个元素（[0]~[7]），筛选字段：MO_NO、MRP_NO、DEP
+- **orderBy**: 3 个字段 `{ MO_DD: "asc", MO_NO: "asc", ZC_ITM: "asc" }`
+- **响应**: 标准 `REPORT__TAB` + `COLUMN_INFO.REPORT__TAB`
+
+### 6.2 完工入库报表
+
+```
+POST /mrpafc/getReport
+```
+
+- **PGM**: `MRPPS`
+- **日期字段**: `MM_DD`（入库日期）
+- **fixCondition**: `{ REPORT_DD_FIELD: "MM_DD", COMBOFCP: "1", WL_CHK: "F", COMBODATE: "1" }`
+- **SEARCH_INFO**: 10 个元素，标准布局。筛选字段：MM_NO（fieldType: bilNo）、MRP_NO、DEP、WH、CHK_STATUS
+- **响应**: 标准 `REPORT__TAB` + `COLUMN_INFO.REPORT__TAB`
+
+### 6.3 产品成本分析表 ⚠️ 架构不同
+
+```
+POST /mrppu/getList
+```
+
+- **PGM**: `MRPPU`
+- **端点**: `getList`（不是 getReport！）
+- **请求体额外字段**: `OTHERINFO: { DEP_GROUP: "00000000", INCLUDESON: "F" }`
+- **分页**: 通过 `PAGE_INFO: { PAGE_SIZE, CURRENT_PAGE }`（不在 SEARCH_INFO[0]）
+- **SEARCH_INFO**: 8 个元素（[0]=showBody+displayFields，[1]=fixCondition，[2]~[5]=固定禁用筛选，[6]=DEP，[7]=PRD_NO）
+- **无** DISPLAY_FIELDS 顶层字段
+- **无** orderBy 元素
+- **响应数据路径**: `data.TRANS`（不是 REPORT__TAB）
+- **响应列信息**: `data.COLUMN_INFO` 扁平数组（不是 `COLUMN_INFO.REPORT__TAB`）
+- **响应分页**: `data.PAGE_INFO`
+
+### 6.4 员工年度薪资清册
+
+```
+POST /rptwagcg3/getReport
+```
+
+- **PGM**: `REP_WAGCG3`
+- **日期字段**: `YEARS`（年度筛选，operator: "equal"，单值 string）
+- **showLadder**: `"T"`（显示阶梯价）
+- **fixCondition**: 7 个字段（SZ_NO_TYPE、SZ_NO、CHK_TYPE、LOCK_TYPE、OTR_NO_TYPE、OTR_NO、REPORT_DD_FIELD）
+- **SEARCH_INFO**: 7 个元素（[0]~[6]），筛选字段：YG_NO、OUT_DAY_TYPE
+- **日期筛选**: `{ field: "YEARS", operator: "equal", operatorDisabled: true, value: "2025" }`
+- **响应**: 标准 `REPORT__TAB` + `COLUMN_INFO.REPORT__TAB`
+
+---
+
+## 七、前端对接 Checklist
 
 每次对接新报表时对照：
 
@@ -309,4 +373,6 @@ curl -s -X POST 'http://localhost/SUNFUSION/API/invso/getReport' \
 - [ ] SEARCH_INFO 数组顺序 = [0]~[9]，不可调换
 - [ ] 空筛选条件 `"value": ""`
 - [ ] 成功判断 `code === 0`
-- [ ] 空结果处理（REPORT__TAB 为 `[]`）
+- [ ] 空结果处理（REPORT__TAB 为 `[]`，MRPPU 为 TRANS 为 `[]`）
+- [ ] MRPPU 特殊处理：getList 端点、OTHERINFO、PAGE_INFO、TRANS 响应、扁平 COLUMN_INFO
+- [ ] 端点大小写：全部使用小写（与 v1 实测一致，待 Postman 验证）

@@ -234,18 +234,23 @@ var App = (function() {
     if (resetBtn) {
       resetBtn.addEventListener('click', function() {
         var fields = ['filterCust', 'filterPrd', 'filterDep', 'filterWh',
-                      'filterYwType', 'filterKb'];
+                      'filterYwType', 'filterKb',
+                      'filterDocNo', 'filterMrpNo', 'filterYgNo'];
         fields.forEach(function(id) {
           var el = document.getElementById(id);
           if (el) el.value = '';
         });
         var filterStatus = document.getElementById('filterStatus');
         if (filterStatus) filterStatus.value = '';
+        var filterOutDayType = document.getElementById('filterOutDayType');
+        if (filterOutDayType) filterOutDayType.value = '1';
 
         var filterDateFrom = document.getElementById('filterDateFrom');
         var filterDateTo = document.getElementById('filterDateTo');
         if (filterDateFrom) filterDateFrom.value = '2026-01-01';
         if (filterDateTo) filterDateTo.value = '2026-12-31';
+        var filterDateCst = document.getElementById('filterDateCst');
+        if (filterDateCst) filterDateCst.value = '2025-07';
 
         ReportEngine.currentPage = 1;
         doQuery();
