@@ -143,14 +143,15 @@ var AIParser = (function() {
     html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
     // 分隔线
     html = html.replace(/^---$/gm, '<hr>');
-    // 段落
-    html = html.replace(/\n\n/g, '</p><p>');
+    // 段落（双换行 → 新段落，避免连续空行产生多个空 <p>）
+    html = html.replace(/\n{2,}/g, '</p><p>');
     html = html.replace(/\n/g, '<br>');
     // 确保包裹在 <p> 中
     if (!html.startsWith('<')) { html = '<p>' + html + '</p>'; }
-    // 清理空段落
+    // 清理空段落和纯换行的段落
     html = html.replace(/<p><\/p>/g, '');
     html = html.replace(/<p><br><\/p>/g, '');
+    html = html.replace(/<p>(\s|<br>)*<\/p>/g, '');
 
     return html;
   }

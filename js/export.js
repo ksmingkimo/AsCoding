@@ -60,48 +60,118 @@ var Export = (function() {
     var title = 'AI 数据分析报告';
     var dateStr = new Date().toLocaleDateString('zh-CN');
 
-    // 提取图表截图 (canvas → base64 PNG)
-    var chartImages = '';
+    // ── Step 1: 提取图表截图 (canvas → base64 PNG) ──
+    var chartImages = [];
     if (msgDiv) {
       var canvases = msgDiv.querySelectorAll('canvas');
       canvases.forEach(function(canvas) {
         try {
-          chartImages += '<img src="' + canvas.toDataURL('image/png') +
-                         '" style="max-width:100%;margin:10px 0">';
-        } catch (e) {
-          // 跨域 canvas 无法导出
-        }
+          chartImages.push(canvas.toDataURL('image/png'));
+        } catch (e) { /* cross-origin canvas */ }
       });
     }
 
-    // 清理文本中的标记
-    var cleanText = rawText
-      .replace(/```chart[\s\S]*?```/g, '[图表]')
-      .replace(/```table[\s\S]*?```/g, '[数据表格]')
-      .replace(/```[\s\S]*?```/g, '[代码]');
+    // ── Step 2: 处理特殊块 — 表格渲染为 HTML，图表替换为截图 ──
+    var chartIdx = 0;
+    var processed = rawText;
 
-    // 按标题分割幻灯片
-    var slides = cleanText.split(/\n#{1,3}\s+/).filter(function(s) { return s.trim(); });
-    if (slides.length === 0) { slides = [cleanText]; }
+    // 2a. ```table``` → 渲染为 HTML <table>
+    processed = processed.replace(/```table\s*\n([\s\S]*?)```/g, function(m, json) {
+      try {
+        var data = JSON.parse(json.trim());
+        if (Array.isArray(data) && data.length > 0) {
+          return '%%TABLE%%' + AIParser.renderTableHTML(data) + '%%/TABLE%%';
+        }
+      } catch (e) {}
+      return '<p><em>(表格数据解析失败)</em></p>';
+    });
 
-    var slidesHTML = slides.map(function(slide, i) {
-      return '<div class="slide" style="page-break-after:always;padding:40px;min-height:400px">' +
-        '<h2 style="color:#1E40AF;margin-bottom:20px">' + (i === 0 ? title : '') + '</h2>' +
-        '<div style="white-space:pre-wrap;font-size:14px;line-height:1.8">' +
-          Utils.escapeHtml(slide.trim()).replace(/\n/g, '<br>') +
-        '</div>' +
-        (i === slides.length - 1 ? chartImages : '') +
-        '<p style="color:#94A3B8;font-size:11px;margin-top:30px">' +
-          dateStr + ' | Sunlike ERP AI 分析</p>' +
+    // 2b. ```chart``` → 替换为截图 <img>
+    processed = processed.replace(/```chart[\s\S]*?```/g, function() {
+      if (chartIdx < chartImages.length) {
+        var src = chartImages[chartIdx++];
+        return '%%CHART%%<img src="' + src + '" style="max-width:100%;margin:16px 0;display:block" alt="图表">%%/CHART%%';
+      }
+      return '<p><em>(图表)</em></p>';
+    });
+
+    // 2c. 其他 ```code``` 块
+    processed = processed.replace(/```(\w*)\n?([\s\S]*?)```/g, function(m, lang, code) {
+      return '%%CODE%%<pre><code>' + Utils.escapeHtml(code.trim()) + '</code></pre>%%/CODE%%';
+    });
+
+    // ── Step 3: 按 # / ## / ### 标题拆分为幻灯片 ──
+    var slides = processed.split(/\n#{1,3}\s+/).filter(function(s) { return s.trim(); });
+    if (slides.length === 0) { slides = [processed]; }
+
+    // ── Step 4: 逐页渲染 — Markdown 文本 + HTML 块混合 ──
+    var slidesHTML = slides.map(function(slide, idx) {
+      var body = renderMixed(slide.trim());
+      return '<div class="slide">' +
+        (idx === 0 ? '<h1>' + Utils.escapeHtml(title) + '</h1>' : '') +
+        '<div class="slide-body">' + body + '</div>' +
+        '<p class="slide-footer">' + dateStr + ' | Sunlike ERP AI 分析</p>' +
         '</div>';
     }).join('');
 
+    // ── Step 5: 组装完整 HTML 文档 ──
     var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + title + '</title>' +
-      '<style>body{font-family:"Microsoft YaHei",sans-serif;color:#0F172A;max-width:800px;margin:0 auto}</style>' +
-      '</head><body>' + slidesHTML + '</body></html>';
+      '<style>' +
+      '*{box-sizing:border-box;margin:0;padding:0}' +
+      'body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;color:#0F172A;max-width:820px;margin:0 auto;padding:20px}' +
+      '.slide{page-break-after:always;padding:24px 0;min-height:400px}' +
+      '.slide h1{color:#1E40AF;font-size:22px;margin:0 0 20px 0;padding-bottom:12px;border-bottom:2px solid #DBEAFE}' +
+      '.slide-body{font-size:14px;line-height:1.85}' +
+      '.slide-body h4{font-size:16px;color:#1E3A8A;margin:24px 0 8px 0}' +
+      '.slide-body p{margin:0 0 10px 0}' +
+      '.slide-body ul,ol{margin:8px 0;padding-left:24px}' +
+      '.slide-body li{margin:4px 0}' +
+      '.slide-body hr{border:none;border-top:1px solid #DBEAFE;margin:20px 0}' +
+      '.slide-body strong{color:#1E3A8A}' +
+      '.slide-body code{background:#F1F5F9;padding:1px 5px;border-radius:3px;font-size:13px}' +
+      '.slide-body pre{background:#F8FAFC;padding:12px 16px;border-radius:6px;overflow-x:auto;font-size:13px;margin:12px 0;line-height:1.5}' +
+      'table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px}' +
+      'th{background:#1E3A8A;color:#fff;padding:8px 12px;text-align:left;font-weight:600;white-space:nowrap}' +
+      'td{padding:7px 12px;border-bottom:1px solid #E2E8F0}' +
+      'tr:nth-child(even) td{background:#F8FAFC}' +
+      'td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:"SF Mono","Consolas",monospace}' +
+      '.slide-footer{color:#94A3B8;font-size:11px;margin-top:28px;padding-top:14px;border-top:1px solid #E2E8F0}' +
+      'img{max-width:100%;height:auto;display:block;margin:16px 0}' +
+      '@media print{.slide{page-break-after:always}}' +
+      '</style></head><body>' + slidesHTML + '</body></html>';
 
     downloadFile(html, 'AI数据分析报告.html', 'text/html;charset=utf-8');
-    Utils.showToast('报告 (HTML格式) 已下载。正式 .pptx 功能开发中');
+    Utils.showToast('报告 (HTML格式) 已下载');
+  }
+
+  /**
+   * 混合渲染：Markdown 文本段落 + 已渲染的 HTML 块（表格/图表/代码）
+   * 用 %%BLOCK%%...%%/BLOCK%% 标记保护 HTML 不被 escapeHtml 破坏
+   * @param {string} text
+   * @returns {string} HTML
+   */
+  function renderMixed(text) {
+    var BLOCK_RE = /%%(TABLE|CHART|CODE)%%([\s\S]*?)%%\/\1%%/g;
+    var parts = [];
+    var lastIdx = 0;
+    var match;
+
+    while ((match = BLOCK_RE.exec(text)) !== null) {
+      // 块之前的纯文本 → Markdown 渲染
+      if (match.index > lastIdx) {
+        parts.push(AIParser.renderMarkdown(text.substring(lastIdx, match.index)));
+      }
+      // HTML 块原样保留
+      parts.push(match[2]);
+      lastIdx = match.index + match[0].length;
+    }
+
+    // 剩余纯文本
+    if (lastIdx < text.length) {
+      parts.push(AIParser.renderMarkdown(text.substring(lastIdx)));
+    }
+
+    return parts.join('');
   }
 
   /**
