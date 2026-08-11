@@ -1,7 +1,7 @@
 /**
  * chat-core.js — Chat 对话核心逻辑模块
- * 负责：发送消息流程编排（校验→调 Deepseek→解析→渲染→操作按钮）
- * 依赖：ChatUI, DeepseekClient, AIParser, AIChart, SettingsStore, DataSourceStore, Utils
+ * 负责：发送消息流程编排（校验→调 AI→解析→渲染→操作按钮）
+ * 依赖：ChatUI, AIClient, AIParser, AIChart, SettingsStore, DataSourceStore, Utils
  */
 
 var ChatCore = (function() {
@@ -22,11 +22,11 @@ var ChatCore = (function() {
     var text = chatInput.value.trim();
     if (!text) return;
 
-    // 校验 API Key
-    var apiKey = SettingsStore.getApiKey();
+    // 校验 API Key（AIClient 内部也会校验，这里提前提示）
+    var apiKey = SettingsStore.getAIKey();
     if (!apiKey) {
-      Utils.showToast('请先在系统设置中配置 Deepseek API Key', 'error');
-      if (typeof openSettingsModal === 'function') openSettingsModal();
+      Utils.showToast('请先在系统设置中配置 API Key', 'error');
+      if (typeof SettingsUI !== 'undefined') SettingsUI.open();
       return;
     }
 
@@ -58,8 +58,8 @@ var ChatCore = (function() {
       loadingId);
     if (loadingDiv) loadingDiv.classList.add('loading');
 
-    // 调用 Deepseek
-    DeepseekClient.call(apiKey, text, [], function(err, fullResponse) {
+    // 调用 AI（AIClient 自动根据设置选择 provider + key）
+    AIClient.call(text, [], function(err, fullResponse) {
       isStreaming = false;
       if (btnSend) btnSend.disabled = false;
 

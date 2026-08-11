@@ -1,7 +1,7 @@
 /**
  * settings-ui.js — 设置面板 UI 模块
- * 负责：设置模态弹窗的打开/关闭、Deepseek Key 验证、服务器连接验证
- * 依赖：SettingsStore, Utils
+ * 负责：设置模态弹窗的打开/关闭、AI 模型选择、API Key 验证、服务器连接验证
+ * 依赖：SettingsStore, AIClient, Utils
  */
 
 var SettingsUI = (function() {
@@ -9,19 +9,46 @@ var SettingsUI = (function() {
 
   var API_PATH = '/SUNFUSION/API';
 
-  /**
-   * 打开设置面板（回填当前值、清空验证结果）
-   */
+  // ── Placeholder hints per provider ────────────────────
+
+  var PLACEHOLDERS = {
+    deepseek: 'sk-...',
+    qwen: 'sk-...',
+    gemini: 'AIza...',
+    claude: 'sk-ant-...'
+  };
+
+  var LABELS = {
+    deepseek: 'Deepseek API Key',
+    qwen: 'QWen API Key',
+    gemini: 'Gemini API Key',
+    claude: 'Claude API Key'
+  };
+
+  /* ================================================================
+     Open / Close
+     ================================================================ */
+
   function openSettingsModal() {
     var modal = document.getElementById('settingsModal');
     if (!modal) return;
 
     var settings = SettingsStore.getSettings();
+    var providerEl = document.getElementById('settingAIProvider');
     var apiKeyEl = document.getElementById('settingApiKey');
     var serverUrlEl = document.getElementById('settingServerUrl');
 
-    if (apiKeyEl) apiKeyEl.value = settings.apiKey || '';
+    // 当前选中模型
+    var provider = SettingsStore.getAIProvider();
+    if (providerEl) providerEl.value = provider;
 
+    // 该模型的 API Key
+    if (apiKeyEl) apiKeyEl.value = SettingsStore.getAIKey(provider) || '';
+
+    // 更新 placeholder / label
+    updateKeyHint(provider);
+
+    // 服务器地址
     if (serverUrlEl) {
       var host = (settings.serverUrl || 'http://localhost')
         .replace(/\/+$/, '')
@@ -38,33 +65,61 @@ var SettingsUI = (function() {
     modal.classList.remove('hidden');
   }
 
-  /**
-   * 关闭设置面板
-   */
   function closeSettingsModal() {
     var modal = document.getElementById('settingsModal');
     if (modal) modal.classList.add('hidden');
   }
 
   /**
-   * 首次运行检查：如果没有 API Key，自动弹出设置面板
+   * 首次运行检查：如果没有配置 API Key，自动弹出设置面板
    */
   function checkFirstRun() {
-    var settings = SettingsStore.getSettings();
-    if (!settings.apiKey) {
+    var key = SettingsStore.getAIKey();
+    if (!key) {
       setTimeout(function() { openSettingsModal(); }, 800);
     }
   }
 
-  /**
-   * 验证 Deepseek API Key
-   */
-  function validateApiKey() {
-    var apiKey = document.getElementById('settingApiKey');
-    var resultEl = document.getElementById('keyValidateResult');
-    if (!apiKey || !resultEl) return;
+  /* ================================================================
+     Model Switch
+     ================================================================ */
 
-    var key = apiKey.value.trim();
+  function onProviderChange() {
+    var providerEl = document.getElementById('settingAIProvider');
+    if (!providerEl) return;
+    var provider = providerEl.value;
+
+    // 切换 Key 输入框的值和 placeholder
+    var apiKeyEl = document.getElementById('settingApiKey');
+    if (apiKeyEl) apiKeyEl.value = SettingsStore.getAIKey(provider) || '';
+
+    updateKeyHint(provider);
+
+    // 清空验证结果
+    var resultEl = document.getElementById('keyValidateResult');
+    if (resultEl) { resultEl.textContent = ''; resultEl.className = 'validation-result'; }
+  }
+
+  function updateKeyHint(provider) {
+    var apiKeyEl = document.getElementById('settingApiKey');
+    var labelEl = document.getElementById('labelApiKey');
+    if (apiKeyEl) apiKeyEl.placeholder = PLACEHOLDERS[provider] || '输入 API Key';
+    if (labelEl) labelEl.textContent = LABELS[provider] || 'API Key';
+  }
+
+  /* ================================================================
+     Validate API Key
+     ================================================================ */
+
+  function validateApiKey() {
+    var providerEl = document.getElementById('settingAIProvider');
+    var apiKeyEl = document.getElementById('settingApiKey');
+    var resultEl = document.getElementById('keyValidateResult');
+    if (!apiKeyEl || !resultEl) return;
+
+    var provider = providerEl ? providerEl.value : 'deepseek';
+    var key = apiKeyEl.value.trim();
+
     if (!key) {
       resultEl.textContent = '❌ 请输入 API Key';
       resultEl.className = 'validation-result error';
@@ -74,39 +129,21 @@ var SettingsUI = (function() {
     resultEl.textContent = '⏳ 正在验证...';
     resultEl.className = 'validation-result';
 
-    fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + key
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [{ role: 'user', content: 'hi' }],
-        max_tokens: 5
-      })
-    })
-    .then(function(resp) {
-      if (resp.ok) {
-        resultEl.textContent = '✅ API Key 有效，连接成功';
-        resultEl.className = 'validation-result success';
-      } else if (resp.status === 401) {
-        resultEl.textContent = '❌ API Key 无效，请检查后重试';
+    AIClient.validateKey(provider, key, function(err, msg) {
+      if (err) {
+        resultEl.textContent = '❌ ' + Utils.escapeHtml(err);
         resultEl.className = 'validation-result error';
       } else {
-        resultEl.textContent = '❌ 服务器返回错误 (' + resp.status + ')';
-        resultEl.className = 'validation-result error';
+        resultEl.textContent = '✅ ' + Utils.escapeHtml(msg);
+        resultEl.className = 'validation-result success';
       }
-    })
-    .catch(function(err) {
-      resultEl.textContent = '❌ 网络连接失败: ' + (err.message || '未知错误');
-      resultEl.className = 'validation-result error';
     });
   }
 
-  /**
-   * 验证 ERP 服务器连接
-   */
+  /* ================================================================
+     Validate Server
+     ================================================================ */
+
   function validateServer() {
     var serverUrlEl = document.getElementById('settingServerUrl');
     var resultEl = document.getElementById('serverValidateResult');
@@ -142,7 +179,6 @@ var SettingsUI = (function() {
           ((data.data && data.data.USR_NAME) || 'OK') + ')';
         resultEl.className = 'validation-result success';
       } else if (typeof data.code !== 'undefined') {
-        // 服务器返回了 API 响应 — code 非 0 只说明测试账号不对，服务器是通的
         resultEl.textContent = '✅ 服务器可达 (API 响应正常)';
         resultEl.className = 'validation-result success';
       } else {
@@ -157,28 +193,36 @@ var SettingsUI = (function() {
     });
   }
 
-  /**
-   * 保存设置
-   */
-  function saveSettings() {
-    var serverUrlEl = document.getElementById('settingServerUrl');
-    var apiKeyEl = document.getElementById('settingApiKey');
+  /* ================================================================
+     Save Settings
+     ================================================================ */
 
+  function saveSettings() {
+    var providerEl = document.getElementById('settingAIProvider');
+    var apiKeyEl = document.getElementById('settingApiKey');
+    var serverUrlEl = document.getElementById('settingServerUrl');
+
+    var provider = providerEl ? providerEl.value : 'deepseek';
+    var key = apiKeyEl ? apiKeyEl.value.trim() : '';
     var host = serverUrlEl ? serverUrlEl.value.trim() : 'http://localhost';
     host = host.replace(/\/+$/, '').replace(/\/SUNFUSION\/API$/i, '');
 
-    SettingsStore.saveSettings({
-      apiKey: apiKeyEl ? apiKeyEl.value.trim() : '',
-      serverUrl: host
-    });
+    // 保存 provider + key + server（先清除所有旧 Key，只保留当前模型的）
+    SettingsStore.clearAllAIKeys();
+    var settings = SettingsStore.getSettings();
+    settings.serverUrl = host;
+    SettingsStore.saveSettings(settings);
+    SettingsStore.saveAIProvider(provider);
+    SettingsStore.saveAIKey(provider, key);
 
     closeSettingsModal();
     Utils.showToast('设置已保存');
   }
 
-  /**
-   * 绑定所有设置面板事件（在 DOM ready 后调用）
-   */
+  /* ================================================================
+     Init
+     ================================================================ */
+
   function init() {
     // 打开/关闭按钮
     var settingsBtn = document.getElementById('settingsBtn');
@@ -195,6 +239,12 @@ var SettingsUI = (function() {
       modal.addEventListener('click', function(e) {
         if (e.target === modal) { closeSettingsModal(); }
       });
+    }
+
+    // 模型切换
+    var providerEl = document.getElementById('settingAIProvider');
+    if (providerEl) {
+      providerEl.addEventListener('change', onProviderChange);
     }
 
     // 验证按钮

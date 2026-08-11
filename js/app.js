@@ -437,6 +437,7 @@ var App = (function() {
     if (typeof DatasourceList !== 'undefined') DatasourceList.init();
     if (typeof Tabs !== 'undefined') Tabs.init();
     if (typeof ChatCore !== 'undefined') ChatCore.init();
+    if (typeof AISuggestions !== 'undefined') AISuggestions.init();
     if (typeof SettingsUI !== 'undefined') SettingsUI.init();
 
     // 绑定 UI 事件

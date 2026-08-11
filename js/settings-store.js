@@ -1,6 +1,6 @@
 /**
  * settings-store.js — 设置数据管理模块
- * 负责：Deepseek API Key / 服务器地址的本地持久化读写
+ * 负责：AI 模型选择 + API Key + 服务器地址的本地持久化读写
  * 依赖：无外部依赖，仅浏览器 localStorage
  */
 
@@ -12,7 +12,7 @@ var SettingsStore = (function() {
 
   /**
    * 获取所有设置
-   * @returns {object} { apiKey, serverUrl }
+   * @returns {object} { aiConfig: {provider, keys}, serverUrl }
    */
   function getSettings() {
     try {
@@ -24,19 +24,80 @@ var SettingsStore = (function() {
 
   /**
    * 保存设置
-   * @param {object} settings - { apiKey, serverUrl }
+   * @param {object} settings
    */
   function saveSettings(settings) {
     localStorage.setItem(LS_KEY, JSON.stringify(settings));
   }
 
+  // ── AI Model & Key ──────────────────────────────────
+
   /**
-   * 获取 Deepseek API Key
+   * 获取当前选中的 AI 模型
+   * @returns {string} 'deepseek' | 'qwen' | 'gemini' | 'claude'
+   */
+  function getAIProvider() {
+    var s = getSettings();
+    return (s.aiConfig && s.aiConfig.provider) || 'deepseek';
+  }
+
+  /**
+   * 保存当前选中的 AI 模型
+   * @param {string} provider
+   */
+  function saveAIProvider(provider) {
+    var s = getSettings();
+    if (!s.aiConfig) s.aiConfig = { provider: 'deepseek', keys: {} };
+    s.aiConfig.provider = provider;
+    saveSettings(s);
+  }
+
+  /**
+   * 获取指定模型的 API Key
+   * @param {string} provider — 不传则返回当前激活模型的 Key
    * @returns {string}
    */
-  function getApiKey() {
-    return getSettings().apiKey || '';
+  function getAIKey(provider) {
+    var s = getSettings();
+    var p = provider || getAIProvider();
+    if (s.aiConfig && s.aiConfig.keys && s.aiConfig.keys[p]) {
+      return s.aiConfig.keys[p];
+    }
+    // 向后兼容：旧版单 Key 迁移到 Deepseek
+    if (p === 'deepseek' && s.apiKey && !(s.aiConfig && s.aiConfig.keys && s.aiConfig.keys.deepseek)) {
+      s.aiConfig = s.aiConfig || { provider: 'deepseek', keys: {} };
+      s.aiConfig.keys = s.aiConfig.keys || {};
+      s.aiConfig.keys.deepseek = s.apiKey;
+      delete s.apiKey;
+      saveSettings(s);
+      return s.aiConfig.keys.deepseek;
+    }
+    return '';
   }
+
+  /**
+   * 保存指定模型的 API Key
+   * @param {string} provider
+   * @param {string} key
+   */
+  function saveAIKey(provider, key) {
+    var s = getSettings();
+    if (!s.aiConfig) s.aiConfig = { provider: 'deepseek', keys: {} };
+    if (!s.aiConfig.keys) s.aiConfig.keys = {};
+    s.aiConfig.keys[provider] = key || '';
+    saveSettings(s);
+  }
+
+  /**
+   * 清除所有已保存的 API Key
+   */
+  function clearAllAIKeys() {
+    var s = getSettings();
+    if (s.aiConfig) s.aiConfig.keys = {};
+    saveSettings(s);
+  }
+
+  // ── Server ──────────────────────────────────────────
 
   /**
    * 获取完整的 API 服务器 URL（自动追加 /SUNFUSION/API）
@@ -45,9 +106,17 @@ var SettingsStore = (function() {
    */
   function getServerUrl() {
     var raw = (getSettings().serverUrl || 'http://localhost');
-    // 向后兼容：去掉旧格式中的完整路径
     raw = raw.replace(/\/+$/, '').replace(/\/SUNFUSION\/API$/i, '');
     return raw.replace(/\/+$/, '') + API_PATH;
+  }
+
+  // ── Legacy (kept for backward compat) ───────────────
+
+  /**
+   * @deprecated Use getAIKey() instead
+   */
+  function getApiKey() {
+    return getAIKey('deepseek');
   }
 
   /* ================================================================
@@ -56,8 +125,16 @@ var SettingsStore = (function() {
   return {
     getSettings: getSettings,
     saveSettings: saveSettings,
-    getApiKey: getApiKey,
-    getServerUrl: getServerUrl
+    // AI
+    getAIProvider: getAIProvider,
+    saveAIProvider: saveAIProvider,
+    getAIKey: getAIKey,
+    saveAIKey: saveAIKey,
+    clearAllAIKeys: clearAllAIKeys,
+    // Server
+    getServerUrl: getServerUrl,
+    // Legacy
+    getApiKey: getApiKey
   };
 
 })();

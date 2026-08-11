@@ -243,6 +243,18 @@
             </div>
           </div>
           <div class="chat-input-area">
+            <button class="btn-brain" id="btnBrain" title="AI 推荐提问">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 1 4 4c0 1.1-.4 2.1-1.2 2.8l-.8.8c-.5.5-.9 1.1-1.1 1.8-.2.7-.4 1.4-.4 2.1v.5"/><path d="M12 2a4 4 0 0 0-4 4c0 1.1.4 2.1 1.2 2.8l.8.8c.5.5.9 1.1 1.1 1.8.2.7.4 1.4.4 2.1v.5"/><path d="M15 20a3 3 0 1 1-6 0"/><path d="M8 14h8"/></svg>
+            </button>
+            <div class="suggestions-panel" id="suggestionsPanel">
+              <div class="suggestions-header">
+                <span>🧠 AI 推荐提问</span>
+                <button class="suggestions-close" id="btnSuggestionsClose">&times;</button>
+              </div>
+              <div class="suggestions-body" id="suggestionsBody">
+                <div class="suggestions-loading">⏳ 正在分析数据源，生成推荐问题...</div>
+              </div>
+            </div>
             <textarea id="chatInput" placeholder="输入你的问题，例如：帮我分析销售趋势..." rows="1"></textarea>
             <button class="btn-send" id="btnSend" title="发送">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -263,7 +275,16 @@
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <label for="settingApiKey">Deepseek API Key</label>
+        <label for="settingAIProvider">AI 大模型</label>
+        <select id="settingAIProvider" class="form-input">
+          <option value="deepseek">Deepseek（深度求索）</option>
+          <option value="qwen">QWen（通义千问）</option>
+          <option value="gemini">Gemini（谷歌）</option>
+          <option value="claude">Claude Sonnet（克劳迪）</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="settingApiKey" id="labelApiKey">API Key</label>
         <div class="form-row">
           <input type="password" id="settingApiKey" class="form-input" placeholder="sk-..." autocomplete="off">
           <button class="btn btn-secondary btn-sm" id="btnValidateKey">验证</button>
@@ -295,7 +316,7 @@
      ========================================================= -->
 <!-- Foundation -->
 <script src="js/utils.js?v=20260811c"></script>
-<script src="js/settings-store.js?v=20260811c"></script>
+<script src="js/settings-store.js?v=20260811d"></script>
 <script src="js/datasource-store.js?v=20260811c"></script>
 <!-- Auth & API -->
 <script src="js/auth.js?v=20260811c"></script>
@@ -306,14 +327,15 @@
 <script src="js/tabs.js?v=20260811c"></script>
 <script src="js/chat-ui.js?v=20260811c"></script>
 <!-- AI Core -->
-<script src="js/deepseek-client.js?v=20260811c"></script>
+<script src="js/ai-client.js?v=20260811g"></script>
 <script src="js/ai-parser.js?v=20260811c"></script>
 <script src="js/ai-chart.js?v=20260811c"></script>
 <!-- Export -->
 <script src="js/export.js?v=20260811c"></script>
 <!-- Controllers -->
 <script src="js/chat-core.js?v=20260811c"></script>
-<script src="js/settings-ui.js?v=20260811c"></script>
+<script src="js/ai-suggestions.js?v=20260811c"></script>
+<script src="js/settings-ui.js?v=20260811d"></script>
 <!-- App Entry（DOMContentLoaded 自动初始化） -->
 <script src="js/app.js?v=20260811c"></script>
 </body>
