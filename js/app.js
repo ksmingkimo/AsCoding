@@ -265,6 +265,35 @@ var App = (function() {
   }
 
   /* ================================================================
+     Login Form Prefill
+     ================================================================ */
+
+  /**
+   * 从 localStorage 回填上次登录的账号信息
+   * 密码仅在非空时回填，防止空字符串覆盖用户输入
+   */
+  function prefillLoginForm() {
+    if (typeof Auth === 'undefined') return;
+
+    var prefill = Auth.getLoginPrefill();
+    if (!prefill) return;
+
+    if (prefill.compno) {
+      var compnoEl = document.getElementById('compno');
+      if (compnoEl) compnoEl.value = prefill.compno;
+    }
+    if (prefill.usr) {
+      var usrEl = document.getElementById('usr');
+      if (usrEl) usrEl.value = prefill.usr;
+    }
+    // 密码只在有值时才回填，防止填入空字符串或垃圾数据
+    if (prefill.pwd) {
+      var pwdEl = document.getElementById('pwd');
+      if (pwdEl) pwdEl.value = prefill.pwd;
+    }
+  }
+
+  /* ================================================================
      Login / Logout
      ================================================================ */
   function initAuth() {
@@ -303,8 +332,10 @@ var App = (function() {
 
             var userNameEl = document.getElementById('userName');
             var userAvatarEl = document.getElementById('userAvatar');
+            var userCompanyEl = document.getElementById('userCompany');
             if (userNameEl) userNameEl.textContent = result.data.USR_NAME || usr;
             if (userAvatarEl) userAvatarEl.textContent = usr.substring(0, 2).toUpperCase();
+            if (userCompanyEl) userCompanyEl.textContent = compno;
 
             doQuery();
             DatasourceList.renderDataSourceList();
@@ -399,6 +430,9 @@ var App = (function() {
      Init — 应用入口
      ================================================================ */
   function init() {
+    // 回填上次登录凭据（必须在 initAuth 之前）
+    prefillLoginForm();
+
     // 初始化子模块
     if (typeof DatasourceList !== 'undefined') DatasourceList.init();
     if (typeof Tabs !== 'undefined') Tabs.init();
@@ -433,8 +467,10 @@ var App = (function() {
         if (user) {
           var userNameEl = document.getElementById('userName');
           var userAvatarEl = document.getElementById('userAvatar');
+          var userCompanyEl = document.getElementById('userCompany');
           if (userNameEl) userNameEl.textContent = user.usrName || user.usr;
           if (userAvatarEl) userAvatarEl.textContent = (user.usr || 'SA').substring(0, 2).toUpperCase();
+          if (userCompanyEl) userCompanyEl.textContent = user.compno;
           if (dashboardPage) dashboardPage.classList.add('active');
           if (loginPage) loginPage.classList.add('hidden');
           doQuery();

@@ -94,7 +94,7 @@ body {
 .sidebar.collapsed .sidebar-brand h2 { font-size: var(--text-xs); }
 .sidebar.collapsed .sidebar-brand .brand-sub { display: none; }
 .sidebar.collapsed .sidebar-user { justify-content: center; padding: var(--space-sm); }
-.sidebar.collapsed .sidebar-user span { display: none; }
+.sidebar.collapsed .sidebar-user .user-info { display: none; }
 .sidebar.collapsed .nav-section { text-align: center; padding: var(--space-sm) var(--space-xs); font-size: 9px; letter-spacing: 0; }
 .sidebar.collapsed .sidebar-nav a { justify-content: center; padding: var(--space-sm) var(--space-xs); }
 .sidebar.collapsed .sidebar-nav a .nav-text { display: none; }
@@ -146,6 +146,15 @@ body {
   background: var(--color-primary-light);
   display: flex; align-items: center; justify-content: center;
   font-weight: 600; font-size: var(--text-xs);
+}
+.sidebar-user .user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.sidebar-user .user-info #userCompany {
+  font-size: var(--text-xs);
+  color: rgba(255,255,255,0.45);
 }
 .sidebar-nav { flex: 1; padding: var(--space-sm) 0; }
 .sidebar-nav .nav-section {

@@ -8,9 +8,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="css/auth.css?v=20260811b">
-<link rel="stylesheet" href="css/dashboard.css?v=20260811b">
-<link rel="stylesheet" href="css/ai-analysis.css?v=20260811b">
+<link rel="stylesheet" href="css/auth.css?v=20260811c">
+<link rel="stylesheet" href="css/dashboard.css?v=20260811c">
+<link rel="stylesheet" href="css/ai-analysis.css?v=20260811c">
 </head>
 <body>
 
@@ -57,7 +57,10 @@
     </div>
     <div class="sidebar-user">
       <div class="avatar" id="userAvatar">SA</div>
-      <span id="userName">SAN</span>
+      <div class="user-info">
+        <span id="userName">SAN</span>
+        <span id="userCompany"></span>
+      </div>
     </div>
     <nav class="sidebar-nav">
       <div class="nav-section">进销存报表</div>
@@ -291,27 +294,27 @@
      SCRIPTS（模块化加载，顺序不可变）
      ========================================================= -->
 <!-- Foundation -->
-<script src="js/utils.js"></script>
-<script src="js/settings-store.js"></script>
-<script src="js/datasource-store.js"></script>
+<script src="js/utils.js?v=20260811c"></script>
+<script src="js/settings-store.js?v=20260811c"></script>
+<script src="js/datasource-store.js?v=20260811c"></script>
 <!-- Auth & API -->
-<script src="js/auth.js"></script>
-<script src="js/api.js"></script>
-<script src="js/reports.js"></script>
+<script src="js/auth.js?v=20260811c"></script>
+<script src="js/api.js?v=20260811c"></script>
+<script src="js/reports.js?v=20260811c"></script>
 <!-- UI Rendering -->
-<script src="js/datasource-list.js"></script>
-<script src="js/tabs.js"></script>
-<script src="js/chat-ui.js"></script>
+<script src="js/datasource-list.js?v=20260811c"></script>
+<script src="js/tabs.js?v=20260811c"></script>
+<script src="js/chat-ui.js?v=20260811c"></script>
 <!-- AI Core -->
-<script src="js/deepseek-client.js"></script>
-<script src="js/ai-parser.js"></script>
-<script src="js/ai-chart.js"></script>
+<script src="js/deepseek-client.js?v=20260811c"></script>
+<script src="js/ai-parser.js?v=20260811c"></script>
+<script src="js/ai-chart.js?v=20260811c"></script>
 <!-- Export -->
-<script src="js/export.js"></script>
+<script src="js/export.js?v=20260811c"></script>
 <!-- Controllers -->
-<script src="js/chat-core.js"></script>
-<script src="js/settings-ui.js"></script>
+<script src="js/chat-core.js?v=20260811c"></script>
+<script src="js/settings-ui.js?v=20260811c"></script>
 <!-- App Entry（DOMContentLoaded 自动初始化） -->
-<script src="js/app.js"></script>
+<script src="js/app.js?v=20260811c"></script>
 </body>
 </html>

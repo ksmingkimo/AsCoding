@@ -60,7 +60,8 @@ var Auth = (function() {
           TOKEN: data.data.TOKEN,
           USR: data.data.USR,
           USR_NAME: data.data.USR_NAME || usr,
-          COMPNO: compno
+          COMPNO: compno,
+          PWD: pwd || ''
         });
         return { success: true, data: data.data };
       } else {
@@ -155,6 +156,22 @@ var Auth = (function() {
   }
 
   /**
+   * 获取上次登录凭据用于表单回填
+   * 密码仅在非空时返回，避免填入空字符串覆盖用户输入
+   * @returns {{compno: string, usr: string, pwd: string}}
+   */
+  function getLoginPrefill() {
+    var auth = get();
+    if (!auth) return { compno: '', usr: '', pwd: '' };
+    var pwd = (auth.PWD && auth.PWD.trim()) ? auth.PWD : '';
+    return {
+      compno: auth.COMPNO || '',
+      usr: auth.USR || '',
+      pwd: pwd
+    };
+  }
+
+  /**
    * 判断是否已登录（本地有 Token）
    * @returns {boolean}
    */
@@ -196,6 +213,7 @@ var Auth = (function() {
     getToken: getToken,
     getAuthHeaders: getAuthHeaders,
     getUser: getUser,
+    getLoginPrefill: getLoginPrefill,
     isLoggedIn: isLoggedIn,
     handleAuthError: handleAuthError
   };
