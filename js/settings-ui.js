@@ -141,6 +141,10 @@ var SettingsUI = (function() {
         resultEl.textContent = '✅ 服务器连接正常 (用户: ' +
           ((data.data && data.data.USR_NAME) || 'OK') + ')';
         resultEl.className = 'validation-result success';
+      } else if (typeof data.code !== 'undefined') {
+        // 服务器返回了 API 响应 — code 非 0 只说明测试账号不对，服务器是通的
+        resultEl.textContent = '✅ 服务器可达 (API 响应正常)';
+        resultEl.className = 'validation-result success';
       } else {
         resultEl.textContent = '⚠ 服务器响应异常 (code: ' + data.code + ', ' +
           (data.message || '未知') + ')';

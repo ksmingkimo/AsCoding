@@ -94,7 +94,11 @@ var Api = (function() {
       if (data.code === 0) {
         return { ok: true, message: '服务器连接正常' };
       }
-      return { ok: false, message: '服务器响应异常 (code: ' + data.code + ')' };
+      // code 非 0 但有 code 字段 = API 收到了请求并返回 → 服务器是通的（只是测试账号不匹配）
+      if (typeof data.code !== 'undefined') {
+        return { ok: true, message: '服务器可达 (API 响应正常)' };
+      }
+      return { ok: false, message: '服务器响应格式异常' };
     })
     .catch(function(err) {
       return { ok: false, message: '无法连接: ' + (err.message || '网络错误') };
