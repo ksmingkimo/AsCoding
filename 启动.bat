@@ -19,7 +19,28 @@ if not exist "index.html" (
     exit /b 1
 )
 
-REM Launch PowerShell script
-powershell.exe -ExecutionPolicy Bypass -File "%~dp0install.ps1" -Mode quick
+REM Locate PowerShell and launch installer
+set "PS_EXE="
+if exist "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" (
+    set "PS_EXE=%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe"
+)
+if exist "%SystemRoot%\SysWOW64\WindowsPowerShell\v1.0\powershell.exe" (
+    set "PS_EXE=%SystemRoot%\SysWOW64\WindowsPowerShell\v1.0\powershell.exe"
+)
+if not defined PS_EXE (
+    for %%p in (powershell.exe pwsh.exe) do (
+        for /f "delims=" %%f in ('where %%p 2^>nul') do (
+            if exist "%%f" set "PS_EXE=%%f"
+        )
+    )
+)
+if not defined PS_EXE (
+    echo   [ERROR] PowerShell is not installed or not in PATH!
+    echo   Please install PowerShell and try again.
+    pause
+    exit /b 1
+)
+echo   Using PowerShell: %PS_EXE%
+"%PS_EXE%" -ExecutionPolicy Bypass -File "%~dp0install.ps1" -Mode quick
 
 pause
