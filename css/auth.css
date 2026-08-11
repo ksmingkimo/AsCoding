@@ -1,0 +1,168 @@
+/* ============================================================
+   auth.css — Login Page Styles
+   Extracted from ui-template.html Design System
+   Requires CSS variables from :root in parent HTML
+   ============================================================ */
+
+/* Login Page Container */
+.page-login {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1E3A8A 0%, #1E40AF 50%, #3B82F6 100%);
+}
+
+/* Login Card */
+.login-card {
+  width: 380px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-3xl);
+}
+
+.login-card h1 {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  text-align: center;
+  margin-bottom: var(--space-xs);
+}
+
+.login-card .subtitle {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-bottom: var(--space-2xl);
+}
+
+/* Form */
+.form-group {
+  margin-bottom: var(--space-lg);
+}
+
+.form-group label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text);
+  margin-bottom: var(--space-xs);
+}
+
+.form-group label .required {
+  color: var(--color-error);
+  margin-left: 2px;
+}
+
+.form-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  font-family: var(--font-family);
+  color: var(--color-text);
+  background: var(--color-surface);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.form-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.15);
+}
+
+.form-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.form-input:disabled {
+  background: var(--color-muted);
+  color: var(--color-text-muted);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 var(--space-xl);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  font-weight: 600;
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  gap: var(--space-sm);
+}
+
+.btn-primary {
+  width: 100%;
+  background: var(--color-primary);
+  color: #FFFFFF;
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-dark);
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Error message */
+.login-error {
+  margin-top: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: var(--radius-sm);
+  color: var(--color-error);
+  font-size: var(--text-sm);
+  display: none;
+}
+
+.login-error.visible {
+  display: block;
+}
+
+/* Page visibility */
+.page-login.hidden {
+  display: none;
+}
+
+/* Loading spinner */
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: auth-spin 0.6s linear infinite;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+@keyframes auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Toast — see dashboard.css for full design */

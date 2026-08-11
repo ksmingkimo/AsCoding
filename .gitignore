@@ -1,0 +1,41 @@
+# Claude CLI (skills, cache — not project source)
+.claude/
+
+# Dependencies
+node_modules/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Build outputs
+dist/
+build/
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Claude (project config only, not skills)
+.claude/settings.local.json
+
+# Temporary files
+*.tmp
+*.bak
