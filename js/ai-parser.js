@@ -19,7 +19,7 @@ var AIParser = (function() {
     var lastIndex = 0;
 
     // Step 1: 提取 ```chart``` 块
-    var chartRegex = /```chart\s*\n([\s\S]*?)```/g;
+    var chartRegex = /```\s*chart\s*\n([\s\S]*?)```/g;
     var chartMatch;
 
     while ((chartMatch = chartRegex.exec(rawText)) !== null) {
@@ -50,17 +50,20 @@ var AIParser = (function() {
    */
   function renderWithTables(text) {
     var html = '';
-    var tableRegex = /```table\s*\n([\s\S]*?)```/g;
+    // Match both ```table``` fenced blocks and bare "table\n[JSON]" patterns
+    var tableRegex = /```table\s*\n([\s\S]*?)```|\btable\s*\n(\s*\[[\s\S]*?\])\s*(?=\n{2,}|$)/gi;
     var tableMatch;
     var lastIdx = 0;
 
     while ((tableMatch = tableRegex.exec(text)) !== null) {
       html += renderMarkdown(text.substring(lastIdx, tableMatch.index));
       try {
-        var tableData = JSON.parse(tableMatch[1].trim());
+        // Group 1 = fenced ```table```, Group 2 = bare table\n[JSON]
+        var json = (tableMatch[1] || tableMatch[2]).trim();
+        var tableData = JSON.parse(json);
         html += renderTableHTML(tableData);
       } catch (e) {
-        html += '<pre><code>' + Utils.escapeHtml(tableMatch[1]) + '</code></pre>';
+        html += '<pre><code>' + Utils.escapeHtml(tableMatch[1] || tableMatch[2]) + '</code></pre>';
       }
       lastIdx = tableMatch.index + tableMatch[0].length;
     }
@@ -85,7 +88,21 @@ var AIParser = (function() {
 
   function renderTableHTML(data) {
     if (!Array.isArray(data) || data.length === 0) return '<p>(空表格)</p>';
-    var keys = Object.keys(data[0]);
+
+    // Union ALL keys across every row — not just data[0].
+    // AI often outputs heterogeneous rows (e.g. row 1 = summary, row 2 = detail
+    // with different column names). Using only the first row's keys silently
+    // drops all columns unique to later rows.
+    var keys = [];
+    var seenKeys = {};
+    data.forEach(function(row) {
+      Object.keys(row).forEach(function(k) {
+        if (!seenKeys[k]) {
+          seenKeys[k] = true;
+          keys.push(k);
+        }
+      });
+    });
 
     // Detect which columns are purely numeric (for right-alignment)
     var numericCols = {};

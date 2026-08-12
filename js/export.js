@@ -86,22 +86,39 @@ var Export = (function() {
       return '<p><em>(表格数据解析失败)</em></p>';
     });
 
+    // 2a2. AI 有时输出裸 "table\n[JSON]" 不带 ``` 标记 — 补救解析
+    processed = processed.replace(/\btable\s*\n(\s*\[[\s\S]*?\])\s*(?=\n{2,}|$)/gi, function(m, json) {
+      try {
+        var data = JSON.parse(json.trim());
+        if (Array.isArray(data) && data.length > 0) {
+          return '%%TABLE%%' + AIParser.renderTableHTML(data) + '%%/TABLE%%';
+        }
+      } catch (e) {}
+      return m;
+    });
+
     // 2b. ```chart``` → 替换为截图 <img>
-    processed = processed.replace(/```chart[\s\S]*?```/g, function() {
+    //     使用更宽松的 regex — AI 可能在 ``` 和 chart 之间有空格
+    processed = processed.replace(/```\s*chart\s*\n([\s\S]*?)```/g, function(m, json) {
       if (chartIdx < chartImages.length) {
         var src = chartImages[chartIdx++];
         return '%%CHART%%<img src="' + src + '" style="max-width:100%;margin:16px 0;display:block" alt="图表">%%/CHART%%';
       }
-      return '<p><em>(图表)</em></p>';
+      // 无截图时也尝试渲染为代码块，保持数据可见
+      try {
+        var cfg = JSON.parse(json.trim());
+        return '%%CHART%%<p><em>（图表数据已嵌入，请在浏览器中查看原始图表）</em></p>%%/CHART%%';
+      } catch (e) {}
+      return '<p><em>(图表数据解析失败)</em></p>';
     });
 
-    // 2c. 其他 ```code``` 块
-    processed = processed.replace(/```(\w*)\n?([\s\S]*?)```/g, function(m, lang, code) {
+    // 2c. 其他 ```code``` 块（排除已处理的 chart/table）
+    processed = processed.replace(/```(?!\s*(?:chart|table)\b)(\w*)\n?([\s\S]*?)```/g, function(m, lang, code) {
       return '%%CODE%%<pre><code>' + Utils.escapeHtml(code.trim()) + '</code></pre>%%/CODE%%';
     });
 
-    // ── Step 3: 按 # / ## / ### 标题拆分为幻灯片 ──
-    var slides = processed.split(/\n#{1,3}\s+/).filter(function(s) { return s.trim(); });
+    // ── Step 3: 按 # / ## / ### 标题拆分为幻灯片（用 lookahead 保留 # 标记）──
+    var slides = processed.split(/\n(?=#{1,3}\s+)/).filter(function(s) { return s.trim(); });
     if (slides.length === 0) { slides = [processed]; }
 
     // ── Step 4: 逐页渲染 — Markdown 文本 + HTML 块混合 ──
