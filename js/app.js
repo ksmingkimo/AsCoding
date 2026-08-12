@@ -322,7 +322,8 @@ var App = (function() {
       resetBtn.addEventListener('click', function() {
         var fields = ['filterCust', 'filterPrd', 'filterDep', 'filterWh',
                       'filterYwType', 'filterKb',
-                      'filterDocNo', 'filterMrpNo', 'filterYgNo'];
+                      'filterDocNo', 'filterMrpNo', 'filterYgNo',
+                      'filterBatNo', 'filterPrdMark', 'filterFxKnd'];
         fields.forEach(function(id) {
           var el = document.getElementById(id);
           if (el) el.value = '';

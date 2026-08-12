@@ -1,7 +1,7 @@
 # API 服务调用说明文档
 
 > Sunlike ERP API 对接参考
-> 最后更新：2026-08-10（PoC 实测验证）
+> 最后更新：2026-08-12（PoC 实测验证 + API2/API3 新增）
 
 ---
 
@@ -83,7 +83,7 @@ curl -s -X POST http://localhost/SUNFUSION/API/user/login \
 
 ## 三、报表查询 API（通用）
 
-### 请求结构（所有 6 个报表通用）
+### 请求结构（31 个报表通用，含 getReport 30 个 + getList 1 个）
 
 ```
 POST /{module}/getReport
@@ -281,7 +281,7 @@ curl -s -X POST 'http://localhost/SUNFUSION/API/invso/getReport' \
 
 ---
 
-## 五、6 个报表差异速查
+## 五、报表差异速查
 
 | 报表 | 端点 | PGM | 日期字段 | 特殊 fixCondition | 部门字段 |
 |------|------|-----|---------|-------------------|---------|
@@ -360,7 +360,49 @@ POST /rptwagcg3/getReport
 
 ---
 
-## 七、前端对接 Checklist
+## 七、API3 — 21 个新报表（2026-08-12 新增）
+
+### 7.1 概述
+
+`标准报表制表API3.md` 包含 21 个新报表，全部使用 `getReport` 端点（无 getList 特殊情况）。新增以下分组：
+
+| 分组 | 报表数 | 报表名称 |
+|------|--------|---------|
+| 财务管理 | 6 | 科目预算(ACCABGT/GetReport)、信用额度(Rptsarplist/GetReport)、报销(monbx/getReport)、员工借款(monjk/getReport)、应收票据(monCA/getReport)、应付票据(monCB/getReport) |
+| 库存管理 | 5 | 过期货品预警(rptinvdo/getReport)、安全存量预警(rptinvdl/getReport)、负库存预警(rptinvswa/getReport)、库存调拨(invic/getReport)、库存调整(invij/getReport) |
+| 采购与价格 | 5 | 送货单(scmdrpti/getReport)、采购交货状况(InvPoPcStatus/GetReport)、委外交货状况(InvTwPcStatus/GetReport)、采购政策价格(invhp/GetReport)、售价政策价格(invhs/GetReport) |
+| 生产制造 | 2 | 领退补料(mrpag/getReport)、单位成本分析(mrpcf/getReport) |
+| 人力资源 | 2 | 人事资料分析(rptwagyg/getReport, PGM: REP_WAGYG0)、员工明细(rptwagyg/getReport, PGM: REP_WAGYG) |
+| 固定资产 | 1 | 财产目录(fixaa/getReport, PGM: FIXCE) |
+
+### 7.2 新增请求模式
+
+| 模式 | 配置字段 | 说明 |
+|------|---------|------|
+| showBody | `showBody: "T"` | SEARCH_INFO[1] 显示 body 字段（人事资料分析、员工借款） |
+| 无分页 | `hasPagination: false` | SEARCH_INFO[0] 不生成 offset（信用额度查询表） |
+| 预设日期操作符 | `dateOperator` | last_year/this_year/today/last_week/this_month/equal，客户端计算具体日期值 |
+| 隐藏日期 UI | `hideDateUI: true` | SYS_DATE 报表不显示日期选择器（员工明细、采购/售价价格表） |
+| 隐藏固定条件 | `searchInfoExtra: [...]` | fixCondition 后插入额外的 SEARCH_INFO 元素 |
+| 文本包含 | `operator: "contain"` | 模糊文本搜索（送货单 TI_NO） |
+| 非日期范围 | operator: "range" + fieldType 非 date | 非日期字段的范围筛选 [from, to]（库存调拨 IC_NO、库存调整 IJ_NO/PRD_NO/DEP） |
+| checkUnder 非标准 | `checkUnder: "T"` on non-CUS/DEP | 科目代号 ACC_NO、帐册代号 BOOK_NO、资产类别 FX_KND |
+
+### 7.3 端点大小写注意事项
+
+API3 文档中端点路径大小写不统一，**全部通过 `apiPath` 精确指定**：
+
+| 类型 | 示例 | 报表 |
+|------|------|------|
+| 全大写 | `ACCABGT/GetReport` | 科目预算 |
+| 驼峰 | `Rptsarplist/GetReport`、`InvPoPcStatus/GetReport` | 信用额度、采购交货 |
+| 全小写 | `monbx/getReport`、`rptinvdo/getReport` | 大部分报表 |
+
+> ⚠️ 部署后如果报表调用不通，第一个怀疑就是端点大小写问题。
+
+---
+
+## 八、前端对接 Checklist
 
 每次对接新报表时对照：
 
@@ -376,3 +418,6 @@ POST /rptwagcg3/getReport
 - [ ] 空结果处理（REPORT__TAB 为 `[]`，MRPPU 为 TRANS 为 `[]`）
 - [ ] MRPPU 特殊处理：getList 端点、OTHERINFO、PAGE_INFO、TRANS 响应、扁平 COLUMN_INFO
 - [ ] 端点大小写：全部使用小写（与 v1 实测一致，待 Postman 验证）
+- [ ] API3 新字段：showBody / hasPagination / dateOperator / searchInfoExtra / hideDateUI
+- [ ] API3 contain 操作符：文本包含搜索
+- [ ] API3 非 date range：非日期字段范围筛选 [from, to]
