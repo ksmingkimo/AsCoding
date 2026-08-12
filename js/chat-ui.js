@@ -61,7 +61,7 @@ var ChatUI = (function() {
   }
 
   /**
-   * 添加操作按钮组（复制 / 延申问答 / 导出 Excel / 导出 PPTX）
+   * 添加操作按钮组（复制 / 延申问答 / 导出 Excel / 导出 HTML / 导出 PPTX）
    * @param {HTMLElement} msgDiv - 消息容器元素
    * @param {string} rawText - 原始回复文本
    */
@@ -72,7 +72,9 @@ var ChatUI = (function() {
       '<button class="action-btn" data-action="copy" title="复制回复内容">📋 复制</button>' +
       '<button class="action-btn" data-action="extend" title="基于此回复继续提问">💬 延申问答</button>' +
       '<button class="action-btn" data-action="excel" title="导出为 Excel">📥 Excel</button>' +
-      '<button class="action-btn" data-action="pptx" title="导出为 PPTX">📊 PPTX</button>';
+      '<button class="action-btn" data-action="html" title="导出为 HTML 报告">📄 HTML</button>' +
+      '<button class="action-btn" data-action="pdf" title="导出为 PDF（浏览器打印）">📑 PDF</button>' +
+      '<button class="action-btn" data-action="pptx" title="导出为 PPTX（真正的 PowerPoint）">📊 PPTX</button>';
 
     // 复制按钮
     actions.querySelector('[data-action="copy"]').addEventListener('click', function() {
@@ -97,7 +99,25 @@ var ChatUI = (function() {
       }
     });
 
-    // PPTX 导出按钮 — 延迟依赖 Export 模块
+    // HTML 导出按钮 — 延迟依赖 Export 模块
+    actions.querySelector('[data-action="html"]').addEventListener('click', function() {
+      if (typeof Export !== 'undefined' && Export.toHTML) {
+        Export.toHTML(rawText, msgDiv);
+      } else {
+        Utils.showToast('导出模块未加载', 'error');
+      }
+    });
+
+    // PDF 导出按钮 — 内容与 HTML 一致，通过浏览器打印为 PDF
+    actions.querySelector('[data-action="pdf"]').addEventListener('click', function() {
+      if (typeof Export !== 'undefined' && Export.toPDF) {
+        Export.toPDF(rawText, msgDiv);
+      } else {
+        Utils.showToast('导出模块未加载', 'error');
+      }
+    });
+
+    // PPTX 导出按钮 — 生成真正的 .pptx 文件
     actions.querySelector('[data-action="pptx"]').addEventListener('click', function() {
       if (typeof Export !== 'undefined' && Export.toPPTX) {
         Export.toPPTX(rawText, msgDiv);

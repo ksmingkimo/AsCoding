@@ -1,7 +1,7 @@
 /**
  * ai-parser.js — AI 响应解析模块
  * 负责：解析 AI 回复中的 Markdown、```table```、```chart``` 标记
- *       将原始文本转换为可渲染的 HTML
+ *       将原始文本转换为可渲染的 HTML（含管道表格自动美化）
  * 依赖：Utils
  */
 
@@ -73,11 +73,6 @@ var AIParser = (function() {
   }
 
   /**
-   * 将 JSON 数据渲染为 HTML <table>
-   * @param {Array<object>} data
-   * @returns {string} HTML
-   */
-  /**
    * 判断字符串是否可转为数字（用于右对齐）
    */
   function isNumeric(val) {
@@ -86,13 +81,15 @@ var AIParser = (function() {
     return !isNaN(parseFloat(s)) && isFinite(s);
   }
 
+  /**
+   * 将 JSON 数据渲染为 HTML <table>
+   * @param {Array<object>} data
+   * @returns {string} HTML
+   */
   function renderTableHTML(data) {
     if (!Array.isArray(data) || data.length === 0) return '<p>(空表格)</p>';
 
     // Union ALL keys across every row — not just data[0].
-    // AI often outputs heterogeneous rows (e.g. row 1 = summary, row 2 = detail
-    // with different column names). Using only the first row's keys silently
-    // drops all columns unique to later rows.
     var keys = [];
     var seenKeys = {};
     data.forEach(function(row) {
@@ -133,13 +130,79 @@ var AIParser = (function() {
   }
 
   /**
+   * 将 Markdown 管道表格解析为 HTML <table>
+   * 输入示例：| A | B |\n|---|----|\n| 1 | 2 |
+   */
+  function parseMarkdownTable(md) {
+    var lines = md.trim().split('\n');
+    if (lines.length < 3) return Utils.escapeHtml(md);
+
+    // 表头行
+    var headerCells = lines[0].split('|').map(function(c) { return c.trim(); });
+    // 去除首尾空（来自 leading/trailing |）
+    if (headerCells.length > 0 && !headerCells[0]) headerCells.shift();
+    if (headerCells.length > 0 && !headerCells[headerCells.length - 1]) headerCells.pop();
+    // 过滤纯空列
+    headerCells = headerCells.filter(function(c, i, arr) {
+      return c || (i > 0 && i < arr.length - 1);
+    });
+    if (headerCells.length === 0) return Utils.escapeHtml(md);
+
+    // 数据行（跳过第二行分隔符）
+    var dataRows = [];
+    for (var i = 2; i < lines.length; i++) {
+      var cells = lines[i].split('|').map(function(c) { return c.trim(); });
+      if (cells.length > 0 && !cells[0]) cells.shift();
+      if (cells.length > 0 && !cells[cells.length - 1]) cells.pop();
+      if (cells.length > 0) dataRows.push(cells);
+    }
+    if (dataRows.length === 0) return Utils.escapeHtml(md);
+
+    // 检测每列是否数值（右对齐）
+    var numericCols = {};
+    for (var ci = 0; ci < headerCells.length; ci++) {
+      var allNumeric = dataRows.every(function(row) {
+        return isNumeric(row[ci] || '');
+      });
+      if (allNumeric) numericCols[ci] = true;
+    }
+
+    var html = '<div class="table-wrap"><table><thead><tr>';
+    headerCells.forEach(function(h) {
+      html += '<th>' + Utils.escapeHtml(h) + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+    dataRows.forEach(function(row) {
+      html += '<tr>';
+      row.forEach(function(cell, ci) {
+        var v = cell || '';
+        html += '<td' + (numericCols[ci] ? ' class="num"' : '') + '>' + Utils.escapeHtml(v) + '</td>';
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    return html;
+  }
+
+  /**
    * 基本 Markdown → HTML 渲染
-   * 支持：标题(#)、粗体(**)、斜体(*)、行内代码(`)、代码块(```)、列表(-)、分隔线(---)
+   * 支持：管道表格、标题(#)、粗体(**)、斜体(*)、行内代码(`)、代码块(```)、列表(-)、分隔线(---)
    * @param {string} text
    * @returns {string} HTML
    */
   function renderMarkdown(text) {
     if (!text) return '';
+
+    // Step 0: 提取管道表格 → 占位符保护（避免被 escapeHtml 破坏）
+    var tables = [];
+    // 匹配：header |...|, separator |---|, one+ data rows |...|
+    var TABLE_RE = /(\|[^\n]+\|\s*\n\|[-:\s|]+\|\s*\n(?:\|[^\n]*\|\s*\n?)+)/g;
+    text = text.replace(TABLE_RE, function(match) {
+      var idx = tables.length;
+      tables.push(parseMarkdownTable(match));
+      return '%%MDTBL' + idx + '%%';
+    });
+
     var html = Utils.escapeHtml(text);
 
     // 代码块（已处理过 table/chart，这里处理普通代码块）
@@ -160,15 +223,20 @@ var AIParser = (function() {
     html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
     // 分隔线
     html = html.replace(/^---$/gm, '<hr>');
-    // 段落（双换行 → 新段落，避免连续空行产生多个空 <p>）
+    // 段落（双换行 → 新段落）
     html = html.replace(/\n{2,}/g, '</p><p>');
     html = html.replace(/\n/g, '<br>');
     // 确保包裹在 <p> 中
     if (!html.startsWith('<')) { html = '<p>' + html + '</p>'; }
-    // 清理空段落和纯换行的段落
+    // 清理空段落
     html = html.replace(/<p><\/p>/g, '');
     html = html.replace(/<p><br><\/p>/g, '');
     html = html.replace(/<p>(\s|<br>)*<\/p>/g, '');
+
+    // 还原管道表格
+    html = html.replace(/%%MDTBL(\d+)%%/g, function(m, idx) {
+      return tables[parseInt(idx, 10)] || '';
+    });
 
     return html;
   }

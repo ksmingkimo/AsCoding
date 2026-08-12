@@ -192,7 +192,7 @@ AsCoding/
 │   ├── ai-suggestions.js        ← AI 推荐提问（🧠 大脑按钮）
 │   ├── ai-parser.js            ← Markdown/表格/图表标记解析
 │   ├── ai-chart.js             ← Chart.js 图表渲染
-│   ├── export.js               ← CSV Excel / HTML PPTX 导出
+│   ├── export.js               ← Excel / HTML / PDF / PPTX 导出
 │   │
 │   ├── settings-ui.js          ← 设置面板弹窗/验证
 │   └── app.js                  ← 主入口（AppState/查询/分页/初始化）
@@ -293,7 +293,7 @@ Authorization: Bearer {TOKEN}
 2. 自动切换到 **AI数据分析** Tab
 3. 在 Chat 输入框用自然语言提问
 4. AI 结合所有数据源进行分析（支持 4 个模型切换）
-5. 回复支持 **表格** / **图表** / **Markdown**，可导出 Excel / PPTX
+5. 回复支持 **表格** / **图表** / **Markdown**（含管道表格自动渲染），可导出 Excel / HTML / PDF / PPTX
 6. 🧠 **AI 推荐提问**：点击大脑图标，AI 根据当前数据源自动生成深度分析问题
 
 ### System Prompt 定制
@@ -316,7 +316,7 @@ AI 被训练为 ERP 数据分析专家，会：
 | **图表** | Chart.js 4.x | CDN 加载，bar/line/pie/doughnut |
 | **AI** | Deepseek/QWen/Gemini/Claude | 4 模型统一客户端，非流式调用 |
 | **存储** | localStorage | 认证/设置/数据源持久化 |
-| **导出** | CSV + HTML | Excel (CSV UTF-8 BOM) / PPTX (HTML 降级) |
+| **导出** | CSV + HTML + PDF + PPTX | Excel (CSV UTF-8 BOM) / HTML 报告 / PDF (浏览器打印) / PPTX (PptxGenJS 原生 .pptx) |
 
 ### 设计系统
 
@@ -343,7 +343,7 @@ AI 被训练为 ERP 数据分析专家，会：
 | 人力资源报表 (1 个) | ✅ 已完成 |
 | AI 流式响应 | ⬜ 待开发 |
 | IndexedDB 迁移 | ⬜ 待开发 |
-| 正式 .pptx 导出 | ⬜ 待开发 |
+| 正式 .pptx 导出 | ✅ 已完成 |
 
 ---
 
