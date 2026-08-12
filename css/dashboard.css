@@ -600,6 +600,33 @@ td.date { color: var(--color-text-secondary); }
 .tab-panel.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
 .tab-panel .content-body { flex: 1; overflow-y: auto; }
 
+/* Tab loading badge */
+.tab-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.tab-badge .spinner {
+  width: 12px; height: 12px;
+  border-width: 2px;
+  border-color: var(--color-muted);
+  border-top-color: var(--color-primary);
+}
+
+/* Data source card loading/error state */
+.ds-card.ds-loading { opacity: 0.8; pointer-events: none; }
+.ds-card.ds-error { border-left: 3px solid var(--color-danger, #dc2626); }
+.ds-status-loading { color: var(--color-muted); font-style: italic; }
+.ds-status-loading .spinner {
+  width: 12px; height: 12px;
+  border-width: 2px;
+  border-color: var(--color-muted);
+  border-top-color: var(--color-primary);
+  margin-right: 6px;
+}
+.ds-status-error { color: var(--color-danger, #dc2626); }
+
 /* ============================================================
    RESPONSIVE
    ============================================================ */

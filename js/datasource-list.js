@@ -61,18 +61,41 @@ var DatasourceList = (function() {
 
     sources.forEach(function(ds) {
       var card = document.createElement('div');
-      card.className = 'ds-card' + (window.AppState && window.AppState.activeDSId === ds.id ? ' active' : '');
+      var isLoading = ds.status === 'loading';
+      var isError = ds.status === 'error';
+      card.className = 'ds-card' +
+        (window.AppState && window.AppState.activeDSId === ds.id ? ' active' : '') +
+        (isLoading ? ' ds-loading' : '') +
+        (isError ? ' ds-error' : '');
       card.setAttribute('data-dsid', ds.id);
-      card.innerHTML =
-        '<button class="ds-delete" title="删除此数据源">&times;</button>' +
-        '<div class="ds-name">' + Utils.escapeHtml(ds.reportName) + '</div>' +
-        '<div class="ds-summary">' + Utils.escapeHtml(ds.filterSummary) + '</div>' +
-        '<div class="ds-meta">' +
-          '<span>' + (ds.recordCount || 0).toLocaleString() + ' 条记录</span>' +
-          '<span>' + Utils.formatTime(ds.createdAt) + '</span>' +
-        '</div>';
 
-      // 点击卡片选中
+      if (isLoading) {
+        card.innerHTML =
+          '<div class="ds-name">' + Utils.escapeHtml(ds.reportName) + '</div>' +
+          '<div class="ds-summary">' + Utils.escapeHtml(ds.filterSummary || '') + '</div>' +
+          '<div class="ds-meta">' +
+            '<span class="ds-status-loading"><span class="spinner"></span> 正在加载数据...</span>' +
+          '</div>';
+      } else if (isError) {
+        card.innerHTML =
+          '<button class="ds-delete" title="删除此数据源">&times;</button>' +
+          '<div class="ds-name">' + Utils.escapeHtml(ds.reportName) + '</div>' +
+          '<div class="ds-summary">' + Utils.escapeHtml(ds.filterSummary || '') + '</div>' +
+          '<div class="ds-meta">' +
+            '<span class="ds-status-error">❌ ' + Utils.escapeHtml(ds.errorMsg || '加载失败') + '</span>' +
+          '</div>';
+      } else {
+        card.innerHTML =
+          '<button class="ds-delete" title="删除此数据源">&times;</button>' +
+          '<div class="ds-name">' + Utils.escapeHtml(ds.reportName) + '</div>' +
+          '<div class="ds-summary">' + Utils.escapeHtml(ds.filterSummary) + '</div>' +
+          '<div class="ds-meta">' +
+            '<span>' + (ds.recordCount || 0).toLocaleString() + ' 条记录</span>' +
+            '<span>' + Utils.formatTime(ds.createdAt) + '</span>' +
+          '</div>';
+      }
+
+      // 点击卡片选中（loading 状态也可选中但不可操作）
       card.addEventListener('click', function(e) {
         if (e.target.classList.contains('ds-delete')) return;
         document.querySelectorAll('.ds-card').forEach(function(c) { c.classList.remove('active'); });
@@ -80,18 +103,21 @@ var DatasourceList = (function() {
         if (window.AppState) window.AppState.activeDSId = ds.id;
       });
 
-      // 删除按钮
-      card.querySelector('.ds-delete').addEventListener('click', function(e) {
-        e.stopPropagation();
-        if (confirm('确定删除数据源 "' + ds.reportName + ' - ' + ds.filterSummary + '" 吗？')) {
-          DataSourceStore.remove(ds.id);
-          if (window.AppState && window.AppState.activeDSId === ds.id) {
-            window.AppState.activeDSId = null;
+      // 删除按钮（仅非 loading 状态有）
+      var delBtn = card.querySelector('.ds-delete');
+      if (delBtn) {
+        delBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (confirm('确定删除数据源 "' + ds.reportName + ' - ' + ds.filterSummary + '" 吗？')) {
+            DataSourceStore.remove(ds.id);
+            if (window.AppState && window.AppState.activeDSId === ds.id) {
+              window.AppState.activeDSId = null;
+            }
+            renderDataSourceList();
+            Utils.showToast('数据源已删除');
           }
-          renderDataSourceList();
-          Utils.showToast('数据源已删除');
-        }
-      });
+        });
+      }
 
       dsList.appendChild(card);
     });

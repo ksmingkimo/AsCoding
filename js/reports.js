@@ -550,7 +550,7 @@ var ReportEngine = (function() {
 
     // ── Standard getReport-style reports (v1 + v2) ──
     var offsetStart = (page - 1) * pageSize;
-    var offsetEnd = offsetStart + pageSize - 1;
+    var offsetEnd = offsetStart + pageSize;
 
     // SEARCH_INFO [0] — pagination
     var searchInfo = [
@@ -576,7 +576,7 @@ var ReportEngine = (function() {
         operator: dFilter.operator || 'range',
         fieldType: dFilter.fieldType || 'date',
         need: dFilter.need !== false,
-        fieldDisabled: dFilter.fieldDisabled !== false
+        fieldDisabled: dFilter.fieldDisabled === true
       };
       if (dFilter.operatorDisabled) { dateElem.operatorDisabled = true; }
       // Resolve value: use dateFilter.value if set, otherwise read from filters

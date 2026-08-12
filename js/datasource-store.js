@@ -38,13 +38,49 @@ var DataSourceStore = (function() {
     var sources = getAll();
     source.id = 'ds_' + Date.now();
     source.createdAt = new Date().toISOString();
+    source.status = 'ready';
     sources.unshift(source);
-    // 上限 20 个
-    if (sources.length > 20) {
-      sources = sources.slice(0, 20);
-    }
+    if (sources.length > 20) { sources = sources.slice(0, 20); }
     saveAll(sources);
     return source;
+  }
+
+  /**
+   * 添加一个"加载中"的占位数据源（立即返回，后续用 update() 填充）
+   * @param {object} source - 占位信息 { reportName, filterSummary, displayFields, ... }
+   * @returns {object} 含 id 的占位 source
+   */
+  function addPending(source) {
+    var sources = getAll();
+    source.id = 'ds_' + Date.now();
+    source.createdAt = new Date().toISOString();
+    source.status = 'loading';
+    source.data = [];
+    source.recordCount = 0;
+    sources.unshift(source);
+    if (sources.length > 20) { sources = sources.slice(0, 20); }
+    saveAll(sources);
+    return source;
+  }
+
+  /**
+   * 更新已有数据源的字段（用于异步加载完成后填充数据）
+   * @param {string} id
+   * @param {object} updates — 要更新的键值对
+   */
+  function update(id, updates) {
+    var sources = getAll();
+    for (var i = 0; i < sources.length; i++) {
+      if (sources[i].id === id) {
+        for (var k in updates) {
+          if (Object.prototype.hasOwnProperty.call(updates, k)) {
+            sources[i][k] = updates[k];
+          }
+        }
+        break;
+      }
+    }
+    saveAll(sources);
   }
 
   /**
@@ -79,6 +115,8 @@ var DataSourceStore = (function() {
     getAll: getAll,
     saveAll: saveAll,
     add: add,
+    addPending: addPending,
+    update: update,
     remove: remove,
     clearAll: clearAll,
     getById: getById
