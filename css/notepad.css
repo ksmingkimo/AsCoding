@@ -1,0 +1,184 @@
+/* ============================================================
+   notepad.css — 记事本 Tab 面板 + ds-footer 双按钮覆写
+   加载顺序：在 ai-analysis.css 之后加载，确保优先级
+   ============================================================ */
+
+/* ============================================================
+   NOTEPAD TAB PANEL
+   ============================================================ */
+
+/* Notepad layout fills tab panel */
+.notepad-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-bg);
+}
+
+/* Toolbar / header */
+.notepad-toolbar {
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.notepad-title {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+.notepad-hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* Event list — card grid */
+.notepad-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-lg);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-content: flex-start;
+}
+
+/* Empty state */
+.notepad-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: var(--space-3xl);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+.notepad-empty .empty-icon { font-size: 48px; margin-bottom: var(--space-lg); }
+.notepad-empty p { font-size: var(--text-sm); margin: 0; }
+.notepad-empty .hint { font-size: var(--text-xs); margin-top: var(--space-sm); color: var(--color-text-muted); line-height: 1.6; }
+
+/* Event card — ~280px wide in a flex-wrap grid */
+.notepad-card {
+  width: 280px;
+  padding: var(--space-md);
+  border: 1px solid var(--color-muted);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+  background: var(--color-surface);
+}
+.notepad-card:hover { border-color: var(--color-primary-light); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.notepad-card .np-title {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  margin-bottom: 6px;
+  padding-right: 24px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.notepad-card .np-source {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  margin-bottom: 3px;
+  display: flex;
+  gap: var(--space-xs);
+  line-height: 1.4;
+}
+.notepad-card .np-source-label {
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  font-weight: 500;
+}
+.notepad-card .np-time {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-top: 6px;
+}
+.notepad-card .np-delete {
+  position: absolute;
+  top: var(--space-sm); right: var(--space-sm);
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+.notepad-card:hover .np-delete { opacity: 1; }
+.notepad-card .np-delete:hover { background: #FEF2F2; color: var(--color-error); }
+
+/* Notepad footer */
+.notepad-footer {
+  padding: var(--space-sm) var(--space-lg);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+  flex-shrink: 0;
+}
+.notepad-footer .btn-clear-all {
+  height: 30px;
+  padding: 0 var(--space-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.notepad-footer .btn-clear-all:hover { color: var(--color-error); border-color: var(--color-error); }
+
+/* ============================================================
+   DS-FOOTER DUAL BUTTON OVERRIDE
+   Must come AFTER ai-analysis.css's original .ds-footer rules
+   (same specificity, later cascade = wins)
+   ============================================================ */
+.ai-datasource-panel .ds-footer {
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  border-top: 1px solid var(--color-border);
+}
+.ai-datasource-panel .ds-footer .btn-save-notepad {
+  flex: 1;
+  height: 30px;
+  background: var(--color-primary);
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.ai-datasource-panel .ds-footer .btn-save-notepad:hover { background: var(--color-primary-dark); }
+.ai-datasource-panel .ds-footer .btn-save-notepad:disabled { opacity: 0.5; cursor: not-allowed; }
+.ai-datasource-panel .ds-footer .btn-clear-all {
+  flex: 1;
+  height: 30px;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+.ai-datasource-panel .ds-footer .btn-clear-all:hover { color: var(--color-error); border-color: var(--color-error); }

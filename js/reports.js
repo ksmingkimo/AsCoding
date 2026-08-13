@@ -16,6 +16,9 @@ var ReportEngine = (function() {
   var REPORT_CONFIG = {
     invpo: {
       name: '采购报表',
+      group: '进销存报表',
+      icon: '📋',
+      pinyin: 'cgbb',
       endpoint: 'invpo',
       pgm: 'REP_POLIST',
       dateField: 'OS_DD',
@@ -39,6 +42,9 @@ var ReportEngine = (function() {
 
     invpc: {
       name: '进货报表',
+      group: '进销存报表',
+      icon: '📦',
+      pinyin: 'jhbb',
       endpoint: 'invpc',
       pgm: 'REP_PCLIST',
       dateField: 'PS_DD',
@@ -60,6 +66,9 @@ var ReportEngine = (function() {
 
     invSO: {
       name: '受订报表',
+      group: '进销存报表',
+      icon: '📝',
+      pinyin: 'sdbb',
       endpoint: 'invso',
       pgm: 'REP_SOLIST',
       dateField: 'OS_DD',
@@ -83,6 +92,9 @@ var ReportEngine = (function() {
 
     invSa: {
       name: '销货报表',
+      group: '进销存报表',
+      icon: '💵',
+      pinyin: 'xhbb',
       endpoint: 'invSa',
       pgm: 'REP_SALIST',
       dateField: 'PS_DD',
@@ -110,6 +122,9 @@ var ReportEngine = (function() {
 
     monAA: {
       name: '收款明细表',
+      group: '财务管理',
+      icon: '💰',
+      pinyin: 'skmxb',
       endpoint: 'monAA',
       pgm: 'REP_RTLIST',
       dateField: 'RP_DD',
@@ -139,6 +154,9 @@ var ReportEngine = (function() {
 
     monBA: {
       name: '付款明细表',
+      group: '财务管理',
+      icon: '💳',
+      pinyin: 'fkmxb',
       endpoint: 'monBA',
       pgm: 'REP_PTLIST',
       dateField: 'RP_DD',
@@ -168,6 +186,9 @@ var ReportEngine = (function() {
 
     mrpPK: {
       name: '工单完成情况表',
+      group: '生产制造',
+      icon: '🏭',
+      pinyin: 'gdwcqkb',
       endpoint: 'mrppk',
       apiPath: 'mrppk/getReport',
       pgm: 'MRPPK',
@@ -191,6 +212,9 @@ var ReportEngine = (function() {
 
     mrpPS: {
       name: '完工入库报表',
+      group: '生产制造',
+      icon: '📥',
+      pinyin: 'wgrkbb',
       endpoint: 'mrpafc',
       apiPath: 'mrpafc/getReport',
       pgm: 'MRPPS',
@@ -220,6 +244,9 @@ var ReportEngine = (function() {
 
     mrppu: {
       name: '产品成本分析表',
+      group: '生产制造',
+      icon: '📈',
+      pinyin: 'cpcbfxb',
       endpoint: 'mrppu',
       apiPath: 'mrppu/getList',
       apiMethod: 'getList',
@@ -252,6 +279,9 @@ var ReportEngine = (function() {
 
     wagCG3: {
       name: '员工年度薪资清册',
+      group: '人力资源',
+      icon: '👤',
+      pinyin: 'ygndxzqc',
       endpoint: 'rptwagcg3',
       apiPath: 'rptwagcg3/getReport',
       pgm: 'REP_WAGCG3',
@@ -285,6 +315,9 @@ var ReportEngine = (function() {
 
     accabgt: {
       name: '科目预算报表',
+      group: '财务管理',
+      icon: '📒',
+      pinyin: 'kmysbb',
       apiPath: 'ACCABGT/GetReport',
       pgm: 'REP_ACCABGTLIST',
       dateField: 'YEARS',
@@ -300,6 +333,9 @@ var ReportEngine = (function() {
 
     rptsarp: {
       name: '信用额度查询表',
+      group: '财务管理',
+      icon: '🛡️',
+      pinyin: 'xyedcxb',
       apiPath: 'Rptsarplist/GetReport',
       pgm: 'RPTSARPLIST',
       dateField: null,
@@ -314,6 +350,9 @@ var ReportEngine = (function() {
 
     monbx: {
       name: '报销报表',
+      group: '财务管理',
+      icon: '🧾',
+      pinyin: 'bxbb',
       apiPath: 'monbx/getReport',
       pgm: 'REP_BXLIST',
       dateField: 'BX_DD',
@@ -329,6 +368,9 @@ var ReportEngine = (function() {
 
     monjk: {
       name: '员工借款报表',
+      group: '财务管理',
+      icon: '💸',
+      pinyin: 'ygjkbb',
       apiPath: 'monjk/getReport',
       pgm: 'REP_JKLIST',
       dateField: 'JK_DD',
@@ -344,6 +386,9 @@ var ReportEngine = (function() {
 
     monCA: {
       name: '应收票据报表',
+      group: '财务管理',
+      icon: '📄',
+      pinyin: 'yspjbb',
       apiPath: 'monCA/getReport',
       pgm: 'REP_CALIST',
       dateField: 'RCV_DD',
@@ -359,6 +404,9 @@ var ReportEngine = (function() {
 
     monCB: {
       name: '应付票据报表',
+      group: '财务管理',
+      icon: '📑',
+      pinyin: 'yfpjbb',
       apiPath: 'monCB/getReport',
       pgm: 'REP_CBLIST',
       dateField: 'RCV_DD',
@@ -376,6 +424,9 @@ var ReportEngine = (function() {
 
     rptinvdo: {
       name: '过期货品预警表',
+      group: '库存管理',
+      icon: '⚠️',
+      pinyin: 'gqhpyjb',
       apiPath: 'rptinvdo/getReport',
       pgm: 'RPT_INVDO',
       dateField: null,
@@ -396,6 +447,9 @@ var ReportEngine = (function() {
 
     rptinvdl: {
       name: '安全存量预警表',
+      group: '库存管理',
+      icon: '🔒',
+      pinyin: 'aqclyjb',
       apiPath: 'rptinvdl/getReport',
       pgm: 'RPT_INVDL',
       dateField: null,
@@ -412,6 +466,9 @@ var ReportEngine = (function() {
 
     rptinvswa: {
       name: '负库存预警表',
+      group: '库存管理',
+      icon: '📉',
+      pinyin: 'fkcyjb',
       apiPath: 'rptinvswa/getReport',
       pgm: 'RPT_INVSWA',
       dateField: null,
@@ -428,6 +485,9 @@ var ReportEngine = (function() {
 
     invic: {
       name: '库存调拨报表',
+      group: '库存管理',
+      icon: '🔄',
+      pinyin: 'kcdbbb',
       apiPath: 'invic/getReport',
       pgm: 'DRPIC_REP',
       dateField: 'IC_DD',
@@ -442,6 +502,9 @@ var ReportEngine = (function() {
 
     invij: {
       name: '库存调整报表',
+      group: '库存管理',
+      icon: '🔧',
+      pinyin: 'kctzbb',
       apiPath: 'invij/getReport',
       pgm: 'REP_IJLIST',
       dateField: 'IJ_DD',
@@ -460,6 +523,9 @@ var ReportEngine = (function() {
 
     scmdrpti: {
       name: '送货单报表',
+      group: '采购与价格',
+      icon: '🚚',
+      pinyin: 'shdbb',
       apiPath: 'scmdrpti/getReport',
       pgm: 'REPTILIST',
       dateField: 'TI_DD',
@@ -475,6 +541,9 @@ var ReportEngine = (function() {
 
     invpopc: {
       name: '采购交货状况表',
+      group: '采购与价格',
+      icon: '📊',
+      pinyin: 'cgjhzkb',
       apiPath: 'InvPoPcStatus/GetReport',
       pgm: 'INVPOPCSTATUS',
       dateField: 'OS_DD',
@@ -490,6 +559,9 @@ var ReportEngine = (function() {
 
     invtwpc: {
       name: '委外交货状况表',
+      group: '采购与价格',
+      icon: '🏗️',
+      pinyin: 'wjjhzkb',
       apiPath: 'InvTwPcStatus/GetReport',
       pgm: 'INVTWPCSTATUS',
       dateField: 'TW_DD',
@@ -505,6 +577,9 @@ var ReportEngine = (function() {
 
     invhp: {
       name: '采购政策价格表',
+      group: '采购与价格',
+      icon: '🏷️',
+      pinyin: 'cgzcjgb',
       apiPath: 'invhp/GetReport',
       pgm: 'REP_HPLIST',
       dateField: 'SYS_DATE',
@@ -523,6 +598,9 @@ var ReportEngine = (function() {
 
     invhs: {
       name: '售价政策价格表',
+      group: '采购与价格',
+      icon: '💲',
+      pinyin: 'sjzcjgb',
       apiPath: 'invhs/GetReport',
       pgm: 'REP_HSLIST',
       dateField: 'SYS_DATE',
@@ -544,6 +622,9 @@ var ReportEngine = (function() {
 
     mrpag: {
       name: '领退补料报表',
+      group: '生产制造',
+      icon: '📤',
+      pinyin: 'ltblbb',
       apiPath: 'mrpag/getReport',
       pgm: 'REP_MLLIST',
       dateField: 'ML_DD',
@@ -560,6 +641,9 @@ var ReportEngine = (function() {
 
     mrpcf: {
       name: '单位成本分析表',
+      group: '生产制造',
+      icon: '🧮',
+      pinyin: 'dwcbfxb',
       apiPath: 'mrpcf/getReport',
       pgm: 'MRPCF',
       dateField: 'BIL_DD',
@@ -576,6 +660,9 @@ var ReportEngine = (function() {
 
     rptwagyg0: {
       name: '人事资料分析表',
+      group: '人力资源',
+      icon: '📋',
+      pinyin: 'rszlfxb',
       apiPath: 'rptwagyg/getReport',
       pgm: 'REP_WAGYG0',
       dateField: null,
@@ -591,6 +678,9 @@ var ReportEngine = (function() {
 
     rptwagyg: {
       name: '员工明细表',
+      group: '人力资源',
+      icon: '👥',
+      pinyin: 'ygmxb',
       apiPath: 'rptwagyg/getReport',
       pgm: 'REP_WAGYG',
       dateField: 'SYS_DATE',
@@ -611,6 +701,9 @@ var ReportEngine = (function() {
 
     fixaa: {
       name: '财产目录',
+      group: '固定资产',
+      icon: '🏢',
+      pinyin: 'ccml',
       apiPath: 'fixaa/getReport',
       pgm: 'FIXCE',
       dateField: 'GR_DD',

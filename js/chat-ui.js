@@ -139,6 +139,54 @@ var ChatUI = (function() {
     }
   }
 
+  /**
+   * 清空所有已渲染的聊天消息（保留欢迎语）
+   */
+  function clearAllMessages() {
+    var container = getContainer();
+    if (!container) return;
+    // 移除所有 .chat-message 元素
+    container.querySelectorAll('.chat-message').forEach(function(msg) {
+      msg.remove();
+    });
+    showWelcome();
+  }
+
+  /**
+   * 从聊天历史数组重新渲染整个对话
+   * @param {Array<{role: string, content: string}>} chatHistory
+   */
+  function renderHistory(chatHistory) {
+    if (!chatHistory || chatHistory.length === 0) return;
+
+    hideWelcome();
+
+    chatHistory.forEach(function(msg) {
+      var escapedContent = Utils.escapeHtml(msg.content).replace(/\n/g, '<br>');
+      var msgDiv = addMessageBubble(msg.role, escapedContent);
+
+      // 对 assistant 消息：重新解析内容（表格、图表等）并添加操作按钮
+      if (msg.role === 'assistant' && typeof AIParser !== 'undefined') {
+        // 替换气泡内容为解析后的 HTML
+        var parsed = AIParser.parse(msg.content);
+        var bubble = msgDiv.querySelector('.msg-bubble');
+        if (bubble && parsed && parsed.html) {
+          bubble.innerHTML = parsed.html;
+        }
+        // 添加操作按钮
+        addActionButtons(msgDiv, msg.content);
+        // 渲染图表
+        if (parsed && parsed.charts && parsed.charts.length > 0 && typeof AIChart !== 'undefined') {
+          parsed.charts.forEach(function(chartConfig, i) {
+            AIChart.render(msgDiv, chartConfig, i);
+          });
+        }
+      }
+    });
+
+    scrollToBottom();
+  }
+
   /* ================================================================
      Public API
      ================================================================ */
@@ -147,7 +195,9 @@ var ChatUI = (function() {
     showWelcome: showWelcome,
     addMessageBubble: addMessageBubble,
     addActionButtons: addActionButtons,
-    scrollToBottom: scrollToBottom
+    scrollToBottom: scrollToBottom,
+    clearAllMessages: clearAllMessages,
+    renderHistory: renderHistory
   };
 
 })();

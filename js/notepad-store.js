@@ -1,0 +1,105 @@
+/**
+ * notepad-store.js — 记事本 localStorage CRUD 模块
+ * 负责：事件存储、读取、删除（类似 DataSourceStore 的 IIFE 模式）
+ * 依赖：无（纯浏览器 localStorage API）
+ * localStorage key: sunlike_notepad
+ */
+
+var NotepadStore = (function() {
+  'use strict';
+
+  var LS_KEY = 'sunlike_notepad';
+  var MAX_EVENTS = 50;
+
+  /**
+   * 读取全部事件
+   * @returns {Array<object>}
+   */
+  function getAll() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      if (!raw) return [];
+      var parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /**
+   * 覆盖写入全部事件
+   * @param {Array<object>} events
+   */
+  function saveAll(events) {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(events));
+    } catch (e) {
+      Utils.showToast('记事本存储空间不足，请清理旧事件', 'error');
+    }
+  }
+
+  /**
+   * 添加事件（自动生成 id + createdAt，插入头部，裁剪上限）
+   * @param {object} event — { title, dataSource, chatHistory, conversationCount }
+   * @returns {object} 完整事件对象（含 id + createdAt）
+   */
+  function add(event) {
+    var fullEvent = {
+      id: 'note_' + Date.now(),
+      createdAt: new Date().toISOString(),
+      title: event.title,
+      dataSource: event.dataSource,
+      chatHistory: event.chatHistory,
+      conversationCount: event.conversationCount
+    };
+
+    var events = getAll();
+    events.unshift(fullEvent);
+
+    // 裁剪到 MAX_EVENTS
+    if (events.length > MAX_EVENTS) {
+      events = events.slice(0, MAX_EVENTS);
+    }
+
+    saveAll(events);
+    return fullEvent;
+  }
+
+  /**
+   * 按 ID 删除事件
+   * @param {string} id
+   */
+  function remove(id) {
+    var events = getAll();
+    events = events.filter(function(e) { return e.id !== id; });
+    saveAll(events);
+  }
+
+  /**
+   * 清空全部事件
+   */
+  function clearAll() {
+    saveAll([]);
+  }
+
+  /**
+   * 按 ID 查找事件
+   * @param {string} id
+   * @returns {object|undefined}
+   */
+  function getById(id) {
+    return getAll().find(function(e) { return e.id === id; });
+  }
+
+  /* ================================================================
+     Public API
+     ================================================================ */
+  return {
+    getAll: getAll,
+    add: add,
+    remove: remove,
+    clearAll: clearAll,
+    getById: getById
+  };
+
+})();

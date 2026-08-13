@@ -26,6 +26,11 @@ var Tabs = (function() {
     if (tabId === 'tabAI') {
       DatasourceList.renderDataSourceList();
     }
+
+    // 切换到记事本 Tab 时刷新事件列表
+    if (tabId === 'tabNotepad' && typeof NotepadUI !== 'undefined') {
+      NotepadUI.render();
+    }
   }
 
   /**

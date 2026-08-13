@@ -194,31 +194,49 @@ var App = (function() {
      Sidebar Navigation
      ================================================================ */
   function initSidebarNav() {
-    document.querySelectorAll('.nav-item').forEach(function(link) {
-      link.addEventListener('click', function(e) {
-        e.preventDefault();
-        document.querySelectorAll('.nav-item').forEach(function(l) { l.classList.remove('active'); });
-        this.classList.add('active');
+    var nav = document.querySelector('.sidebar-nav');
+    if (!nav) return;
 
-        var navText = this.querySelector('.nav-text');
-        AppState.currentReportName = navText ? navText.textContent.trim() : this.textContent.trim();
-        AppState.currentReport = this.getAttribute('data-report');
-
-        var reportTitle = document.getElementById('reportTitle');
-        if (reportTitle) reportTitle.textContent = AppState.currentReportName;
-
-        // 切换回到数据查询 Tab
-        if (typeof Tabs !== 'undefined') Tabs.switchTab('tabQuery');
-
-        if (typeof ReportEngine !== 'undefined') {
-          ReportEngine.updateFilterPanel(AppState.currentReport);
-          ReportEngine.renderTableHead(document.getElementById('tableHeadRow'), AppState.currentReport);
-        }
-
-        ReportEngine.currentPage = 1;
-        doQuery();
-      });
+    // 容器级事件委托：兼容静态 HTML 与 ReportMenu 动态渲染的 .nav-item
+    nav.addEventListener('click', function(e) {
+      if (e.target.closest('.nav-star')) return;   // 星标交互交给 ReportMenu（双保险兜底）
+      var link = e.target.closest('.nav-item');
+      if (!link) return;
+      e.preventDefault();
+      openReport(link.getAttribute('data-report'));
     });
+  }
+
+  /**
+   * 打开指定报表：更新状态/标题/菜单高亮/筛选面板并执行查询
+   * @param {string} reportKey — REPORT_CONFIG 的 key
+   */
+  function openReport(reportKey) {
+    var cfg = ReportEngine.getConfig(reportKey);
+    if (!cfg) return;
+
+    AppState.currentReport = reportKey;
+    AppState.currentReportName = cfg.name;   // 从配置取名，不依赖 DOM 文本
+
+    var reportTitle = document.getElementById('reportTitle');
+    if (reportTitle) reportTitle.textContent = cfg.name;
+
+    // 菜单高亮：按 data-report 全量更新（收藏区 + 分组内两份条目同亮）
+    document.querySelectorAll('.nav-item').forEach(function(l) {
+      l.classList.remove('active');
+      if (l.getAttribute('data-report') === reportKey) l.classList.add('active');
+    });
+
+    // 切换回到数据查询 Tab
+    if (typeof Tabs !== 'undefined') Tabs.switchTab('tabQuery');
+
+    if (typeof ReportEngine !== 'undefined') {
+      ReportEngine.updateFilterPanel(reportKey);
+      ReportEngine.renderTableHead(document.getElementById('tableHeadRow'), reportKey);
+    }
+
+    ReportEngine.currentPage = 1;
+    doQuery();
   }
 
   /* ================================================================
@@ -502,6 +520,8 @@ var App = (function() {
         sidebarToggle.textContent = '◀';
         sidebarToggle.title = '折叠侧边栏';
       }
+      // 折叠态变化 → 即时重渲染报表菜单（折叠态全量 emoji 平铺 / 展开态分组视图）
+      if (typeof ReportMenu !== 'undefined') ReportMenu.render();
       // 延迟 resize 图表实例
       setTimeout(function() {
         if (window._chartInstances) {
@@ -540,6 +560,10 @@ var App = (function() {
     if (typeof ChatCore !== 'undefined') ChatCore.init();
     if (typeof AISuggestions !== 'undefined') AISuggestions.init();
     if (typeof SettingsUI !== 'undefined') SettingsUI.init();
+    if (typeof NotepadUI !== 'undefined') NotepadUI.init();
+
+    // 报表菜单（动态渲染侧边栏：搜索/折叠/收藏；未加载时守卫跳过）
+    if (typeof ReportMenu !== 'undefined') ReportMenu.init();
 
     // 绑定 UI 事件
     initSidebarNav();

@@ -111,12 +111,30 @@ var Utils = (function() {
   /* ================================================================
      Public API
      ================================================================ */
+  /**
+   * 深拷贝对象（JSON 序列化方式）
+   * @param {*} obj
+   * @returns {*}
+   */
+  function deepClone(obj) {
+    if (obj === undefined || obj === null) return obj;
+    try {
+      return JSON.parse(JSON.stringify(obj));
+    } catch (e) {
+      return obj;
+    }
+  }
+
+  /* ================================================================
+     Public API
+     ================================================================ */
   return {
     showToast: showToast,
     escapeHtml: escapeHtml,
     formatTime: formatTime,
     copyToClipboard: copyToClipboard,
-    fallbackCopy: fallbackCopy
+    fallbackCopy: fallbackCopy,
+    deepClone: deepClone
   };
 
 })();

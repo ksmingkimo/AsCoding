@@ -14,7 +14,7 @@ $ErrorActionPreference = "Stop"
 # ============================================================
 # Config
 # ============================================================
-$Version   = "1.1"
+$Version   = "1.2"
 $OutputZip = "sunlike-erp-report-v$Version.zip"
 $TempDir   = Join-Path $PSScriptRoot "deploy-package"
 
@@ -46,7 +46,7 @@ Copy-Item (Join-Path $PSScriptRoot "index.html") $TempDir
 Write-Host "   [OK] index.html" -ForegroundColor Green
 
 # -- CSS files --
-$cssFiles = @("auth.css", "dashboard.css", "ai-analysis.css")
+$cssFiles = @("auth.css", "dashboard.css", "ai-analysis.css", "notepad.css")
 foreach ($f in $cssFiles) {
     $src = Join-Path $PSScriptRoot "css\$f"
     if (Test-Path $src) {
@@ -65,6 +65,8 @@ $jsFiles = @(
     "auth.js",
     "api.js",
     "reports.js",
+    "report-menu-store.js",
+    "report-menu.js",
     "datasource-list.js",
     "tabs.js",
     "chat-ui.js",
@@ -73,6 +75,8 @@ $jsFiles = @(
     "ai-parser.js",
     "ai-chart.js",
     "export.js",
+    "notepad-store.js",
+    "notepad-ui.js",
     "chat-core.js",
     "ai-suggestions.js",
     "settings-ui.js",
@@ -119,7 +123,7 @@ Write-Host "==============================================" -ForegroundColor Cya
 Write-Host ""
 Write-Host "  Output file :  $outputPath" -ForegroundColor White
 Write-Host "  File size   :  $zipSize KB" -ForegroundColor White
-Write-Host "  Contents    :  22 files (1 html + 3 css + 18 js)" -ForegroundColor White
+Write-Host "  Contents    :  27 files (1 html + 4 css + 22 js)" -ForegroundColor White
 Write-Host ""
 Write-Host "  Next steps:" -ForegroundColor Yellow
 Write-Host "  1. Extract $OutputZip to your web server directory" -ForegroundColor Yellow

@@ -41,7 +41,7 @@ function Show-Banner {
     Write-Host ""
     Write-Host "  ============================================" -ForegroundColor Cyan
     Write-Host "    Sunlike ERP Report System                  " -ForegroundColor Cyan
-    Write-Host "    One-Click Deploy Tool v1.1                  " -ForegroundColor Cyan
+    Write-Host "    One-Click Deploy Tool v1.2                  " -ForegroundColor Cyan
     Write-Host "  ============================================" -ForegroundColor Cyan
     Write-Host ""
 }
