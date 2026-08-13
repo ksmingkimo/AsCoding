@@ -34,13 +34,16 @@ var NotepadStore = (function() {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(events));
     } catch (e) {
-      Utils.showToast('记事本存储空间不足，请清理旧事件', 'error');
+      Utils.showToast(I18n.t('记事本存储空间不足，请清理旧事件'), 'error');
     }
   }
 
   /**
    * 添加事件（自动生成 id + createdAt，插入头部，裁剪上限）
-   * @param {object} event — { title, dataSource, chatHistory, conversationCount }
+   * @param {object} event — { title, dataSources, activeDSId, chatHistory, conversationCount }
+   *   dataSources — 全部数据源快照数组（含 loading/error 状态，Round 41 起）
+   *   activeDSId  — 保存时选中的数据源 id（回存时恢复选中态）
+   *   旧事件（Round 40 之前）为单数 dataSource 字段，读取端兼容迁移
    * @returns {object} 完整事件对象（含 id + createdAt）
    */
   function add(event) {
@@ -48,7 +51,8 @@ var NotepadStore = (function() {
       id: 'note_' + Date.now(),
       createdAt: new Date().toISOString(),
       title: event.title,
-      dataSource: event.dataSource,
+      dataSources: event.dataSources,
+      activeDSId: event.activeDSId,
       chatHistory: event.chatHistory,
       conversationCount: event.conversationCount
     };

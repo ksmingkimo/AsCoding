@@ -25,7 +25,7 @@ var ChatCore = (function() {
     // 校验 API Key（AIClient 内部也会校验，这里提前提示）
     var apiKey = SettingsStore.getAIKey();
     if (!apiKey) {
-      Utils.showToast('请先在系统设置中配置 API Key', 'error');
+      Utils.showToast(I18n.t('请先在系统设置中配置 API Key'), 'error');
       if (typeof SettingsUI !== 'undefined') SettingsUI.open();
       return;
     }
@@ -33,7 +33,7 @@ var ChatCore = (function() {
     // 校验数据源
     var sources = DataSourceStore.getAll();
     if (sources.length === 0) {
-      Utils.showToast('请先在数据查询中转入数据源', 'error');
+      Utils.showToast(I18n.t('请先在数据查询中转入数据源'), 'error');
       return;
     }
 

@@ -1208,7 +1208,7 @@ var ReportEngine = (function() {
    * Get human-readable column label
    */
   function getColumnLabel(fieldName) {
-    return COLUMN_LABELS[fieldName] || fieldName;
+    return I18n.t(COLUMN_LABELS[fieldName] || fieldName);
   }
 
   /**
@@ -1249,7 +1249,7 @@ var ReportEngine = (function() {
 
     // Boolean CHK_STATUS
     if (fieldName === 'CHK_STATUS') {
-      return value === 'Y' ? '已审核' : (value === 'N' ? '未审核' : String(value));
+      return value === 'Y' ? I18n.t('已审核') : (value === 'N' ? I18n.t('未审核') : String(value));
     }
 
     return String(value);
@@ -1269,8 +1269,8 @@ var ReportEngine = (function() {
    * Get badge HTML for CHK_STATUS
    */
   function getStatusBadge(value) {
-    if (value === 'Y') return '<span class="badge badge-success">已审核</span>';
-    if (value === 'N') return '<span class="badge badge-warning">未审核</span>';
+    if (value === 'Y') return '<span class="badge badge-success">' + I18n.t('已审核') + '</span>';
+    if (value === 'N') return '<span class="badge badge-warning">' + I18n.t('未审核') + '</span>';
     return '';
   }
 
@@ -1563,7 +1563,7 @@ var ReportEngine = (function() {
 
     return promise.then(function(response) {
       if (response.code !== 0) {
-        throw new Error(response.message || '查询失败 (code: ' + response.code + ')');
+        throw new Error(response.message || I18n.t('查询失败 (code: {0})', response.code));
       }
 
       var data, columnInfo;
@@ -1758,76 +1758,76 @@ var ReportEngine = (function() {
     // Update label for filterCust
     var custLabel = document.querySelector('label[for="filterCust"]');
     if (custLabel) {
-      if (reportKey === 'invpo' || reportKey === 'invpc' || reportKey === 'mrpag') { custLabel.textContent = '厂商代号'; }
-      else if (reportKey === 'monbx') { custLabel.textContent = '员工代号'; }
-      else if (reportKey === 'invhs') { custLabel.textContent = '客户代号'; }
-      else { custLabel.textContent = '客户/厂商'; }
+      if (reportKey === 'invpo' || reportKey === 'invpc' || reportKey === 'mrpag') { custLabel.textContent = I18n.t('厂商代号'); }
+      else if (reportKey === 'monbx') { custLabel.textContent = I18n.t('员工代号'); }
+      else if (reportKey === 'invhs') { custLabel.textContent = I18n.t('客户代号'); }
+      else { custLabel.textContent = I18n.t('客户/厂商'); }
     }
 
     // Update label for filterDocNo based on active report
     var docNoLabel = document.querySelector('label[for="filterDocNo"]');
     if (docNoLabel) {
-      if (reportKey === 'mrpPK') { docNoLabel.textContent = '生产子工单'; }
-      else if (reportKey === 'mrpPS') { docNoLabel.textContent = '入库单号'; }
-      else if (reportKey === 'monjk') { docNoLabel.textContent = '借款单号'; }
-      else if (reportKey === 'monCA' || reportKey === 'monCB') { docNoLabel.textContent = '票据号码'; }
-      else if (reportKey === 'scmdrpti') { docNoLabel.textContent = '送货单号'; }
-      else if (reportKey === 'invpopc') { docNoLabel.textContent = '采购单号'; }
-      else if (reportKey === 'invtwpc') { docNoLabel.textContent = '托工单号'; }
-      else if (reportKey === 'invic') { docNoLabel.textContent = '调拨单号'; }
-      else if (reportKey === 'invij') { docNoLabel.textContent = '调整单号'; }
-      else if (reportKey === 'fixaa') { docNoLabel.textContent = '资产代号'; }
-      else { docNoLabel.textContent = '单号'; }
+      if (reportKey === 'mrpPK') { docNoLabel.textContent = I18n.t('生产子工单'); }
+      else if (reportKey === 'mrpPS') { docNoLabel.textContent = I18n.t('入库单号'); }
+      else if (reportKey === 'monjk') { docNoLabel.textContent = I18n.t('借款单号'); }
+      else if (reportKey === 'monCA' || reportKey === 'monCB') { docNoLabel.textContent = I18n.t('票据号码'); }
+      else if (reportKey === 'scmdrpti') { docNoLabel.textContent = I18n.t('送货单号'); }
+      else if (reportKey === 'invpopc') { docNoLabel.textContent = I18n.t('采购单号'); }
+      else if (reportKey === 'invtwpc') { docNoLabel.textContent = I18n.t('托工单号'); }
+      else if (reportKey === 'invic') { docNoLabel.textContent = I18n.t('调拨单号'); }
+      else if (reportKey === 'invij') { docNoLabel.textContent = I18n.t('调整单号'); }
+      else if (reportKey === 'fixaa') { docNoLabel.textContent = I18n.t('资产代号'); }
+      else { docNoLabel.textContent = I18n.t('单号'); }
     }
 
     // Update label for filterPrd based on active report
     var prdLabel = document.querySelector('label[for="filterPrd"]');
     if (prdLabel) {
-      if (reportKey === 'mrppu') { prdLabel.textContent = '生产货品'; }
-      else if (reportKey === 'mrpPK' || reportKey === 'mrpPS') { prdLabel.textContent = '成品代号'; }
-      else if (reportKey === 'accabgt') { prdLabel.textContent = '科目代号'; }
-      else { prdLabel.textContent = '货品代号'; }
+      if (reportKey === 'mrppu') { prdLabel.textContent = I18n.t('生产货品'); }
+      else if (reportKey === 'mrpPK' || reportKey === 'mrpPS') { prdLabel.textContent = I18n.t('成品代号'); }
+      else if (reportKey === 'accabgt') { prdLabel.textContent = I18n.t('科目代号'); }
+      else { prdLabel.textContent = I18n.t('货品代号'); }
     }
 
     // Update label for filterMrpNo based on active report
     var mrpNoLabel = document.querySelector('label[for="filterMrpNo"]');
     if (mrpNoLabel) {
-      if (reportKey === 'accabgt') { mrpNoLabel.textContent = '帐册代号'; }
-      else { mrpNoLabel.textContent = '成品代号'; }
+      if (reportKey === 'accabgt') { mrpNoLabel.textContent = I18n.t('帐册代号'); }
+      else { mrpNoLabel.textContent = I18n.t('成品代号'); }
     }
 
     // Update label for filterStatus based on active report
     var statusLabel = document.querySelector('label[for="filterStatus"]');
     var statusEl = document.getElementById('filterStatus');
     if (statusLabel && statusEl) {
-      if (reportKey === 'fixaa') { statusLabel.textContent = '资产状况'; }
-      else if (reportKey === 'invhp' || reportKey === 'invhs') { statusLabel.textContent = '审核状态'; }
-      else { statusLabel.textContent = '审核状态'; }
+      if (reportKey === 'fixaa') { statusLabel.textContent = I18n.t('资产状况'); }
+      else if (reportKey === 'invhp' || reportKey === 'invhs') { statusLabel.textContent = I18n.t('审核状态'); }
+      else { statusLabel.textContent = I18n.t('审核状态'); }
     }
 
     // Update label for filterYwType based on active report
     var ywTypeLabel = document.querySelector('label[for="filterYwType"]');
     if (ywTypeLabel) {
-      if (reportKey === 'invhp' || reportKey === 'invhs') { ywTypeLabel.textContent = '公开状态'; }
-      else { ywTypeLabel.textContent = '业务类型'; }
+      if (reportKey === 'invhp' || reportKey === 'invhs') { ywTypeLabel.textContent = I18n.t('公开状态'); }
+      else { ywTypeLabel.textContent = I18n.t('业务类型'); }
     }
 
     // Update label for filterFxKnd
     var fxKndLabel = document.querySelector('label[for="filterFxKnd"]');
     if (fxKndLabel) {
-      fxKndLabel.textContent = '资产类别';
+      fxKndLabel.textContent = I18n.t('资产类别');
     }
 
     // Update label for filterBatNo
     var batNoLabel = document.querySelector('label[for="filterBatNo"]');
     if (batNoLabel) {
-      batNoLabel.textContent = '批号';
+      batNoLabel.textContent = I18n.t('批号');
     }
 
     // Update label for filterPrdMark
     var prdMarkLabel = document.querySelector('label[for="filterPrdMark"]');
     if (prdMarkLabel) {
-      prdMarkLabel.textContent = '货品特征';
+      prdMarkLabel.textContent = I18n.t('货品特征');
     }
   }
 

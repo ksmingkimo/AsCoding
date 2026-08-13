@@ -87,7 +87,7 @@ var AIParser = (function() {
    * @returns {string} HTML
    */
   function renderTableHTML(data) {
-    if (!Array.isArray(data) || data.length === 0) return '<p>(空表格)</p>';
+    if (!Array.isArray(data) || data.length === 0) return '<p>' + I18n.t('(空表格)') + '</p>';
 
     // Union ALL keys across every row — not just data[0].
     var keys = [];

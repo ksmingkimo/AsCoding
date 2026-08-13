@@ -79,7 +79,7 @@ var Utils = (function() {
   function copyToClipboard(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(function() {
-        showToast('已复制到剪贴板');
+        showToast(I18n.t('已复制到剪贴板'));
       }).catch(function() {
         fallbackCopy(text);
       });
@@ -101,9 +101,9 @@ var Utils = (function() {
     ta.select();
     try {
       document.execCommand('copy');
-      showToast('已复制到剪贴板');
+      showToast(I18n.t('已复制到剪贴板'));
     } catch (e) {
-      showToast('复制失败，请手动选择文本', 'error');
+      showToast(I18n.t('复制失败，请手动选择文本'), 'error');
     }
     document.body.removeChild(ta);
   }

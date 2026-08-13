@@ -28,7 +28,7 @@ var Export = (function() {
     }
 
     if (allData.length === 0) {
-      Utils.showToast('未在回复中找到表格数据，无法导出 Excel', 'error');
+      Utils.showToast(I18n.t('未在回复中找到表格数据，无法导出 Excel'), 'error');
       return;
     }
 
@@ -45,8 +45,8 @@ var Export = (function() {
       }).join(',') + '\n';
     });
 
-    downloadFile(csv, 'AI数据分析结果.csv', 'text/csv;charset=utf-8');
-    Utils.showToast('Excel (CSV) 文件已下载');
+    downloadFile(csv, I18n.t('AI数据分析结果') + '.csv', 'text/csv;charset=utf-8');
+    Utils.showToast(I18n.t('Excel (CSV) 文件已下载'));
   }
 
   /**
@@ -61,7 +61,7 @@ var Export = (function() {
    * @returns {string} 完整的 HTML 文档字符串
    */
   function buildHTMLReport(rawText, msgDiv) {
-    var title = 'AI 数据分析报告';
+    var title = I18n.t('AI 数据分析报告');
     var dateStr = new Date().toLocaleDateString('zh-CN');
 
     // ── Step 1: 提取图表截图 (canvas → base64 PNG) ──
@@ -87,7 +87,7 @@ var Export = (function() {
           return '%%TABLE%%' + AIParser.renderTableHTML(data) + '%%/TABLE%%';
         }
       } catch (e) {}
-      return '<p><em>(表格数据解析失败)</em></p>';
+      return '<p><em>' + I18n.t('(表格数据解析失败)') + '</em></p>';
     });
 
     // 2a2. 裸 "table\n[JSON]" 补救
@@ -105,13 +105,13 @@ var Export = (function() {
     processed = processed.replace(/```\s*chart\s*\n([\s\S]*?)```/g, function(m, json) {
       if (chartIdx < chartImages.length) {
         var src = chartImages[chartIdx++];
-        return '%%CHART%%<img src="' + src + '" style="max-width:100%;margin:16px 0;display:block" alt="图表">%%/CHART%%';
+        return '%%CHART%%<img src="' + src + '" style="max-width:100%;margin:16px 0;display:block" alt="' + I18n.t('图表') + '">%%/CHART%%';
       }
       try {
         JSON.parse(json.trim());
-        return '%%CHART%%<p><em>（图表数据已嵌入，请在浏览器中查看原始图表）</em></p>%%/CHART%%';
+        return '%%CHART%%<p><em>' + I18n.t('（图表数据已嵌入，请在浏览器中查看原始图表）') + '</em></p>%%/CHART%%';
       } catch (e) {}
-      return '<p><em>(图表数据解析失败)</em></p>';
+      return '<p><em>' + I18n.t('(图表数据解析失败)') + '</em></p>';
     });
 
     // 2c. 其他 ```code``` 块
@@ -129,7 +129,7 @@ var Export = (function() {
       return '<div class="slide">' +
         (idx === 0 ? '<h1>' + Utils.escapeHtml(title) + '</h1>' : '') +
         '<div class="slide-body">' + body + '</div>' +
-        '<p class="slide-footer">' + dateStr + ' | Sunlike ERP AI 分析</p>' +
+        '<p class="slide-footer">' + dateStr + ' | ' + I18n.t('Sunlike ERP AI 分析') + '</p>' +
         '</div>';
     }).join('');
 
@@ -165,8 +165,8 @@ var Export = (function() {
    */
   function toHTML(rawText, msgDiv) {
     var html = buildHTMLReport(rawText, msgDiv);
-    downloadFile(html, 'AI数据分析报告.html', 'text/html;charset=utf-8');
-    Utils.showToast('报告 (HTML格式) 已下载');
+    downloadFile(html, I18n.t('AI数据分析报告') + '.html', 'text/html;charset=utf-8');
+    Utils.showToast(I18n.t('报告 (HTML格式) 已下载'));
   }
 
   /**
@@ -176,7 +176,7 @@ var Export = (function() {
     var html = buildHTMLReport(rawText, msgDiv);
     var w = window.open('', '_blank', 'width=900,height=700');
     if (!w) {
-      Utils.showToast('PDF 导出被浏览器拦截，请允许弹出窗口后重试', 'error');
+      Utils.showToast(I18n.t('PDF 导出被浏览器拦截，请允许弹出窗口后重试'), 'error');
       return;
     }
     w.document.write(html);
@@ -213,7 +213,7 @@ var Export = (function() {
    */
   function toPPTX(rawText, msgDiv) {
     if (typeof PptxGenJS === 'undefined') {
-      Utils.showToast('PPTX 生成库未加载，请刷新页面后重试', 'error');
+      Utils.showToast(I18n.t('PPTX 生成库未加载，请刷新页面后重试'), 'error');
       return;
     }
 
@@ -230,7 +230,7 @@ var Export = (function() {
     var units = buildSlideUnits(rawText, chartImages);
 
     if (units.length === 0) {
-      Utils.showToast('未找到可导出的内容', 'error');
+      Utils.showToast(I18n.t('未找到可导出的内容'), 'error');
       return;
     }
 
@@ -238,8 +238,8 @@ var Export = (function() {
     var pres = new PptxGenJS();
     pres.layout = 'LAYOUT_16x9';
     pres.author = 'Sunlike ERP';
-    pres.title = 'AI 数据分析报告';
-    pres.subject = '数据报告';
+    pres.title = I18n.t('AI 数据分析报告');
+    pres.subject = I18n.t('数据报告');
 
     var dateStr = new Date().toLocaleDateString('zh-CN');
 
@@ -280,20 +280,20 @@ var Export = (function() {
       }
 
       // 页脚
-      slide.addText('Sunlike ERP AI 分析 | ' + dateStr, {
+      slide.addText(I18n.t('Sunlike ERP AI 分析') + ' | ' + dateStr, {
         x: MARGIN_L, y: FOOTER_Y, w: CONTENT_W, h: 0.3,
         fontSize: 9, color: '94A3B8', fontFace: 'Microsoft YaHei'
       });
     });
 
     // Step 5: 下载
-    pres.writeFile({ fileName: 'AI数据分析报告.pptx' })
+    pres.writeFile({ fileName: I18n.t('AI数据分析报告') + '.pptx' })
       .then(function() {
-        Utils.showToast('PPTX 文件已下载');
+        Utils.showToast(I18n.t('PPTX 文件已下载'));
       })
       .catch(function(e) {
         console.error('PPTX 生成失败:', e);
-        Utils.showToast('PPTX 生成失败，请重试', 'error');
+        Utils.showToast(I18n.t('PPTX 生成失败，请重试'), 'error');
       });
   }
 
@@ -480,7 +480,7 @@ var Export = (function() {
           var chunk = data.slice(p * MAX_ROWS, (p + 1) * MAX_ROWS);
           var pageTitle = unit.title || null;
           if (pageTitle && p > 0) {
-            pageTitle = pageTitle + ' (续' + (p + 1) + '/' + totalPages + ')';
+            pageTitle = pageTitle + I18n.t(' (续{0}/{1})', (p + 1), totalPages);
           }
           finalResult.push({
             type: 'table',
@@ -568,7 +568,7 @@ var Export = (function() {
     var maxH = optH !== undefined ? optH : BODY_H;
 
     if (!imageDataUrl) {
-      slide.addText('（图表 — 请查看原始分析结果）', {
+      slide.addText(I18n.t('（图表 — 请查看原始分析结果）'), {
         x: MARGIN_L, y: y, w: CONTENT_W, h: 0.4,
         fontSize: 12, italic: true, color: '94A3B8', fontFace: 'Microsoft YaHei'
       });
@@ -591,7 +591,7 @@ var Export = (function() {
   function renderMainCode(slide, code, optY, optH) {
     var y = optY !== undefined ? optY : BODY_Y;
     var h = optH !== undefined ? optH : BODY_H;
-    var displayCode = code.length > 1200 ? code.substring(0, 1200) + '\n... (已截断)' : code;
+    var displayCode = code.length > 1200 ? code.substring(0, 1200) + '\n... (' + I18n.t('已截断') + ')' : code;
 
     slide.addText(displayCode, {
       x: MARGIN_L, y: y, w: CONTENT_W, h: h,

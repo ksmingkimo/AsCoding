@@ -322,7 +322,7 @@
             </div>
           </div>
           <div class="ds-footer">
-            <button class="btn-save-notepad" id="btnSaveToNotepad" data-i18n-title="保存当前数据源和对话到记事本" title="保存当前数据源和对话到记事本">📓 <span data-i18n="存到记事本">存到记事本</span></button>
+            <button class="btn-save-notepad" id="btnSaveToNotepad" data-i18n-title="保存全部数据源和对话到记事本" title="保存全部数据源和对话到记事本">📓 <span data-i18n="存到记事本">存到记事本</span></button>
             <button class="btn-clear-all" id="btnClearAllDS" data-i18n-title="清空全部数据源" title="清空全部数据源">🗑 <span data-i18n="清空全部数据源">清空全部数据源</span></button>
           </div>
         </div>
@@ -490,35 +490,39 @@
      i18n.js + i18n-data.js 必须最先加载（i18n-data.js 末尾同步 boot）
      ========================================================= -->
 <!-- I18n Foundation -->
-<script src="js/i18n.js?v=20260813a"></script>
-<script src="js/i18n-data.js?v=20260813a"></script>
+<script src="js/i18n.js?v=20260814a"></script>
+<script src="js/i18n-data.js?v=20260814b"></script>
 <!-- Foundation -->
-<script src="js/utils.js?v=20260813a"></script>
-<script src="js/dialog.js?v=20260813a"></script>
+<script src="js/utils.js?v=20260814a"></script>
+<script src="js/dialog.js?v=20260814a"></script>
 <script src="js/settings-store.js?v=20260813a"></script>
 <script src="js/datasource-store.js?v=20260813a"></script>
 <!-- Auth & API -->
-<script src="js/auth.js?v=20260813a"></script>
-<script src="js/api.js?v=20260813a"></script>
-<script src="js/reports.js?v=20260813b"></script>
+<script src="js/auth.js?v=20260814a"></script>
+<script src="js/api.js?v=20260814a"></script>
+<script src="js/reports.js?v=20260814a"></script>
 <!-- 报表菜单（搜索/折叠/收藏） -->
 <script src="js/report-menu-store.js?v=20260813b"></script>
-<script src="js/report-menu.js?v=20260813d"></script>
+<script src="js/report-menu.js?v=20260814a"></script>
 <!-- UI Rendering -->
-<script src="js/datasource-list.js?v=20260813a"></script>
+<script src="js/datasource-list.js?v=20260814a"></script>
 <script src="js/tabs.js?v=20260813a"></script>
-<script src="js/chat-ui.js?v=20260813a"></script>
+<script src="js/chat-ui.js?v=20260814a"></script>
 <!-- AI Core -->
-<script src="js/deepseek-client.js?v=20260813a"></script>
-<script src="js/ai-parser.js?v=20260813a"></script>
-<script src="js/ai-chart.js?v=20260813a"></script>
+<script src="js/ai-client.js?v=20260814a"></script>
+<script src="js/ai-parser.js?v=20260814a"></script>
+<script src="js/ai-chart.js?v=20260814a"></script>
 <!-- Export -->
-<script src="js/export.js?v=20260813a"></script>
+<script src="js/export.js?v=20260814a"></script>
+<!-- Notepad -->
+<script src="js/notepad-store.js?v=20260814b"></script>
+<script src="js/notepad-ui.js?v=20260814b"></script>
 <!-- Controllers -->
-<script src="js/chat-core.js?v=20260813a"></script>
-<script src="js/settings-ui.js?v=20260813a"></script>
+<script src="js/chat-core.js?v=20260814a"></script>
+<script src="js/ai-suggestions.js?v=20260814a"></script>
+<script src="js/settings-ui.js?v=20260814a"></script>
 <!-- App Entry（DOMContentLoaded 自动初始化） -->
-<script src="js/app.js?v=20260813c"></script>
+<script src="js/app.js?v=20260814b"></script>
 
 <script>
 /* ============================================================

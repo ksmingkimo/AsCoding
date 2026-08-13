@@ -49,7 +49,7 @@ var Auth = (function() {
         COMPNO: compno,
         USR: usr,
         PWD: pwd || '',
-        LANG_ID: 'zh-cn',
+        LANG_ID: (typeof I18n !== 'undefined' ? I18n.getLang() : 'zh-cn'),
         SYS_TYPE: 'ERP'
       })
     })
@@ -69,7 +69,7 @@ var Auth = (function() {
       }
     })
     .catch(function(err) {
-      return { success: false, error: '无法连接服务器: ' + (err.message || '网络错误') };
+      return { success: false, error: I18n.t('无法连接服务器: {0}', err.message || I18n.t('网络错误')) };
     });
   }
 
@@ -96,7 +96,7 @@ var Auth = (function() {
         COMPNO: auth.COMPNO || 'AT01',
         USR: auth.USR,
         PWD: '',
-        LANG_ID: 'zh-cn',
+        LANG_ID: (typeof I18n !== 'undefined' ? I18n.getLang() : 'zh-cn'),
         SYS_TYPE: 'ERP'
       })
     })

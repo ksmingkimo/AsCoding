@@ -4,7 +4,7 @@
 .DESCRIPTION
     Extracts deployment-required files from the project, excludes dev docs and tools,
     and generates a ZIP deployment package.
-    Output: sunlike-erp-report-v1.1.zip
+    Output: sunlike-erp-report-v1.3.zip
 .NOTES
     Run from project root: .\deploy.ps1
 #>
@@ -14,7 +14,7 @@ $ErrorActionPreference = "Stop"
 # ============================================================
 # Config
 # ============================================================
-$Version   = "1.2"
+$Version   = "1.3"
 $OutputZip = "sunlike-erp-report-v$Version.zip"
 $TempDir   = Join-Path $PSScriptRoot "deploy-package"
 
@@ -59,7 +59,10 @@ foreach ($f in $cssFiles) {
 
 # -- JS files (in dependency order) --
 $jsFiles = @(
+    "i18n.js",
+    "i18n-data.js",
     "utils.js",
+    "dialog.js",
     "settings-store.js",
     "datasource-store.js",
     "auth.js",
@@ -70,7 +73,6 @@ $jsFiles = @(
     "datasource-list.js",
     "tabs.js",
     "chat-ui.js",
-    "deepseek-client.js",
     "ai-client.js",
     "ai-parser.js",
     "ai-chart.js",
@@ -123,7 +125,7 @@ Write-Host "==============================================" -ForegroundColor Cya
 Write-Host ""
 Write-Host "  Output file :  $outputPath" -ForegroundColor White
 Write-Host "  File size   :  $zipSize KB" -ForegroundColor White
-Write-Host "  Contents    :  27 files (1 html + 4 css + 22 js)" -ForegroundColor White
+Write-Host "  Contents    :  29 files (1 html + 4 css + 24 js)" -ForegroundColor White
 Write-Host ""
 Write-Host "  Next steps:" -ForegroundColor Yellow
 Write-Host "  1. Extract $OutputZip to your web server directory" -ForegroundColor Yellow

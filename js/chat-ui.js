@@ -69,12 +69,12 @@ var ChatUI = (function() {
     var actions = document.createElement('div');
     actions.className = 'msg-actions';
     actions.innerHTML =
-      '<button class="action-btn" data-action="copy" title="复制回复内容">📋 复制</button>' +
-      '<button class="action-btn" data-action="extend" title="基于此回复继续提问">💬 延申问答</button>' +
-      '<button class="action-btn" data-action="excel" title="导出为 Excel">📥 Excel</button>' +
-      '<button class="action-btn" data-action="html" title="导出为 HTML 报告">📄 HTML</button>' +
-      '<button class="action-btn" data-action="pdf" title="导出为 PDF（浏览器打印）">📑 PDF</button>' +
-      '<button class="action-btn" data-action="pptx" title="导出为 PPTX（真正的 PowerPoint）">📊 PPTX</button>';
+      '<button class="action-btn" data-action="copy" title="' + I18n.t('复制回复内容') + '">📋 ' + I18n.t('复制') + '</button>' +
+      '<button class="action-btn" data-action="extend" title="' + I18n.t('基于此回复继续提问') + '">💬 ' + I18n.t('延申问答') + '</button>' +
+      '<button class="action-btn" data-action="excel" title="' + I18n.t('导出为 Excel') + '">📥 Excel</button>' +
+      '<button class="action-btn" data-action="html" title="' + I18n.t('导出为 HTML 报告') + '">📄 HTML</button>' +
+      '<button class="action-btn" data-action="pdf" title="' + I18n.t('导出为 PDF（浏览器打印）') + '">📑 PDF</button>' +
+      '<button class="action-btn" data-action="pptx" title="' + I18n.t('导出为 PPTX（真正的 PowerPoint）') + '">📊 PPTX</button>';
 
     // 复制按钮
     actions.querySelector('[data-action="copy"]').addEventListener('click', function() {
@@ -85,7 +85,7 @@ var ChatUI = (function() {
     actions.querySelector('[data-action="extend"]').addEventListener('click', function() {
       var input = document.getElementById('chatInput');
       if (input) {
-        input.value = '请进一步分析上述结论，找出更多洞察和细节';
+        input.value = I18n.t('请进一步分析上述结论，找出更多洞察和细节');
         input.focus();
       }
     });
@@ -95,7 +95,7 @@ var ChatUI = (function() {
       if (typeof Export !== 'undefined' && Export.toExcel) {
         Export.toExcel(rawText);
       } else {
-        Utils.showToast('导出模块未加载', 'error');
+        Utils.showToast(I18n.t('导出模块未加载'), 'error');
       }
     });
 
@@ -104,7 +104,7 @@ var ChatUI = (function() {
       if (typeof Export !== 'undefined' && Export.toHTML) {
         Export.toHTML(rawText, msgDiv);
       } else {
-        Utils.showToast('导出模块未加载', 'error');
+        Utils.showToast(I18n.t('导出模块未加载'), 'error');
       }
     });
 
@@ -113,7 +113,7 @@ var ChatUI = (function() {
       if (typeof Export !== 'undefined' && Export.toPDF) {
         Export.toPDF(rawText, msgDiv);
       } else {
-        Utils.showToast('导出模块未加载', 'error');
+        Utils.showToast(I18n.t('导出模块未加载'), 'error');
       }
     });
 
@@ -122,7 +122,7 @@ var ChatUI = (function() {
       if (typeof Export !== 'undefined' && Export.toPPTX) {
         Export.toPPTX(rawText, msgDiv);
       } else {
-        Utils.showToast('导出模块未加载', 'error');
+        Utils.showToast(I18n.t('导出模块未加载'), 'error');
       }
     });
 

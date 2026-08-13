@@ -74,8 +74,8 @@ var AIChart = (function() {
 
     } catch (e) {
       canvas.parentElement.innerHTML =
-        '<p style="color:var(--color-error);font-size:var(--text-xs)">⚠ 图表渲染失败: ' +
-        Utils.escapeHtml(e.message) + '</p>';
+        '<p style="color:var(--color-error);font-size:var(--text-xs)">⚠ ' +
+        I18n.t('图表渲染失败: {0}', Utils.escapeHtml(e.message)) + '</p>';
     }
   }
 

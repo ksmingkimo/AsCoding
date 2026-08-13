@@ -19,24 +19,24 @@ var DatasourceList = (function() {
       var fromVal = dateFrom.value;
       var toVal = dateTo.value;
       if (fromVal || toVal) {
-        parts.push('日期' + (fromVal || '...') + '至' + (toVal || '...'));
+        parts.push(I18n.t('日期') + (fromVal || '...') + I18n.t('至') + (toVal || '...'));
       }
     }
     var cust = document.getElementById('filterCust');
-    if (cust && cust.value.trim()) { parts.push('客户/厂商=' + cust.value.trim()); }
+    if (cust && cust.value.trim()) { parts.push(I18n.t('客户/厂商') + '=' + cust.value.trim()); }
     var prd = document.getElementById('filterPrd');
-    if (prd && prd.value.trim()) { parts.push('货品=' + prd.value.trim()); }
+    if (prd && prd.value.trim()) { parts.push(I18n.t('货品') + '=' + prd.value.trim()); }
     var dep = document.getElementById('filterDep');
-    if (dep && dep.value.trim()) { parts.push('部门=' + dep.value.trim()); }
+    if (dep && dep.value.trim()) { parts.push(I18n.t('部门') + '=' + dep.value.trim()); }
     var wh = document.getElementById('filterWh');
-    if (wh && wh.value.trim()) { parts.push('仓库=' + wh.value.trim()); }
+    if (wh && wh.value.trim()) { parts.push(I18n.t('仓库') + '=' + wh.value.trim()); }
     var status = document.getElementById('filterStatus');
-    if (status && status.value) { parts.push('审核=' + (status.value === 'Y' ? '已审核' : '未审核')); }
+    if (status && status.value) { parts.push(I18n.t('审核') + '=' + (status.value === 'Y' ? I18n.t('已审核') : I18n.t('未审核'))); }
     var ywType = document.getElementById('filterYwType');
-    if (ywType && ywType.value.trim()) { parts.push('业务类型=' + ywType.value.trim()); }
+    if (ywType && ywType.value.trim()) { parts.push(I18n.t('业务类型') + '=' + ywType.value.trim()); }
     var kb = document.getElementById('filterKb');
-    if (kb && kb.value.trim()) { parts.push('收付款方式=' + kb.value.trim()); }
-    return parts.length > 0 ? parts.join(', ') : '全部条件';
+    if (kb && kb.value.trim()) { parts.push(I18n.t('收付款方式') + '=' + kb.value.trim()); }
+    return parts.length > 0 ? parts.join(', ') : I18n.t('全部条件');
   }
 
   /**
@@ -74,23 +74,23 @@ var DatasourceList = (function() {
           '<div class="ds-name">' + Utils.escapeHtml(ds.reportName) + '</div>' +
           '<div class="ds-summary">' + Utils.escapeHtml(ds.filterSummary || '') + '</div>' +
           '<div class="ds-meta">' +
-            '<span class="ds-status-loading"><span class="spinner"></span> 正在加载数据...</span>' +
+            '<span class="ds-status-loading"><span class="spinner"></span> ' + I18n.t('正在加载数据...') + '</span>' +
           '</div>';
       } else if (isError) {
         card.innerHTML =
-          '<button class="ds-delete" title="删除此数据源">&times;</button>' +
+          '<button class="ds-delete" title="' + I18n.t('删除此数据源') + '">&times;</button>' +
           '<div class="ds-name">' + Utils.escapeHtml(ds.reportName) + '</div>' +
           '<div class="ds-summary">' + Utils.escapeHtml(ds.filterSummary || '') + '</div>' +
           '<div class="ds-meta">' +
-            '<span class="ds-status-error">❌ ' + Utils.escapeHtml(ds.errorMsg || '加载失败') + '</span>' +
+            '<span class="ds-status-error">❌ ' + Utils.escapeHtml(ds.errorMsg || I18n.t('加载失败')) + '</span>' +
           '</div>';
       } else {
         card.innerHTML =
-          '<button class="ds-delete" title="删除此数据源">&times;</button>' +
+          '<button class="ds-delete" title="' + I18n.t('删除此数据源') + '">&times;</button>' +
           '<div class="ds-name">' + Utils.escapeHtml(ds.reportName) + '</div>' +
           '<div class="ds-summary">' + Utils.escapeHtml(ds.filterSummary) + '</div>' +
           '<div class="ds-meta">' +
-            '<span>' + (ds.recordCount || 0).toLocaleString() + ' 条记录</span>' +
+            '<span>' + I18n.t('{0} 条记录', (ds.recordCount || 0).toLocaleString()) + '</span>' +
             '<span>' + Utils.formatTime(ds.createdAt) + '</span>' +
           '</div>';
       }
@@ -108,14 +108,15 @@ var DatasourceList = (function() {
       if (delBtn) {
         delBtn.addEventListener('click', function(e) {
           e.stopPropagation();
-          if (confirm('确定删除数据源 "' + ds.reportName + ' - ' + ds.filterSummary + '" 吗？')) {
+          Dialog.confirm(I18n.t('确定删除数据源 "{0}" 吗？', ds.reportName + ' - ' + ds.filterSummary)).then(function(ok) {
+            if (!ok) return;
             DataSourceStore.remove(ds.id);
             if (window.AppState && window.AppState.activeDSId === ds.id) {
               window.AppState.activeDSId = null;
             }
             renderDataSourceList();
-            Utils.showToast('数据源已删除');
-          }
+            Utils.showToast(I18n.t('数据源已删除'));
+          });
         });
       }
 
@@ -138,12 +139,13 @@ var DatasourceList = (function() {
     if (btnClearAll) {
       btnClearAll.addEventListener('click', function() {
         if (DataSourceStore.getAll().length === 0) return;
-        if (confirm('确定清空全部数据源吗？此操作不可恢复。')) {
+        Dialog.confirm(I18n.t('确定清空全部数据源吗？此操作不可恢复。'), { danger: true }).then(function(ok) {
+          if (!ok) return;
           DataSourceStore.clearAll();
           if (window.AppState) window.AppState.activeDSId = null;
           renderDataSourceList();
-          Utils.showToast('已清空全部数据源');
-        }
+          Utils.showToast(I18n.t('已清空全部数据源'));
+        });
       });
     }
   }

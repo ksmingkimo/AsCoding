@@ -95,23 +95,23 @@ var Api = (function() {
         COMPNO: 'AT01',
         USR: 'SAN',
         PWD: '',
-        LANG_ID: 'zh-cn',
+        LANG_ID: (typeof I18n !== 'undefined' ? I18n.getLang() : 'zh-cn'),
         SYS_TYPE: 'ERP'
       })
     })
     .then(function(resp) { return resp.json(); })
     .then(function(data) {
       if (data.code === 0) {
-        return { ok: true, message: '服务器连接正常' };
+        return { ok: true, message: I18n.t('服务器连接正常') };
       }
       // code 非 0 但有 code 字段 = API 收到了请求并返回 → 服务器是通的（只是测试账号不匹配）
       if (typeof data.code !== 'undefined') {
-        return { ok: true, message: '服务器可达 (API 响应正常)' };
+        return { ok: true, message: I18n.t('服务器可达 (API 响应正常)') };
       }
-      return { ok: false, message: '服务器响应格式异常' };
+      return { ok: false, message: I18n.t('服务器响应格式异常') };
     })
     .catch(function(err) {
-      return { ok: false, message: '无法连接: ' + (err.message || '网络错误') };
+      return { ok: false, message: I18n.t('无法连接: {0}', err.message || I18n.t('网络错误')) };
     });
   }
 

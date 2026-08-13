@@ -8,6 +8,17 @@ var NotepadUI = (function() {
   'use strict';
 
   /**
+   * 取事件的全部数据源快照数组（旧事件单数 dataSource 字段兼容迁移）
+   * @param {object} event
+   * @returns {Array}
+   */
+  function getEventSources(event) {
+    if (event.dataSources && event.dataSources.length > 0) return event.dataSources;
+    if (event.dataSource) return [event.dataSource];
+    return [];
+  }
+
+  /**
    * 渲染记事本事件卡片列表
    */
   function render() {
@@ -32,30 +43,42 @@ var NotepadUI = (function() {
       card.className = 'notepad-card';
       card.setAttribute('data-note-id', event.id);
 
-      // 构建数据源描述
+      // 构建数据源描述（多源快照 + 旧单源事件兼容）
+      var eventSources = getEventSources(event);
       var dsDesc = '';
-      if (event.dataSource) {
-        dsDesc = Utils.escapeHtml(event.dataSource.reportName || '未知报表');
-        if (event.dataSource.filterSummary) {
-          dsDesc += ' — ' + Utils.escapeHtml(event.dataSource.filterSummary);
+      if (eventSources.length === 1) {
+        var only = eventSources[0];
+        dsDesc = Utils.escapeHtml(I18n.t(only.reportName || '未知报表'));
+        if (only.filterSummary) {
+          dsDesc += ' — ' + Utils.escapeHtml(only.filterSummary);
         }
-        if (event.dataSource.recordCount) {
-          dsDesc += ', ' + event.dataSource.recordCount.toLocaleString() + '条记录';
+        if (only.recordCount) {
+          dsDesc += ', ' + I18n.t('{0}条记录', only.recordCount.toLocaleString());
         }
+      } else if (eventSources.length > 1) {
+        // 多源：显示保存时选中的源 + 总数（id 未命中回退第一个）
+        var active = null;
+        for (var k = 0; k < eventSources.length; k++) {
+          if (eventSources[k].id === event.activeDSId) { active = eventSources[k]; break; }
+        }
+        active = active || eventSources[0];
+        dsDesc = Utils.escapeHtml(
+          I18n.t('{0}（共 {1} 个数据源）', I18n.t(active.reportName || '未知报表'), eventSources.length)
+        );
       }
 
       var convCount = event.conversationCount || 0;
 
       card.innerHTML =
-        '<button class="np-delete" title="删除此事件">&times;</button>' +
-        '<div class="np-title">' + Utils.escapeHtml(event.title || '未命名事件') + '</div>' +
+        '<button class="np-delete" title="' + I18n.t('删除此事件') + '">&times;</button>' +
+        '<div class="np-title">' + Utils.escapeHtml(event.title || I18n.t('未命名事件')) + '</div>' +
         '<div class="np-source">' +
-          '<span class="np-source-label">数据源</span>' +
-          '<span>' + (dsDesc || '无') + '</span>' +
+          '<span class="np-source-label">' + I18n.t('数据源') + '</span>' +
+          '<span>' + (dsDesc || I18n.t('无')) + '</span>' +
         '</div>' +
         '<div class="np-source">' +
-          '<span class="np-source-label">对话</span>' +
-          '<span>' + convCount + ' 轮对话</span>' +
+          '<span class="np-source-label">' + I18n.t('对话') + '</span>' +
+          '<span>' + I18n.t('{0} 轮对话', convCount) + '</span>' +
         '</div>' +
         '<div class="np-time">' + Utils.formatTime(event.createdAt) + '</div>';
 
@@ -83,65 +106,60 @@ var NotepadUI = (function() {
    */
   function saveCurrent() {
     try {
-      var activeDSId = window.AppState ? window.AppState.activeDSId : null;
-
-      // 如果没有活跃 ID，尝试自动选择
-      if (!activeDSId) {
-        var allDS = DataSourceStore.getAll();
-        // 过滤掉 loading/error 状态的
-        var readyDS = allDS.filter(function(ds) { return ds.status === 'ready' || !ds.status; });
-        if (readyDS.length === 1) {
-          activeDSId = readyDS[0].id;
-          if (window.AppState) window.AppState.activeDSId = activeDSId;
-        } else if (readyDS.length > 1) {
-          // 多个数据源但没选中：自动选第一个
-          activeDSId = readyDS[0].id;
-          if (window.AppState) window.AppState.activeDSId = activeDSId;
-        }
+      var allDS = DataSourceStore.getAll();
+      if (allDS.length === 0) {
+        Utils.showToast(I18n.t('请先添加数据源'), 'warning');
+        return;
       }
 
+      var activeDSId = window.AppState ? window.AppState.activeDSId : null;
+
+      // 如果没有活跃 ID，尝试自动选择（优先 ready，否则第一个）
       if (!activeDSId) {
-        Utils.showToast('请先在数据源面板中选择一个数据源', 'warning');
-        return;
+        var readyDS = allDS.filter(function(ds) { return ds.status === 'ready' || !ds.status; });
+        activeDSId = readyDS.length > 0 ? readyDS[0].id : allDS[0].id;
+        if (window.AppState) window.AppState.activeDSId = activeDSId;
       }
 
       var chatHistory = window.AppState ? window.AppState.chatHistory : [];
       if (!chatHistory || chatHistory.length === 0) {
-        Utils.showToast('暂无对话内容可保存', 'warning');
+        Utils.showToast(I18n.t('暂无对话内容可保存'), 'warning');
         return;
       }
 
       var dataSource = DataSourceStore.getById(activeDSId);
       if (!dataSource) {
-        Utils.showToast('未找到选中的数据源', 'error');
+        Utils.showToast(I18n.t('未找到选中的数据源'), 'error');
         return;
       }
 
-      // 弹出命名对话框
-      var defaultName = (dataSource.reportName || '未知报表') + ' — ' + (dataSource.filterSummary || '');
-      var title = prompt('请输入事件名称：', defaultName);
-      if (title === null) return; // 用户取消
-      title = title.trim();
-      if (!title) {
-        Utils.showToast('事件名称不能为空', 'warning');
-        return;
-      }
+      // 弹出命名对话框（应用内弹窗，随语言显示）
+      var defaultName = I18n.t(dataSource.reportName || '未知报表') + ' — ' + (dataSource.filterSummary || '');
+      Dialog.prompt(I18n.t('请输入事件名称：'), { value: defaultName, maxLength: 50 }).then(function(title) {
+        if (title === null) return; // 用户取消
+        title = title.trim();
+        if (!title) {
+          Utils.showToast(I18n.t('事件名称不能为空'), 'warning');
+          return;
+        }
 
-      // 深拷贝后保存
-      var clonedDS = Utils.deepClone(dataSource);
-      var clonedChat = Utils.deepClone(chatHistory);
+        // 深拷贝后保存：全部数据源快照（保存瞬间重新读取，含 loading/error）+ 选中 id + 对话
+        var clonedSources = DataSourceStore.getAll().map(function(ds) { return Utils.deepClone(ds); });
+        var clonedChat = Utils.deepClone(chatHistory);
 
-      var saved = NotepadStore.add({
-        title: title,
-        dataSource: clonedDS,
-        chatHistory: clonedChat,
-        conversationCount: Math.floor(chatHistory.length / 2)
+        NotepadStore.add({
+          title: title,
+          dataSources: clonedSources,
+          activeDSId: activeDSId,
+          chatHistory: clonedChat,
+          conversationCount: Math.floor(chatHistory.length / 2)
+        });
+
+        render();
+        Utils.showToast(I18n.t('已保存到记事本'));
       });
-
-      render();
-      Utils.showToast('已保存到记事本');
     } catch (e) {
-      Utils.showToast('保存失败：' + e.message, 'error');
+      Utils.showToast(I18n.t('保存失败：{0}', e.message), 'error');
     }
   }
 
@@ -152,24 +170,33 @@ var NotepadUI = (function() {
   function loadEvent(id) {
     var event = NotepadStore.getById(id);
     if (!event) {
-      Utils.showToast('事件不存在或已被删除', 'error');
+      Utils.showToast(I18n.t('事件不存在或已被删除'), 'error');
       return;
     }
 
-    if (!confirm('确定加载事件 "' + event.title + '"？\n当前数据源和对话将被替换。')) {
-      return;
-    }
+    Dialog.confirm(I18n.t('确定加载事件 "{0}"？', event.title) + '\n' + I18n.t('当前数据源和对话将被替换。')).then(function(ok) {
+      if (!ok) return;
+      loadEventConfirmed(event);
+    });
+  }
 
-    // 替换数据源
+  /** Dialog.confirm 通过后的加载执行体 */
+  function loadEventConfirmed(event) {
+
+    // 替换数据源：全量快照恢复（saveAll 保留快照原始 id/状态/createdAt；旧单源事件兼容迁移）
+    var sources = getEventSources(event).map(function(ds) { return Utils.deepClone(ds); });
     DataSourceStore.clearAll();
-    if (event.dataSource) {
-      DataSourceStore.add(Utils.deepClone(event.dataSource));
+    if (sources.length > 0) {
+      DataSourceStore.saveAll(sources);
     }
 
     // 替换聊天历史
     if (window.AppState) {
       window.AppState.chatHistory = Utils.deepClone(event.chatHistory || []);
-      window.AppState.activeDSId = null; // 让 DatasourceList 自动选中第一个
+      // 恢复保存时选中的数据源（id 随快照保留；校验存在性，缺失回退第一个）
+      var restoredActiveId = event.activeDSId;
+      var activeExists = sources.some(function(s) { return s.id === restoredActiveId; });
+      window.AppState.activeDSId = activeExists ? restoredActiveId : (sources[0] ? sources[0].id : null);
     }
 
     // 重新渲染聊天
@@ -187,7 +214,7 @@ var NotepadUI = (function() {
     // 跳转到 AI 数据分析 tab
     Tabs.switchTab('tabAI');
 
-    Utils.showToast('已从记事本加载');
+    Utils.showToast(I18n.t('已从记事本加载'));
   }
 
   /**
@@ -198,11 +225,12 @@ var NotepadUI = (function() {
     var event = NotepadStore.getById(id);
     if (!event) return;
 
-    if (!confirm('确定删除事件 "' + event.title + '" 吗？')) return;
-
-    NotepadStore.remove(id);
-    render();
-    Utils.showToast('记事本事件已删除');
+    Dialog.confirm(I18n.t('确定删除事件 "{0}" 吗？', event.title), { danger: true }).then(function(ok) {
+      if (!ok) return;
+      NotepadStore.remove(id);
+      render();
+      Utils.showToast(I18n.t('记事本事件已删除'));
+    });
   }
 
   /**
@@ -210,11 +238,12 @@ var NotepadUI = (function() {
    */
   function clearAll() {
     if (NotepadStore.getAll().length === 0) return;
-    if (!confirm('确定清空全部记事本事件吗？此操作不可恢复。')) return;
-
-    NotepadStore.clearAll();
-    render();
-    Utils.showToast('已清空全部记事本');
+    Dialog.confirm(I18n.t('确定清空全部记事本事件吗？此操作不可恢复。'), { danger: true }).then(function(ok) {
+      if (!ok) return;
+      NotepadStore.clearAll();
+      render();
+      Utils.showToast(I18n.t('已清空全部记事本'));
+    });
   }
 
   /**

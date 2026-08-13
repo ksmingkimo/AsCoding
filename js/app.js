@@ -29,7 +29,7 @@ var App = (function() {
    */
   function doQuery() {
     if (typeof ReportEngine === 'undefined') {
-      Utils.showToast('报表引擎未加载', 'error');
+      Utils.showToast(I18n.t('报表引擎未加载'), 'error');
       return;
     }
     if (ReportEngine.isLoading) return;
@@ -90,10 +90,10 @@ var App = (function() {
       })
       .catch(function(err) {
         _allData = [];
-        Utils.showToast('查询失败: ' + (err.message || '未知错误'), 'error');
+        Utils.showToast(I18n.t('查询失败: {0}', err.message || I18n.t('未知错误')), 'error');
         if (tbody) tbody.innerHTML = '';
-        var tableCount = document.getElementById('tableCount');
-        if (tableCount) tableCount.textContent = '0';
+        var tableInfo = document.getElementById('tableInfoText');
+        if (tableInfo) tableInfo.textContent = I18n.t('共 {0} 条记录', 0);
         if (emptyState) emptyState.style.display = '';
         var pagination = document.querySelector('.pagination');
         if (pagination) pagination.style.display = 'none';
@@ -116,8 +116,8 @@ var App = (function() {
     var start = (viewPage - 1) * pageSize;
     var pageData = _allData.slice(start, start + pageSize);
     ReportEngine.renderTableBody(tbody, pageData, AppState.currentReport);
-    var tableCount = document.getElementById('tableCount');
-    if (tableCount) tableCount.textContent = pageData.length;
+    var tableInfo = document.getElementById('tableInfoText');
+    if (tableInfo) tableInfo.textContent = I18n.t('共 {0} 条记录', pageData.length);
   }
 
   /**
@@ -149,7 +149,7 @@ var App = (function() {
     var controlsEl = document.getElementById('paginationControls');
 
     if (totalCount === 0) {
-      if (infoEl) infoEl.textContent = '无记录';
+      if (infoEl) infoEl.textContent = I18n.t('无记录');
       if (controlsEl) controlsEl.innerHTML = '';
       return;
     }
@@ -157,12 +157,12 @@ var App = (function() {
     var totalPages = Math.ceil(totalCount / pageSize);
     var start = (page - 1) * pageSize + 1;
     var end = Math.min(start + pageSize - 1, totalCount);
-    if (infoEl) infoEl.textContent = '第 ' + start + '-' + end + ' 条，共 ' + totalCount.toLocaleString() + ' 条';
+    if (infoEl) infoEl.textContent = I18n.t('第 {0}-{1} 条，共 {2} 条', start, end, totalCount.toLocaleString());
 
     var html = '';
-    html += '<button class="page-btn" title="首页" ' + (page <= 1 ? 'disabled' : '') +
+    html += '<button class="page-btn" title="' + I18n.t('首页') + '" ' + (page <= 1 ? 'disabled' : '') +
             ' data-page="1">&lt;&lt;</button>';
-    html += '<button class="page-btn" title="上一页" ' + (page <= 1 ? 'disabled' : '') +
+    html += '<button class="page-btn" title="' + I18n.t('上一页') + '" ' + (page <= 1 ? 'disabled' : '') +
             ' data-page="' + (page - 1) + '">&lt;</button>';
 
     var startPage = Math.max(1, page - 2);
@@ -171,9 +171,9 @@ var App = (function() {
               '" data-page="' + i + '">' + i + '</button>';
     }
 
-    html += '<button class="page-btn" title="下一页" ' + (page >= totalPages ? 'disabled' : '') +
+    html += '<button class="page-btn" title="' + I18n.t('下一页') + '" ' + (page >= totalPages ? 'disabled' : '') +
             ' data-page="' + (page + 1) + '">&gt;</button>';
-    html += '<button class="page-btn" title="末页" ' + (page >= totalPages ? 'disabled' : '') +
+    html += '<button class="page-btn" title="' + I18n.t('末页') + '" ' + (page >= totalPages ? 'disabled' : '') +
             ' data-page="' + totalPages + '">&gt;&gt;</button>';
 
     if (controlsEl) {
@@ -187,6 +187,43 @@ var App = (function() {
           }
         });
       });
+    }
+  }
+
+  /* ================================================================
+     i18n 动态内容刷新
+     表头 <th> 是 JS 动态渲染的 HTML，不带 data-i18n 属性，
+     不在 I18n.applyStatic 扫描范围内 → 语言变化时必须显式重渲染。
+     ================================================================ */
+
+  /** 用当前语言重渲染当前报表表头（唯一入口，三处时机共用） */
+  function renderCurrentTableHead() {
+    var tableHeadRow = document.getElementById('tableHeadRow');
+    if (tableHeadRow && typeof ReportEngine !== 'undefined') {
+      ReportEngine.renderTableHead(tableHeadRow, AppState.currentReport);
+    }
+  }
+
+  /**
+   * i18n:changed 监听回调：重刷所有 JS 动态渲染的文字。
+   * 静态文字（data-i18n 属性）由 I18n.applyStatic 覆盖，不在此处理。
+   */
+  function refreshDynamicI18n() {
+    if (typeof ReportEngine === 'undefined') return;
+    renderCurrentTableHead();
+
+    // 报表标题（AppState.currentReportName 保持简体规范值，渲染点翻译）
+    var reportTitle = document.getElementById('reportTitle');
+    var cfg = ReportEngine.getConfig(AppState.currentReport);
+    if (reportTitle && cfg) reportTitle.textContent = I18n.t(cfg.name);
+
+    // 已有数据时用当前语言重刷当前页切片（审核徽章等动态文字）+ 分页控件 title
+    if (_allData.length > 0) {
+      var pageSizeSelect = document.getElementById('pageSizeSelect');
+      var pageSize = pageSizeSelect ? parseInt(pageSizeSelect.value, 10) || 20 : 20;
+      var page = ReportEngine.currentPage || 1;
+      renderPageSlice(page, pageSize);
+      updatePagination(page, pageSize, _allData.length);
     }
   }
 
@@ -219,7 +256,7 @@ var App = (function() {
     AppState.currentReportName = cfg.name;   // 从配置取名，不依赖 DOM 文本
 
     var reportTitle = document.getElementById('reportTitle');
-    if (reportTitle) reportTitle.textContent = cfg.name;
+    if (reportTitle) reportTitle.textContent = I18n.t(cfg.name);
 
     // 菜单高亮：按 data-report 全量更新（收藏区 + 分组内两份条目同亮）
     document.querySelectorAll('.nav-item').forEach(function(l) {
@@ -232,7 +269,7 @@ var App = (function() {
 
     if (typeof ReportEngine !== 'undefined') {
       ReportEngine.updateFilterPanel(reportKey);
-      ReportEngine.renderTableHead(document.getElementById('tableHeadRow'), reportKey);
+      renderCurrentTableHead();
     }
 
     ReportEngine.currentPage = 1;
@@ -250,7 +287,7 @@ var App = (function() {
       var reportKey = AppState.currentReport;
       var cfg = ReportEngine.getConfig(reportKey);
       if (!cfg) {
-        Utils.showToast('请先选择报表', 'error');
+        Utils.showToast(I18n.t('请先选择报表'), 'error');
         return;
       }
 
@@ -283,15 +320,15 @@ var App = (function() {
             recordCount: result.data ? result.data.length : 0
           });
           DatasourceList.renderDataSourceList();
-          Utils.showToast('数据源已就绪：' + (result.data ? result.data.length.toLocaleString() : '0') + ' 条', 'success');
+          Utils.showToast(I18n.t('数据源已就绪：{0} 条', result.data ? result.data.length.toLocaleString() : '0'), 'success');
         })
         .catch(function(err) {
           DataSourceStore.update(pendingDS.id, {
             status: 'error',
-            errorMsg: err.message || '未知错误'
+            errorMsg: err.message || I18n.t('未知错误')
           });
           DatasourceList.renderDataSourceList();
-          Utils.showToast('获取数据失败: ' + (err.message || '未知错误'), 'error');
+          Utils.showToast(I18n.t('获取数据失败: {0}', err.message || I18n.t('未知错误')), 'error');
         })
         .finally(function() {
           if (aiTabBtn) setTabBadge(aiTabBtn, false);
@@ -430,7 +467,7 @@ var App = (function() {
 
         if (!compno || !usr) {
           if (loginError) {
-            loginError.textContent = '请填写公司代码和用户代号';
+            loginError.textContent = I18n.t('请填写公司代码和用户代号');
             loginError.classList.add('visible');
           }
           return;
@@ -440,7 +477,7 @@ var App = (function() {
         var origHTML = loginBtn ? loginBtn.innerHTML : '';
         if (loginBtn) {
           loginBtn.disabled = true;
-          loginBtn.innerHTML = '<span class="spinner"></span> 登录中...';
+          loginBtn.innerHTML = '<span class="spinner"></span> ' + I18n.t('登录中...');
         }
         if (loginError) loginError.classList.remove('visible');
 
@@ -456,9 +493,11 @@ var App = (function() {
             if (userAvatarEl) userAvatarEl.textContent = usr.substring(0, 2).toUpperCase();
             if (userCompanyEl) userCompanyEl.textContent = compno;
 
+            // 登录后按当前语言重渲染表头（init 渲染的是登录前语言）
+            renderCurrentTableHead();
             doQuery();
             DatasourceList.renderDataSourceList();
-            Utils.showToast('登录成功', 'success');
+            Utils.showToast(I18n.t('登录成功'), 'success');
             SettingsUI.checkFirstRun();
           } else {
             if (loginError) {
@@ -484,7 +523,7 @@ var App = (function() {
         AppState.lastQueryData = null;
         if (dashboardPage) dashboardPage.classList.remove('active');
         if (loginPage) loginPage.classList.remove('hidden');
-        Utils.showToast('已退出登录', 'success');
+        Utils.showToast(I18n.t('已退出登录'), 'success');
       });
     }
 
@@ -492,7 +531,7 @@ var App = (function() {
     window.addEventListener('auth:expired', function() {
       if (dashboardPage) dashboardPage.classList.remove('active');
       if (loginPage) loginPage.classList.remove('hidden');
-      Utils.showToast('登录已过期，请重新登录', 'error');
+      Utils.showToast(I18n.t('登录已过期，请重新登录'), 'error');
     });
   }
 
@@ -513,12 +552,12 @@ var App = (function() {
         if (sidebar) sidebar.classList.add('collapsed');
         if (mainContent) mainContent.classList.add('sidebar-collapsed');
         sidebarToggle.textContent = '▶';
-        sidebarToggle.title = '展开侧边栏';
+        sidebarToggle.title = I18n.t('展开侧边栏');
       } else {
         if (sidebar) sidebar.classList.remove('collapsed');
         if (mainContent) mainContent.classList.remove('sidebar-collapsed');
         sidebarToggle.textContent = '◀';
-        sidebarToggle.title = '折叠侧边栏';
+        sidebarToggle.title = I18n.t('折叠侧边栏');
       }
       // 折叠态变化 → 即时重渲染报表菜单（折叠态全量 emoji 平铺 / 展开态分组视图）
       if (typeof ReportMenu !== 'undefined') ReportMenu.render();
@@ -578,10 +617,12 @@ var App = (function() {
 
     // 初始化默认报表的表头和筛选面板
     if (typeof ReportEngine !== 'undefined') {
-      var tableHeadRow = document.getElementById('tableHeadRow');
-      if (tableHeadRow) ReportEngine.renderTableHead(tableHeadRow, AppState.currentReport);
+      renderCurrentTableHead();
       ReportEngine.updateFilterPanel(AppState.currentReport);
     }
+
+    // 语言切换：重刷动态渲染内容（表头/表体切片/标题/分页），静态文字由 applyStatic 覆盖
+    window.addEventListener('i18n:changed', refreshDynamicI18n);
 
     // 会话恢复
     Auth.checkAuth().then(function(valid) {
@@ -599,6 +640,8 @@ var App = (function() {
           if (userCompanyEl) userCompanyEl.textContent = user.compno;
           if (dashboardPage) dashboardPage.classList.add('active');
           if (loginPage) loginPage.classList.add('hidden');
+          // 会话恢复后按当前语言重渲染表头（init 渲染的语言即 boot 语言，此处双保险）
+          renderCurrentTableHead();
           doQuery();
           DatasourceList.renderDataSourceList();
           SettingsUI.checkFirstRun();

@@ -103,8 +103,8 @@ var SettingsUI = (function() {
   function updateKeyHint(provider) {
     var apiKeyEl = document.getElementById('settingApiKey');
     var labelEl = document.getElementById('labelApiKey');
-    if (apiKeyEl) apiKeyEl.placeholder = PLACEHOLDERS[provider] || '输入 API Key';
-    if (labelEl) labelEl.textContent = LABELS[provider] || 'API Key';
+    if (apiKeyEl) apiKeyEl.placeholder = I18n.t(PLACEHOLDERS[provider] || '输入 API Key');
+    if (labelEl) labelEl.textContent = I18n.t(LABELS[provider] || 'API Key');
   }
 
   /* ================================================================
@@ -121,12 +121,12 @@ var SettingsUI = (function() {
     var key = apiKeyEl.value.trim();
 
     if (!key) {
-      resultEl.textContent = '❌ 请输入 API Key';
+      resultEl.textContent = '❌ ' + I18n.t('请输入 API Key');
       resultEl.className = 'validation-result error';
       return;
     }
 
-    resultEl.textContent = '⏳ 正在验证...';
+    resultEl.textContent = '⏳ ' + I18n.t('正在验证...');
     resultEl.className = 'validation-result';
 
     AIClient.validateKey(provider, key, function(err, msg) {
@@ -151,12 +151,12 @@ var SettingsUI = (function() {
 
     var host = serverUrlEl.value.trim();
     if (!host) {
-      resultEl.textContent = '❌ 请输入服务器地址';
+      resultEl.textContent = '❌ ' + I18n.t('请输入服务器地址');
       resultEl.className = 'validation-result error';
       return;
     }
 
-    resultEl.textContent = '⏳ 正在验证...';
+    resultEl.textContent = '⏳ ' + I18n.t('正在验证...');
     resultEl.className = 'validation-result';
 
     var fullUrl = host.replace(/\/+$/, '') + API_PATH + '/user/login';
@@ -168,27 +168,27 @@ var SettingsUI = (function() {
         COMPNO: (document.getElementById('compno') || {}).value || 'AT01',
         USR: (document.getElementById('usr') || {}).value || 'SAN',
         PWD: (document.getElementById('pwd') || {}).value || '',
-        LANG_ID: 'zh-cn',
+        LANG_ID: (typeof I18n !== 'undefined' ? I18n.getLang() : 'zh-cn'),
         SYS_TYPE: 'ERP'
       })
     })
     .then(function(resp) { return resp.json(); })
     .then(function(data) {
       if (data.code === 0) {
-        resultEl.textContent = '✅ 服务器连接正常 (用户: ' +
-          ((data.data && data.data.USR_NAME) || 'OK') + ')';
+        resultEl.textContent = '✅ ' + I18n.t('服务器连接正常 (用户: {0})',
+          ((data.data && data.data.USR_NAME) || 'OK'));
         resultEl.className = 'validation-result success';
       } else if (typeof data.code !== 'undefined') {
-        resultEl.textContent = '✅ 服务器可达 (API 响应正常)';
+        resultEl.textContent = '✅ ' + I18n.t('服务器可达 (API 响应正常)');
         resultEl.className = 'validation-result success';
       } else {
-        resultEl.textContent = '⚠ 服务器响应异常 (code: ' + data.code + ', ' +
-          (data.message || '未知') + ')';
+        resultEl.textContent = '⚠ ' + I18n.t('服务器响应异常 (code: {0}, {1})',
+          data.code, data.message || I18n.t('未知'));
         resultEl.className = 'validation-result error';
       }
     })
     .catch(function(err) {
-      resultEl.textContent = '❌ 无法连接到服务器: ' + (err.message || '网络错误');
+      resultEl.textContent = '❌ ' + I18n.t('无法连接到服务器: {0}', err.message || I18n.t('网络错误'));
       resultEl.className = 'validation-result error';
     });
   }
@@ -216,7 +216,7 @@ var SettingsUI = (function() {
     SettingsStore.saveAIKey(provider, key);
 
     closeSettingsModal();
-    Utils.showToast('设置已保存');
+    Utils.showToast(I18n.t('设置已保存'));
   }
 
   /* ================================================================

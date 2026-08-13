@@ -30,7 +30,7 @@ var AISuggestions = (function() {
     isLoading = true;
     if (btn) btn.disabled = true;
     panel.classList.add('visible');
-    body.innerHTML = '<div class="suggestions-loading">⏳ 正在分析数据源，生成推荐问题...</div>';
+    body.innerHTML = '<div class="suggestions-loading">⏳ ' + I18n.t('正在分析数据源，生成推荐问题...') + '</div>';
 
     AIClient.suggestQuestions(function(err, questions) {
       isLoading = false;
@@ -43,7 +43,7 @@ var AISuggestions = (function() {
       }
 
       if (!questions || questions.length === 0) {
-        body.innerHTML = '<div class="suggestions-loading">暂无推荐，请尝试更换数据源</div>';
+        body.innerHTML = '<div class="suggestions-loading">' + I18n.t('暂无推荐，请尝试更换数据源') + '</div>';
         return;
       }
 

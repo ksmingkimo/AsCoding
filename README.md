@@ -5,6 +5,7 @@
 [![Tech](https://img.shields.io/badge/tech-vanilla--js-blue)](#)
 [![AI](https://img.shields.io/badge/AI-4%20Models-6C47FF)](#)
 [![Charts](https://img.shields.io/badge/charts-Chart.js-FF6384)](#)
+[![i18n](https://img.shields.io/badge/i18n-zh--CN%2Fzh--TW%2Fen-16A34A)](#)
 [![Status](https://img.shields.io/badge/status-production%20ready-brightgreen)](#)
 
 ---
@@ -44,9 +45,10 @@
 │  └────┬─────┘  └────┬─────┘  └──────────┬───────────┘  │
 │       │              │                    │              │
 │  ┌────┴──────────────┴────────────────────┴──────────┐  │
-│  │              18 模块化 JS 引擎                      │  │
-│  │  utils / auth / api / reports / datasource /       │  │
-│  │  chat / deepseek / parser / chart / export / app   │  │
+│  │              24 模块化 JS 引擎                      │  │
+│  │  i18n / utils / auth / api / reports / menu /      │  │
+│  │  datasource / chat / ai / parser / chart /         │  │
+│  │  export / notepad / dialog / app                   │  │
 │  └────────────────────────┬───────────────────────────┘  │
 └───────────────────────────┼──────────────────────────────┘
                             │
@@ -154,7 +156,7 @@ python -m http.server 8080
 
 ### 首次配置
 
-1. 打开应用 → 登录页输入公司代码 + 用户名 + 密码
+1. 打开应用 → 登录页选择语言（简/繁/英，默认按操作系统预判）→ 输入公司代码 + 用户名 + 密码
 2. 登录后自动弹出设置面板（或点击右上角 ⚙ 图标）
 3. 填写 **服务器地址**（仅需 IP:端口，系统自动追加 `/SUNFUSION/API`）
 4. （可选）填写 **Deepseek API Key** 并点击验证
@@ -170,33 +172,40 @@ AsCoding/
 ├── ui-template.html            ← UI 原型模板（与 index.html 同步）
 │
 ├── css/
-│   ├── auth.css                ← 登录页样式
+│   ├── auth.css                ← 登录页样式 + 语言选择器
 │   ├── dashboard.css           ← Dashboard 布局、侧边栏、表格、分页、Toast
-│   └── ai-analysis.css         ← AI Chat、数据源面板、设置弹窗、表格增强
+│   ├── ai-analysis.css         ← AI Chat、数据源面板、设置弹窗、表格增强
+│   └── notepad.css             ← 记事本页签样式
 │
-├── js/
-│   ├── utils.js                ← 通用工具（Toast / 转义 / 格式化）
+├── js/（24 个，index.html 加载清单）
+│   ├── i18n.js                 ← 多语言核心（gettext 风格 t() / applyStatic / 语言解析链）
+│   ├── i18n-data.js            ← 三语静态字典（zh-tw / en，简体原文即 key，末尾同步 boot）
+│   ├── utils.js                ← 通用工具（Toast / 转义 / 格式化 / deepClone）
+│   ├── dialog.js               ← 应用内 confirm/prompt 弹窗
 │   ├── settings-store.js       ← 设置持久化（API Key / 服务器地址）
 │   ├── datasource-store.js     ← 数据源 CRUD（localStorage，上限 20）
 │   │
-│   ├── auth.js                 ← 认证模块（登录/登出/Token/会话恢复）
+│   ├── auth.js                 ← 认证模块（登录/登出/Token/会话恢复，LANG_ID 随语言）
 │   ├── api.js                  ← API 客户端（fetch 封装/认证注入/错误拦截）
 │   ├── reports.js              ← 报表引擎（31 报表配置/SEARCH_INFO 构造/动态表格/17 布局筛选）
+│   ├── report-menu-store.js    ← 报表菜单持久化（收藏列表）
+│   ├── report-menu.js          ← 动态菜单渲染（搜索/折叠分组/收藏置顶）
 │   │
 │   ├── datasource-list.js      ← 数据源列表 UI（卡片渲染/筛选摘要）
-│   ├── tabs.js                 ← Tab 页签切换（数据查询 ↔ AI 分析）
+│   ├── tabs.js                 ← Tab 页签切换（数据查询 ↔ AI 分析 ↔ 记事本）
 │   │
 │   ├── chat-ui.js              ← Chat 消息气泡/操作按钮/滚动
 │   ├── chat-core.js            ← Chat 发送流程编排
-│   ├── deepseek-client.js      ← Deepseek API 兼容别名 → AIClient
-│   ├── ai-client.js             ← 多模型 AI 统一客户端（Deepseek/QWen/Gemini/Claude）
-│   ├── ai-suggestions.js        ← AI 推荐提问（🧠 大脑按钮）
+│   ├── ai-client.js            ← 多模型 AI 统一客户端（Deepseek/QWen/Gemini/Claude，三语提示词）
+│   ├── ai-suggestions.js       ← AI 推荐提问（🧠 大脑按钮）
 │   ├── ai-parser.js            ← Markdown/表格/图表标记解析
 │   ├── ai-chart.js             ← Chart.js 图表渲染
-│   ├── export.js               ← Excel / HTML / PDF / PPTX 导出
+│   ├── export.js               ← Excel / HTML / PDF / PPTX 导出（标题文件名随语言）
 │   │
+│   ├── notepad-store.js        ← 记事本 CRUD（localStorage，上限 50，多数据源快照）
+│   ├── notepad-ui.js           ← 记事本卡片渲染 + 保存/加载/删除/清空
 │   ├── settings-ui.js          ← 设置面板弹窗/验证
-│   └── app.js                  ← 主入口（AppState/查询/分页/初始化）
+│   └── app.js                  ← 主入口（AppState/查询/分页/初始化/表头渲染唯一入口）
 │
 ├── 流程图/                      ← 10 张 Draw.io 业务流程图
 ├── scripts/
@@ -204,7 +213,10 @@ AsCoding/
 │
 ├── screenshots/                ← 应用截图（界面预览）
 │
-└── docs/
+├── deploy.ps1                  ← 部署包生成脚本（v1.3，29 文件）
+├── sunlike-erp-report-v1.x.zip ← 部署包（解压到 Web 服务器目录）
+│
+└── 文档（项目根目录）
     ├── 需求架构文档.md          ← 项目需求 & 技术架构
     ├── 进度追踪表.md            ← 任务进度 & 风险追踪
     ├── 对话记录.md              ← 每轮对话的完整流水账
@@ -212,7 +224,8 @@ AsCoding/
     ├── 标准报表制表API.md        ← v1 6 个 API 原始文档
     ├── 标准报表制表API2.md       ← v2 4 个 API 原始文档（生产制造 + 人力资源）
     ├── 标准报表制表API3.md       ← v3 21 个 API 原始文档（财务/库存/采购价格/生产/人事/固定资产）
-    ├── 流程图.md                ← 流程图文字参考
+    ├── 流程图.md                ← 14 节业务流程图文字参考
+    ├── 部署指南.md              ← Web 服务器部署说明
     └── 项目经验行动指南.md       ← 通用开发纪律速查卡
 ```
 
@@ -273,6 +286,18 @@ Authorization: Bearer {TOKEN}
 
 ---
 
+## 🌐 多语言支持（简 / 繁 / 英）
+
+登录页【简繁英】分段按钮切换，**简体 / 繁体 zh-TW / 英文 en** 三语系，ERP 数据不翻译。
+
+- **切换入口**：仅登录页三个分段按钮（语言自称不翻译）；默认按操作系统预判（zh-TW/zh-HK→繁体，en→英文），用户显式点击才持久化（localStorage `sunlike_lang`），下次沿用
+- **机制**：gettext 风格 —— 简体原文即 key，`I18n.t(key)` 本地查静态字典（601+ key × 2 语言），缺失优雅回退简体；`data-i18n` 四属性覆盖静态文字，`i18n:changed` 事件驱动动态内容（表头/表体徽章/分页）即时重刷
+- **LANG_ID 跟随**：登录/会话恢复/验证服务器三处请求传 LangTag（`zh-cn`/`zh-tw`/`en`），服务器错误消息天然按语系返回
+- **存储与显示分离**：报表名/收藏/记事本等持久化值保留简体规范值，仅渲染点翻译——跨语系切换不损坏已存内容
+- **AI 与导出随语言**：系统提示词/推荐问题三语分发（AI 用对应语言作答），导出标题文件名（HTML/PPTX/CSV）随语言
+
+---
+
 ## 🤖 AI 数据分析功能
 
 ### 支持模型
@@ -303,6 +328,27 @@ AI 被训练为 ERP 数据分析专家，会：
 - 🔢 引用具体数字，不凭空编造
 - 📝 按"结论→数据→图表→建议"的结构回复
 - ⚠️ 严禁输出思考过程/格式自检/推理链条
+
+---
+
+## 🗂 报表菜单（搜索 / 折叠 / 收藏）
+
+31 报表侧边栏为 **REPORT_CONFIG 驱动的动态渲染**：
+
+- **搜索**：中文名模糊 + 拼音首字母匹配，`Ctrl+K` 聚焦（侧边栏折叠时自动展开）、`Esc` 清空
+- **分组折叠**：7 分组可折叠（点击标题 / Enter / Space），默认全部折叠（登录/刷新复位）
+- **收藏置顶**：条目右侧 ★/☆，收藏后置顶显示在"★ 收藏"区，localStorage 持久化
+- **折叠侧边栏（56px）**：全部报表 emoji 平铺，收藏去重置顶
+
+---
+
+## 📓 记事本（多数据源快照）
+
+第三个平行页签【📓 记事本】：将 AI 分析现场一键打包保存为事件，随时恢复。
+
+- **保存**：AI 分析 Tab 底部「📓 存到记事本」→ 输入事件名称 → **全部数据源快照**（含加载中/失败状态）+ 当前 AI 对话 + 保存时选中的数据源，深拷贝存入 localStorage（`sunlike_notepad`，上限 50 个事件）
+- **回存**：点击事件卡片 → 确认 → 数据源列表**全量恢复**（保留原始状态）+ 对话历史重新渲染（表格/图表重新解析）+ 自动选中保存时选中的源 + 跳转 AI 分析 Tab
+- **兼容**：旧版本保存的单数据源事件回存自动迁移
 
 ---
 
@@ -346,6 +392,9 @@ AI 被训练为 ERP 数据分析专家，会：
 | 人力资源报表 (1 个) | ✅ 已完成 |
 | 财务/库存/价格报表 (14 个) | ✅ 已完成 |
 | 固定资产报表 (1 个) | ✅ 已完成 |
+| 报表菜单改进（搜索 / 折叠 / 收藏置顶） | ✅ 已完成 |
+| 记事本（多数据源快照） | 🟡 待浏览器 E2E |
+| 多语言支持（简 / 繁 / 英） | 🟡 待浏览器三语走查 |
 | AI 流式响应 | ⬜ 待开发 |
 | IndexedDB 迁移 | ⬜ 待开发 |
 | 正式 .pptx 导出 | ✅ 已完成 |
