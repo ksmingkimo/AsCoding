@@ -3,16 +3,82 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sunlike ERP Reports — UI Template</title>
+<title data-i18n="Sunlike ERP — 报表查询系统">Sunlike ERP Reports — UI Template</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-<link rel="stylesheet" href="css/auth.css?v=20260813a">
+<link rel="stylesheet" href="css/auth.css?v=20260813b">
 <link rel="stylesheet" href="css/dashboard.css?v=20260813c">
-<link rel="stylesheet" href="css/ai-analysis.css?v=20260813a">
+<link rel="stylesheet" href="css/ai-analysis.css?v=20260813b">
 <link rel="stylesheet" href="css/notepad.css?v=20260814a">
+<style>
+/* ============================================================
+   DEMO ONLY — i18n 演示面板样式（生产环境删除本段）
+   ============================================================ */
+.demo-panel {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 340px;
+  max-height: 72vh;
+  overflow-y: auto;
+  z-index: 900;              /* 低于 modal(1000)/toast(10000)，弹窗演示时被正确覆盖 */
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+.demo-panel .demo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-md) var(--space-lg);
+  font-weight: 600;
+  border-bottom: 1px solid var(--color-border);
+}
+.demo-panel .demo-header button {
+  width: 26px; height: 26px;
+  border: none; background: transparent;
+  cursor: pointer; color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+}
+.demo-panel .demo-header button:hover { background: var(--color-muted); color: var(--color-text); }
+.demo-panel .demo-body { padding: var(--space-md) var(--space-lg) var(--space-lg); }
+.demo-panel .demo-body.collapsed { display: none; }
+.demo-panel .demo-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: 4px 0;
+}
+.demo-panel .demo-label { color: var(--color-text-secondary); flex-shrink: 0; }
+.demo-panel .demo-row span:last-child:not(.demo-label) { text-align: right; }
+.demo-panel .demo-divider { border-top: 1px solid var(--color-border); margin: var(--space-sm) 0; }
+.demo-panel .demo-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.demo-panel .demo-actions button {
+  flex: 1 1 auto;
+  height: 28px;
+  padding: 0 var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  font-family: var(--font-family);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.demo-panel .demo-actions button:hover { background: var(--color-muted); border-color: var(--color-primary); color: var(--color-primary); }
+.demo-panel .demo-actions button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.demo-panel .demo-badge { display: inline-block; padding: 1px 6px; border-radius: 999px; font-size: var(--text-xs); }
+.demo-badge.audited { background: #DCFCE7; color: #15803D; }
+.demo-badge.unaudited { background: #FEF3C7; color: #B45309; }
+</style>
 </head>
 <body>
 
@@ -22,23 +88,29 @@
 <div id="loginPage" class="page-login">
   <div class="login-card">
     <h1>Sunlike ERP</h1>
-    <p class="subtitle">报表查询系统</p>
+    <p class="subtitle" data-i18n="报表查询系统">报表查询系统</p>
+    <!-- 语言选择器：简 / 繁 / 英（语言自称不翻译；启动时按 OS 预判，点击才持久化） -->
+    <div class="lang-switch" id="langSwitch" role="radiogroup" data-i18n-aria-label="语言">
+      <button type="button" data-lang="zh-cn" role="radio" aria-checked="true" title="简体中文">简</button>
+      <button type="button" data-lang="zh-tw" role="radio" aria-checked="false" title="繁體中文">繁</button>
+      <button type="button" data-lang="en" role="radio" aria-checked="false" title="English">英</button>
+    </div>
     <form id="loginForm" autocomplete="on">
       <div class="form-group">
-        <label for="compno">公司代码 <span class="required">*</span></label>
-        <input type="text" id="compno" class="form-input" value="AT01" placeholder="输入公司代码" autocomplete="organization">
+        <label for="compno"><span data-i18n="公司代码">公司代码</span><span class="required">*</span></label>
+        <input type="text" id="compno" class="form-input" value="AT01" data-i18n-placeholder="输入公司代码" placeholder="输入公司代码" autocomplete="organization">
       </div>
       <div class="form-group">
-        <label for="usr">用户代号 <span class="required">*</span></label>
-        <input type="text" id="usr" class="form-input" value="SAN" placeholder="输入用户代号" autocomplete="username">
+        <label for="usr"><span data-i18n="用户代号">用户代号</span><span class="required">*</span></label>
+        <input type="text" id="usr" class="form-input" value="SAN" data-i18n-placeholder="输入用户代号" placeholder="输入用户代号" autocomplete="username">
       </div>
       <div class="form-group">
-        <label for="pwd">密码</label>
-        <input type="password" id="pwd" class="form-input" placeholder="输入密码" autocomplete="current-password">
+        <label for="pwd" data-i18n="密码">密码</label>
+        <input type="password" id="pwd" class="form-input" data-i18n-placeholder="输入密码" placeholder="输入密码" autocomplete="current-password">
       </div>
       <button type="submit" class="btn btn-primary" id="loginBtn">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        登 录
+        <span data-i18n="登 录">登 录</span>
       </button>
       <div class="login-error" id="loginError"></div>
     </form>
@@ -52,10 +124,10 @@
 
   <!-- Sidebar -->
   <aside class="sidebar" id="sidebar">
-    <button class="sidebar-toggle" id="sidebarToggle" title="折叠/展开侧边栏">◀</button>
+    <button class="sidebar-toggle" id="sidebarToggle" data-i18n-title="折叠/展开侧边栏" title="折叠/展开侧边栏">◀</button>
     <div class="sidebar-brand">
       <h2>Sunlike ERP</h2>
-      <div class="brand-sub">报表查询系统</div>
+      <div class="brand-sub" data-i18n="报表查询系统">报表查询系统</div>
     </div>
     <div class="sidebar-user">
       <div class="avatar" id="userAvatar">SA</div>
@@ -63,25 +135,25 @@
     </div>
     <div class="sidebar-search">
       <span class="search-icon">🔍</span>
-      <input type="text" id="reportSearch" placeholder="搜索报表（Ctrl+K）" autocomplete="off" spellcheck="false" />
+      <input type="text" id="reportSearch" data-i18n-placeholder="搜索报表（Ctrl+K）" placeholder="搜索报表（Ctrl+K）" autocomplete="off" spellcheck="false" />
     </div>
     <nav class="sidebar-nav" id="sidebarNav"></nav>
     <div class="sidebar-footer">
-      <button class="btn-logout" id="logoutBtn">退出登录</button>
+      <button class="btn-logout" id="logoutBtn"><span data-i18n="退出登录">退出登录</span></button>
     </div>
   </aside>
 
   <!-- Main Content -->
   <main class="main-content">
     <header class="content-header">
-      <h3 id="reportTitle">受订报表</h3>
+      <h3 id="reportTitle" data-i18n="受订报表">受订报表</h3>
       <div class="header-actions">
         <span style="font-size:var(--text-sm);color:var(--color-text-secondary)" id="currentTime"></span>
         <button class="btn btn-secondary btn-sm" id="refreshBtn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-          刷新
+          <span data-i18n="刷新">刷新</span>
         </button>
-        <button class="btn btn-secondary btn-sm" id="settingsBtn" title="系统设置">
+        <button class="btn btn-secondary btn-sm" id="settingsBtn" data-i18n-title="系统设置" title="系统设置">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         </button>
       </div>
@@ -90,13 +162,13 @@
     <!-- Tab Navigation -->
     <div class="content-tabs">
       <button class="tab-btn active" data-tab="tabQuery">
-        <span class="tab-icon">📋</span> 数据查询
+        <span class="tab-icon">📋</span> <span data-i18n="数据查询">数据查询</span>
       </button>
       <button class="tab-btn" data-tab="tabAI">
-        <span class="tab-icon">🤖</span> AI数据分析
+        <span class="tab-icon">🤖</span> <span data-i18n="AI数据分析">AI数据分析</span>
       </button>
       <button class="tab-btn" data-tab="tabNotepad">
-        <span class="tab-icon">📓</span> 记事本
+        <span class="tab-icon">📓</span> <span data-i18n="记事本">记事本</span>
       </button>
     </div>
 
@@ -104,82 +176,82 @@
     <div class="tab-panel active" id="tabQuery">
     <div class="content-body">
       <div class="filter-panel">
-        <h4>查询条件</h4>
+        <h4 data-i18n="查询条件">查询条件</h4>
         <div class="filter-grid">
           <div class="form-group filter-date-group">
-            <label>日期范围</label>
+            <label data-i18n="日期范围">日期范围</label>
             <div class="date-range-row">
               <input type="date" id="filterDateFrom" class="form-input" value="2026-01-01">
-              <span>至</span>
+              <span data-i18n="至">至</span>
               <input type="date" id="filterDateTo" class="form-input" value="2026-12-31">
             </div>
           </div>
           <div class="form-group filter-group-cust">
-            <label for="filterCust">客户/厂商</label>
-            <input type="text" id="filterCust" class="form-input" placeholder="全部">
+            <label for="filterCust" data-i18n="客户/厂商">客户/厂商</label>
+            <input type="text" id="filterCust" class="form-input" data-i18n-placeholder="全部" placeholder="全部">
           </div>
           <div class="form-group filter-group-prd">
-            <label for="filterPrd">货品代号</label>
-            <input type="text" id="filterPrd" class="form-input" placeholder="全部">
+            <label for="filterPrd" data-i18n="货品代号">货品代号</label>
+            <input type="text" id="filterPrd" class="form-input" data-i18n-placeholder="全部" placeholder="全部">
           </div>
           <div class="form-group">
-            <label for="filterDep">部门</label>
-            <input type="text" id="filterDep" class="form-input" placeholder="全部">
+            <label for="filterDep" data-i18n="部门">部门</label>
+            <input type="text" id="filterDep" class="form-input" data-i18n-placeholder="全部" placeholder="全部">
           </div>
           <div class="form-group filter-group-wh">
-            <label for="filterWh">仓库</label>
-            <input type="text" id="filterWh" class="form-input" placeholder="全部">
+            <label for="filterWh" data-i18n="仓库">仓库</label>
+            <input type="text" id="filterWh" class="form-input" data-i18n-placeholder="全部" placeholder="全部">
           </div>
           <div class="form-group filter-group-status">
-            <label for="filterStatus">审核状态</label>
+            <label for="filterStatus" data-i18n="审核状态">审核状态</label>
             <select id="filterStatus" class="form-input">
-              <option value="">全部</option>
-              <option value="Y">已审核</option>
-              <option value="N">未审核</option>
+              <option value="" data-i18n="全部">全部</option>
+              <option value="Y" data-i18n="已审核">已审核</option>
+              <option value="N" data-i18n="未审核">未审核</option>
             </select>
           </div>
           <div class="form-group filter-group-ywtype" style="display:none;">
-            <label for="filterYwType">业务类型</label>
-            <input type="text" id="filterYwType" class="form-input" placeholder="全部">
+            <label for="filterYwType" data-i18n="业务类型">业务类型</label>
+            <input type="text" id="filterYwType" class="form-input" data-i18n-placeholder="全部" placeholder="全部">
           </div>
           <div class="form-group filter-group-kb" style="display:none;">
-            <label for="filterKb">收/付款方式</label>
-            <input type="text" id="filterKb" class="form-input" placeholder="全部">
+            <label for="filterKb" data-i18n="收/付款方式">收/付款方式</label>
+            <input type="text" id="filterKb" class="form-input" data-i18n-placeholder="全部" placeholder="全部">
           </div>
           <div class="form-group filter-group-docno" style="display:none;">
-            <label for="filterDocNo">单号</label>
-            <input type="text" id="filterDocNo" class="form-input" placeholder="全部">
+            <label for="filterDocNo" data-i18n="单号">单号</label>
+            <input type="text" id="filterDocNo" class="form-input" data-i18n-placeholder="全部" placeholder="全部">
           </div>
           <div class="form-group filter-group-mrpno" style="display:none;">
-            <label for="filterMrpNo">成品代号</label>
-            <input type="text" id="filterMrpNo" class="form-input" placeholder="全部">
+            <label for="filterMrpNo" data-i18n="成品代号">成品代号</label>
+            <input type="text" id="filterMrpNo" class="form-input" data-i18n-placeholder="全部" placeholder="全部">
           </div>
           <div class="form-group filter-group-ygno" style="display:none;">
-            <label for="filterYgNo">员工代号</label>
-            <input type="text" id="filterYgNo" class="form-input" placeholder="全部">
+            <label for="filterYgNo" data-i18n="员工代号">员工代号</label>
+            <input type="text" id="filterYgNo" class="form-input" data-i18n-placeholder="全部" placeholder="全部">
           </div>
           <div class="form-group filter-group-batno" style="display:none;">
-            <label for="filterBatNo">批号</label>
-            <input type="text" id="filterBatNo" class="form-input" placeholder="全部">
+            <label for="filterBatNo" data-i18n="批号">批号</label>
+            <input type="text" id="filterBatNo" class="form-input" data-i18n-placeholder="全部" placeholder="全部">
           </div>
           <div class="form-group filter-group-prdmark" style="display:none;">
-            <label for="filterPrdMark">货品特征</label>
-            <input type="text" id="filterPrdMark" class="form-input" placeholder="全部">
+            <label for="filterPrdMark" data-i18n="货品特征">货品特征</label>
+            <input type="text" id="filterPrdMark" class="form-input" data-i18n-placeholder="全部" placeholder="全部">
           </div>
           <div class="form-group filter-group-fxknd" style="display:none;">
-            <label for="filterFxKnd">资产类别</label>
-            <input type="text" id="filterFxKnd" class="form-input" placeholder="全部">
+            <label for="filterFxKnd" data-i18n="资产类别">资产类别</label>
+            <input type="text" id="filterFxKnd" class="form-input" data-i18n-placeholder="全部" placeholder="全部">
           </div>
           <div class="form-group filter-group-outdaytype" style="display:none;">
-            <label for="filterOutDayType">在职状态</label>
+            <label for="filterOutDayType" data-i18n="在职状态">在职状态</label>
             <select id="filterOutDayType" class="form-input">
-              <option value="1">在职</option>
-              <option value="0">离职</option>
-              <option value="">全部</option>
+              <option value="1" data-i18n="在职">在职</option>
+              <option value="0" data-i18n="离职">离职</option>
+              <option value="" data-i18n="全部">全部</option>
             </select>
           </div>
           <div class="form-group filter-group-datecst" style="display:none;">
-            <label for="filterDateCst">成本年月</label>
+            <label for="filterDateCst" data-i18n="成本年月">成本年月</label>
             <input type="month" id="filterDateCst" class="form-input" value="2025-07">
           </div>
         </div>
@@ -187,35 +259,33 @@
           <div class="btn-group-main">
             <button class="btn btn-primary" id="queryBtn">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              查询
+              <span data-i18n="查询">查询</span>
             </button>
-            <button class="btn btn-secondary" id="transferBtn" title="将当前查询结果转入AI数据分析">
+            <button class="btn btn-secondary" id="transferBtn" data-i18n-title="将当前查询结果转入AI数据分析" title="将当前查询结果转入AI数据分析">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              查转入数据源
+              <span data-i18n="查转入数据源">查转入数据源</span>
             </button>
           </div>
-          <button class="btn btn-secondary" id="resetBtn">重置</button>
+          <button class="btn btn-secondary" id="resetBtn" data-i18n="重置">重置</button>
         </div>
       </div>
 
       <div class="table-container">
         <div class="table-toolbar">
-          <div class="table-info">
-            共 <strong id="tableCount">0</strong> 条记录
-          </div>
+          <div class="table-info" id="tableInfoText"></div>
           <div>
             <select class="form-input" id="pageSizeSelect" style="height:32px;width:80px;font-size:var(--text-sm)">
-              <option value="20" selected>20条/页</option>
-              <option value="50">50条/页</option>
-              <option value="100">100条/页</option>
-              <option value="500">500条/页</option>
+              <option value="20" selected data-i18n="20条/页">20条/页</option>
+              <option value="50" data-i18n="50条/页">50条/页</option>
+              <option value="100" data-i18n="100条/页">100条/页</option>
+              <option value="500" data-i18n="500条/页">500条/页</option>
             </select>
           </div>
         </div>
         <div class="table-wrapper" id="tableWrapper">
           <div class="table-loading" id="tableLoading" style="display:none;">
             <div class="loading-spinner"></div>
-            <span>正在查询...</span>
+            <span data-i18n="正在查询...">正在查询...</span>
           </div>
           <table id="dataTable">
             <thead>
@@ -226,8 +296,8 @@
         </div>
         <div class="empty-state" id="emptyState" style="display:none">
           <div class="empty-icon">📭</div>
-          <p>暂无数据</p>
-          <p style="font-size:var(--text-sm);margin-top:var(--space-xs)">请调整查询条件后重试</p>
+          <p data-i18n="暂无数据">暂无数据</p>
+          <p style="font-size:var(--text-sm);margin-top:var(--space-xs)" data-i18n="请调整查询条件后重试">请调整查询条件后重试</p>
         </div>
         <div class="pagination">
           <div class="pagination-info" id="paginationInfo">—</div>
@@ -242,43 +312,43 @@
       <div class="ai-analysis-layout">
         <div class="ai-datasource-panel">
           <div class="ds-header">
-            <span>📊 数据源列表</span>
+            <span>📊 <span data-i18n="数据源列表">数据源列表</span></span>
           </div>
           <div class="ds-list" id="dsList">
             <div class="ds-empty" id="dsEmpty">
               <div class="empty-icon">📭</div>
-              <p><strong>暂无数据源</strong></p>
-              <p class="hint">请在"数据查询"页面查询报表后，<br>点击"查转入数据源"按钮将数据转入此处</p>
+              <p><strong data-i18n="暂无数据源">暂无数据源</strong></p>
+              <p class="hint"><span data-i18n='请在"数据查询"页面查询报表后，'>请在"数据查询"页面查询报表后，</span><br><span data-i18n='点击"查转入数据源"按钮将数据转入此处'>点击"查转入数据源"按钮将数据转入此处</span></p>
             </div>
           </div>
           <div class="ds-footer">
-            <button class="btn-save-notepad" id="btnSaveToNotepad" title="保存当前数据源和对话到记事本">📓 存到记事本</button>
-            <button class="btn-clear-all" id="btnClearAllDS" title="清空所有数据源">🗑 清空全部数据源</button>
+            <button class="btn-save-notepad" id="btnSaveToNotepad" data-i18n-title="保存当前数据源和对话到记事本" title="保存当前数据源和对话到记事本">📓 <span data-i18n="存到记事本">存到记事本</span></button>
+            <button class="btn-clear-all" id="btnClearAllDS" data-i18n-title="清空全部数据源" title="清空全部数据源">🗑 <span data-i18n="清空全部数据源">清空全部数据源</span></button>
           </div>
         </div>
         <div class="ai-chat-panel">
           <div class="chat-messages" id="chatMessages">
             <div class="chat-welcome" id="chatWelcome">
               <div class="welcome-icon">🤖</div>
-              <h4>AI 数据分析助手</h4>
-              <p>你好！我已准备好分析你的数据。<br>请先在数据查询中转入数据源，然后在下方输入你的问题。</p>
+              <h4 data-i18n="AI 数据分析助手">AI 数据分析助手</h4>
+              <p><span data-i18n="你好！我已准备好分析你的数据。">你好！我已准备好分析你的数据。</span><br><span data-i18n="请先在数据查询中转入数据源，然后在下方输入你的问题。">请先在数据查询中转入数据源，然后在下方输入你的问题。</span></p>
             </div>
           </div>
           <div class="chat-input-area">
-            <button class="btn-brain" id="btnBrain" title="AI 推荐提问">
+            <button class="btn-brain" id="btnBrain" data-i18n-title="AI 推荐提问" title="AI 推荐提问">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 0 1 4 4c0 1.1-.4 2.1-1.2 2.8l-.8.8c-.5.5-.9 1.1-1.1 1.8-.2.7-.4 1.4-.4 2.1v.5"/><path d="M12 2a4 4 0 0 0-4 4c0 1.1.4 2.1 1.2 2.8l.8.8c.5.5.9 1.1 1.1 1.8.2.7.4 1.4.4 2.1v.5"/><path d="M15 20a3 3 0 1 1-6 0"/><path d="M8 14h8"/></svg>
             </button>
             <div class="suggestions-panel" id="suggestionsPanel">
               <div class="suggestions-header">
-                <span>🧠 AI 推荐提问</span>
+                <span>🧠 <span data-i18n="AI 推荐提问">AI 推荐提问</span></span>
                 <button class="suggestions-close" id="btnSuggestionsClose">&times;</button>
               </div>
               <div class="suggestions-body" id="suggestionsBody">
-                <div class="suggestions-loading">⏳ 正在分析数据源，生成推荐问题...</div>
+                <div class="suggestions-loading">⏳ <span data-i18n="正在分析数据源，生成推荐问题...">正在分析数据源，生成推荐问题...</span></div>
               </div>
             </div>
-            <textarea id="chatInput" placeholder="输入你的问题，例如：帮我分析销售趋势..." rows="1"></textarea>
-            <button class="btn-send" id="btnSend" title="发送">
+            <textarea id="chatInput" data-i18n-placeholder="输入你的问题，例如：帮我分析销售趋势..." placeholder="输入你的问题，例如：帮我分析销售趋势..." rows="1"></textarea>
+            <button class="btn-send" id="btnSend" data-i18n-title="发送" title="发送">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>
           </div>
@@ -290,58 +360,58 @@
     <div class="tab-panel" id="tabNotepad">
       <div class="notepad-layout">
         <div class="notepad-toolbar">
-          <span class="notepad-title">📓 记事本事件列表</span>
-          <span class="notepad-hint">点击事件可将数据源+对话恢复到 AI数据分析 页签</span>
+          <span class="notepad-title">📓 <span data-i18n="记事本事件列表">记事本事件列表</span></span>
+          <span class="notepad-hint" data-i18n="点击事件可将数据源+对话恢复到 AI数据分析 页签">点击事件可将数据源+对话恢复到 AI数据分析 页签</span>
         </div>
         <div class="notepad-list" id="notepadList">
           <div class="notepad-empty" id="notepadEmpty">
             <div class="empty-icon">📓</div>
-            <p><strong>暂无保存的事件</strong></p>
-            <p class="hint">在 AI数据分析 页签中，<br>点击数据源面板的"存到记事本"按钮<br>输入名称后保存为事件</p>
+            <p><strong data-i18n="暂无保存的事件">暂无保存的事件</strong></p>
+            <p class="hint"><span data-i18n="在 AI数据分析 页签中，">在 AI数据分析 页签中，</span><br><span data-i18n='点击数据源面板的"存到记事本"按钮'>点击数据源面板的"存到记事本"按钮</span><br><span data-i18n="输入名称后保存为事件">输入名称后保存为事件</span></p>
           </div>
-          <!-- DEMO: 示例事件卡片（仅模板展示用） -->
+          <!-- DEMO: 示例事件卡片（仅模板展示用；标题为用户数据不翻译，报表名/标签随语言） -->
           <div class="notepad-card">
-            <button class="np-delete" title="删除此事件">×</button>
+            <button class="np-delete" data-i18n-title="删除此事件" title="删除此事件">×</button>
             <div class="np-title">上半年销售趋势深度分析</div>
             <div class="np-source">
-              <span class="np-source-label">数据源</span>
-              <span>受订报表 — 日期2026-01-01至2026-06-30, 106条记录</span>
+              <span class="np-source-label" data-i18n="数据源">数据源</span>
+              <span><span data-i18n="受订报表">受订报表</span> — 日期2026-01-01至2026-06-30, 106条记录</span>
             </div>
             <div class="np-source">
-              <span class="np-source-label">对话</span>
-              <span>4 轮对话</span>
+              <span class="np-source-label" data-i18n="对话">对话</span>
+              <span id="npConv1">4 轮对话</span>
             </div>
             <div class="np-time">2026-08-12 14:30</div>
           </div>
           <div class="notepad-card">
-            <button class="np-delete" title="删除此事件">×</button>
+            <button class="np-delete" data-i18n-title="删除此事件" title="删除此事件">×</button>
             <div class="np-title">供应商采购集中度风险评估</div>
             <div class="np-source">
-              <span class="np-source-label">数据源</span>
-              <span>采购报表 — 供应商A, 日期2026全年, 88条记录</span>
+              <span class="np-source-label" data-i18n="数据源">数据源</span>
+              <span><span data-i18n="采购报表">采购报表</span> — 供应商A, 日期2026全年, 88条记录</span>
             </div>
             <div class="np-source">
-              <span class="np-source-label">对话</span>
-              <span>6 轮对话</span>
+              <span class="np-source-label" data-i18n="对话">对话</span>
+              <span id="npConv2">6 轮对话</span>
             </div>
             <div class="np-time">2026-08-11 09:15</div>
           </div>
           <div class="notepad-card">
-            <button class="np-delete" title="删除此事件">×</button>
+            <button class="np-delete" data-i18n-title="删除此事件" title="删除此事件">×</button>
             <div class="np-title">Q2回款率与客户逾期分析</div>
             <div class="np-source">
-              <span class="np-source-label">数据源</span>
-              <span>收款报表 — 已审核, 日期2026-Q2, 54条记录</span>
+              <span class="np-source-label" data-i18n="数据源">数据源</span>
+              <span><span data-i18n="收款明细表">收款明细表</span> — <span data-i18n="已审核">已审核</span>, 日期2026-Q2, 54条记录</span>
             </div>
             <div class="np-source">
-              <span class="np-source-label">对话</span>
-              <span>8 轮对话</span>
+              <span class="np-source-label" data-i18n="对话">对话</span>
+              <span id="npConv3">8 轮对话</span>
             </div>
             <div class="np-time">2026-08-10 16:45</div>
           </div>
         </div>
         <div class="notepad-footer">
-          <button class="btn-clear-all" id="btnClearAllNotepad" title="清空全部记事本">🗑 清空全部记事本</button>
+          <button class="btn-clear-all" id="btnClearAllNotepad" data-i18n-title="清空全部记事本" title="清空全部记事本">🗑 <span data-i18n="清空全部记事本">清空全部记事本</span></button>
         </div>
       </div>
     </div>
@@ -352,7 +422,7 @@
 <div class="modal-overlay hidden" id="settingsModal">
   <div class="modal-card">
     <div class="modal-header">
-      <h3>⚙️ 系统设置</h3>
+      <h3><span data-i18n="⚙️ 系统设置">⚙️ 系统设置</span></h3>
       <button class="modal-close" id="btnModalClose">&times;</button>
     </div>
     <div class="modal-body">
@@ -360,23 +430,23 @@
         <label for="settingApiKey">Deepseek API Key</label>
         <div class="form-row">
           <input type="password" id="settingApiKey" class="form-input" placeholder="sk-..." autocomplete="off">
-          <button class="btn btn-secondary btn-sm" id="btnValidateKey">验证</button>
+          <button class="btn btn-secondary btn-sm" id="btnValidateKey" data-i18n="验证">验证</button>
         </div>
         <div class="validation-result" id="keyValidateResult"></div>
       </div>
       <div class="form-group">
-        <label for="settingServerUrl">服务器地址</label>
+        <label for="settingServerUrl" data-i18n="服务器地址">服务器地址</label>
         <div class="form-row">
-          <input type="text" id="settingServerUrl" class="form-input" placeholder="http://服务器IP:端口">
-          <button class="btn btn-secondary btn-sm" id="btnValidateServer">验证</button>
+          <input type="text" id="settingServerUrl" class="form-input" data-i18n-placeholder="http://服务器IP:端口" placeholder="http://服务器IP:端口">
+          <button class="btn btn-secondary btn-sm" id="btnValidateServer" data-i18n="验证">验证</button>
         </div>
-        <div class="form-hint">只需输入服务器 IP 或域名 + 端口，系统会自动追加 /SUNFUSION/API 路径。</div>
+        <div class="form-hint" data-i18n="只需输入服务器 IP 或域名 + 端口，系统会自动追加 /SUNFUSION/API 路径。">只需输入服务器 IP 或域名 + 端口，系统会自动追加 /SUNFUSION/API 路径。</div>
         <div class="validation-result" id="serverValidateResult"></div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-primary btn-sm" id="btnSaveSettings">保存设置</button>
-      <button class="btn btn-secondary btn-sm" id="btnCancelSettings">取消</button>
+      <button class="btn btn-primary btn-sm" id="btnSaveSettings" data-i18n="保存设置">保存设置</button>
+      <button class="btn btn-secondary btn-sm" id="btnCancelSettings" data-i18n="取消">取消</button>
     </div>
   </div>
 </div>
@@ -385,10 +455,46 @@
 <div class="toast" id="toast"></div>
 
 <!-- =========================================================
-     SCRIPTS（模块化加载，顺序不可变）
+     DEMO ONLY — i18n 演示面板（生产环境删除整个区块）
      ========================================================= -->
+<div class="demo-panel" id="demoPanel">
+  <div class="demo-header">
+    <span data-i18n="i18n 演示面板（仅模板演示用）">i18n 演示面板（仅模板演示用）</span>
+    <button id="demoToggle" data-i18n-aria-label="折叠/展开" aria-label="折叠/展开">▾</button>
+  </div>
+  <div class="demo-body" id="demoBody">
+    <div class="demo-row"><span class="demo-label" data-i18n="当前语言">当前语言</span><b id="demoLang">—</b></div>
+    <div class="demo-row"><span class="demo-label" data-i18n="系统检测">系统检测</span><b id="demoOS">—</b></div>
+    <div class="demo-row"><span class="demo-label" data-i18n="已存偏好">已存偏好</span><b id="demoSaved">—</b></div>
+    <div class="demo-divider"></div>
+    <div class="demo-row"><span class="demo-label" data-i18n="报表名称">报表名称</span><span id="demoReportName"></span></div>
+    <div class="demo-row"><span class="demo-label" data-i18n="分组名称">分组名称</span><span id="demoGroupName"></span></div>
+    <div class="demo-row"><span class="demo-label" data-i18n="栏位标签">栏位标签</span><span id="demoColumns"></span></div>
+    <div class="demo-row"><span class="demo-label" data-i18n="审核徽章">审核徽章</span><span id="demoBadges"></span></div>
+    <div class="demo-row"><span class="demo-label" data-i18n="分页模板">分页模板</span><span id="demoPagination"></span></div>
+    <div class="demo-row"><span class="demo-label" data-i18n="筛选摘要">筛选摘要</span><span id="demoFilterSummary"></span></div>
+    <div class="demo-row"><span class="demo-label" data-i18n="导出文件名">导出文件名</span><span id="demoExport"></span></div>
+    <div class="demo-divider"></div>
+    <div class="demo-actions">
+      <button id="demoPreview" data-i18n="预览主界面">预览主界面</button>
+      <button id="demoBackLogin" data-i18n="返回登录页">返回登录页</button>
+      <button id="demoConfirm" data-i18n="确认弹窗">确认弹窗</button>
+      <button id="demoPrompt" data-i18n="输入弹窗">输入弹窗</button>
+      <button id="demoToast" data-i18n="Toast 示例">Toast 示例</button>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================
+     SCRIPTS（模块化加载，顺序不可变）
+     i18n.js + i18n-data.js 必须最先加载（i18n-data.js 末尾同步 boot）
+     ========================================================= -->
+<!-- I18n Foundation -->
+<script src="js/i18n.js?v=20260813a"></script>
+<script src="js/i18n-data.js?v=20260813a"></script>
 <!-- Foundation -->
 <script src="js/utils.js?v=20260813a"></script>
+<script src="js/dialog.js?v=20260813a"></script>
 <script src="js/settings-store.js?v=20260813a"></script>
 <script src="js/datasource-store.js?v=20260813a"></script>
 <!-- Auth & API -->
@@ -397,7 +503,7 @@
 <script src="js/reports.js?v=20260813b"></script>
 <!-- 报表菜单（搜索/折叠/收藏） -->
 <script src="js/report-menu-store.js?v=20260813b"></script>
-<script src="js/report-menu.js?v=20260813c"></script>
+<script src="js/report-menu.js?v=20260813d"></script>
 <!-- UI Rendering -->
 <script src="js/datasource-list.js?v=20260813a"></script>
 <script src="js/tabs.js?v=20260813a"></script>
@@ -413,5 +519,92 @@
 <script src="js/settings-ui.js?v=20260813a"></script>
 <!-- App Entry（DOMContentLoaded 自动初始化） -->
 <script src="js/app.js?v=20260813c"></script>
+
+<script>
+/* ============================================================
+   DEMO ONLY — i18n 演示脚本（生产环境删除）
+   演示：动态渲染点的 t() 用法 + 语言切换实时刷新 + Dialog/toast 原型
+   ============================================================ */
+(function() {
+  'use strict';
+
+  /** 填充所有动态演示值（初始 + 每次语言切换） */
+  function fill() {
+    document.getElementById('demoLang').textContent = I18n.getLang();
+    document.getElementById('demoOS').textContent = I18n.detectOSLang();
+    var saved = null;
+    try { saved = localStorage.getItem(I18n.LS_KEY); } catch(e) {}
+    document.getElementById('demoSaved').textContent = saved || I18n.t('（无）');
+
+    document.getElementById('demoReportName').textContent = I18n.t('受订报表');
+    document.getElementById('demoGroupName').textContent = I18n.t('进销存报表');
+    document.getElementById('demoColumns').textContent = I18n.t('含税金额') + ' · ' + I18n.t('审核状态') + ' · ' + I18n.t('未交数量');
+    document.getElementById('demoBadges').innerHTML =
+      '<span class="demo-badge audited">' + I18n.t('已审核') + '</span> <span class="demo-badge unaudited">' + I18n.t('未审核') + '</span>';
+    document.getElementById('demoPagination').textContent = I18n.t('第 {0}-{1} 条，共 {2} 条', 1, 20, 106);
+    document.getElementById('demoFilterSummary').textContent = I18n.t('共 {0} 条记录', 106) + ' · ' + I18n.t('日期范围');
+    document.getElementById('demoExport').textContent = I18n.t('AI数据分析结果') + ' 2026-08-13.html';
+
+    /* 镜像生产渲染点：表格计数 / 分页信息 / 分页按钮 / 记事本对话数 */
+    var info = document.getElementById('tableInfoText');
+    if (info) info.textContent = I18n.t('共 {0} 条记录', 106);
+    var pager = document.getElementById('paginationInfo');
+    if (pager) pager.textContent = I18n.t('第 {0}-{1} 条，共 {2} 条', 1, 20, 106);
+    var ctrl = document.getElementById('paginationControls');
+    if (ctrl) {
+      ctrl.innerHTML = '';
+      ['首页','上一页','下一页','末页'].forEach(function(k, i) {
+        var b = document.createElement('button');
+        b.className = 'page-btn';
+        b.textContent = I18n.t(k);
+        b.disabled = (i < 2);   // 演示第一页状态
+        ctrl.appendChild(b);
+      });
+    }
+    document.getElementById('npConv1').textContent = I18n.t('{0} 轮对话', 4);
+    document.getElementById('npConv2').textContent = I18n.t('{0} 轮对话', 6);
+    document.getElementById('npConv3').textContent = I18n.t('{0} 轮对话', 8);
+  }
+  window.addEventListener('i18n:changed', fill);
+  fill();
+
+  function toast(text) {
+    var el = document.getElementById('toast');
+    el.textContent = text;
+    el.className = 'toast toast-success visible';
+    setTimeout(function() { el.classList.remove('visible'); }, 2500);
+  }
+
+  /* 视图切换（演示用，绕过真实登录） */
+  document.getElementById('demoPreview').addEventListener('click', function() {
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('dashboardPage').classList.add('active');
+  });
+  document.getElementById('demoBackLogin').addEventListener('click', function() {
+    document.getElementById('dashboardPage').classList.remove('active');
+    document.getElementById('loginPage').classList.remove('hidden');
+  });
+
+  /* Dialog 原型演示 */
+  document.getElementById('demoConfirm').addEventListener('click', function() {
+    Dialog.confirm(I18n.t('演示确认：确定要删除这个演示数据吗？'), { danger: true }).then(function(ok) {
+      if (ok) toast(I18n.t('已删除（演示）'));
+    });
+  });
+  document.getElementById('demoPrompt').addEventListener('click', function() {
+    Dialog.prompt(I18n.t('为演示事件命名'), { maxLength: 50 }).then(function(v) {
+      if (v !== null) toast(I18n.t('已保存（演示）：{0}', v));
+    });
+  });
+  document.getElementById('demoToast').addEventListener('click', function() {
+    toast(I18n.t('演示：这是一条示例提示消息'));
+  });
+
+  /* 面板折叠 */
+  document.getElementById('demoToggle').addEventListener('click', function() {
+    document.getElementById('demoBody').classList.toggle('collapsed');
+  });
+})();
+</script>
 </body>
 </html>

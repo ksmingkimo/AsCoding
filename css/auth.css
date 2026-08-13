@@ -166,3 +166,44 @@
 }
 
 /* Toast — see dashboard.css for full design */
+
+/* ============================================================
+   Language Switch — 登录页三语分段控件（简 / 繁 / 英）
+   白色胶囊选中态 + 蓝色文字；聚焦环满足键盘可达性
+   ============================================================ */
+.lang-switch {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: var(--space-2xl);
+  background: var(--color-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.lang-switch button {
+  flex: 1;
+  height: 34px;
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  background: transparent;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  font-family: var(--font-family);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.lang-switch button:hover {
+  color: var(--color-text);
+  background: rgba(30, 64, 175, 0.06);
+}
+.lang-switch button.active {
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+.lang-switch button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}

@@ -71,8 +71,9 @@ var ReportMenu = (function() {
   function _buildItemHtml(key, cfg) {
     var isActive = key === _currentKey();
     var isFav = ReportMenuStore.isFavorite(key);
-    var name = Utils.escapeHtml(cfg.name || key);
-    var starTitle = isFav ? '取消收藏' : '收藏';
+    // 显示名走 I18n.t()；收藏 key / data-report / 折叠 key 均保留简体规范值
+    var name = Utils.escapeHtml(I18n.t(cfg.name || key));
+    var starTitle = I18n.t(isFav ? '取消收藏' : '收藏');
     return '<a href="#report-' + key + '" class="nav-item' + (isActive ? ' active' : '') + '" data-report="' + key + '" title="' + name + '">' +
       '<span class="nav-icon">' + (cfg.icon || '📄') + '</span>' +
       '<span class="nav-text">' + name + '</span>' +
@@ -88,7 +89,7 @@ var ReportMenu = (function() {
     var html =
       '<div class="nav-section nav-section-toggleable' + (collapsed ? ' collapsed' : '') + '"' +
         ' data-group="' + Utils.escapeHtml(group) + '" role="button" tabindex="0" aria-expanded="' + (!collapsed) + '">' +
-        '<span class="nav-caret">▾</span>' + Utils.escapeHtml(group) +
+        '<span class="nav-caret">▾</span>' + Utils.escapeHtml(I18n.t(group)) +
         '<span class="nav-count">' + keys.length + '</span>' +
       '</div>';
     if (!collapsed) {
@@ -108,8 +109,9 @@ var ReportMenu = (function() {
       var cfg = ReportEngine.getConfig(k);
       if (!cfg) return;
       var name = String(cfg.name || '').toLowerCase();
+      var tName = I18n.t(cfg.name || '').toLowerCase();  // 当前语言译名（zh-cn 与 name 相同）
       var pinyin = String(cfg.pinyin || '').toLowerCase();
-      if (name.indexOf(q) !== -1 || pinyin.indexOf(q) !== -1) { namePinyinHits.push(k); return; }
+      if (name.indexOf(q) !== -1 || tName.indexOf(q) !== -1 || pinyin.indexOf(q) !== -1) { namePinyinHits.push(k); return; }
       if (String(k).toLowerCase().indexOf(q) !== -1) keyHits.push(k);
     });
 
@@ -118,7 +120,7 @@ var ReportMenu = (function() {
     list.forEach(function(k) {
       html += _buildItemHtml(k, ReportEngine.getConfig(k));
     });
-    return html ? html : '<div class="nav-empty">无匹配报表</div>';
+    return html ? html : '<div class="nav-empty">' + I18n.t('无匹配报表') + '</div>';
   }
 
   /** 折叠态（56px）：忽略分组折叠状态，全部报表 emoji 平铺（同旧版无分组效果），
@@ -158,7 +160,7 @@ var ReportMenu = (function() {
       return !!ReportEngine.getConfig(k);
     });
     if (favs.length > 0) {
-      html += '<div class="nav-section nav-fav-header">★ 收藏</div>';
+      html += '<div class="nav-section nav-fav-header">★ ' + I18n.t('收藏') + '</div>';
       favs.forEach(function(k) {
         html += _buildItemHtml(k, ReportEngine.getConfig(k));
       });
