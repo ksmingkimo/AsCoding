@@ -138,8 +138,33 @@ var Dialog = (function() {
     });
   }
 
+  /**
+   * 警告弹窗：单按钮「确定」；Enter/Esc/点遮罩均可关闭。
+   * @param {string} message
+   * @returns {Promise<void>}
+   */
+  function alert(message) {
+    return new Promise(function(resolve) {
+      _removeExisting();
+      var lastFocus = document.activeElement;
+      var ui = _build();
+      var msg = document.createElement('p');
+      msg.className = 'dialog-message';
+      msg.textContent = message;
+      ui.body.appendChild(msg);
+      var footer = _footer(ui.body);
+      var close = function() { _close(ui.overlay, lastFocus, resolve, undefined); };
+      var ok = _btn('确定', 'btn btn-primary', close);
+      footer.appendChild(ok);
+      _bindKeys(ui.overlay, close, close);
+      _bindBackdrop(ui.overlay, close);
+      ok.focus();
+    });
+  }
+
   return {
     confirm: confirm,
-    prompt: prompt
+    prompt: prompt,
+    alert: alert
   };
 })();

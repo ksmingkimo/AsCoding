@@ -10,7 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <link rel="stylesheet" href="css/auth.css?v=20260813b">
-<link rel="stylesheet" href="css/dashboard.css?v=20260813c">
+<link rel="stylesheet" href="css/dashboard.css?v=20260818d">
 <link rel="stylesheet" href="css/ai-analysis.css?v=20260813b">
 <link rel="stylesheet" href="css/notepad.css?v=20260814a">
 <style>
@@ -226,6 +226,12 @@
             <label for="filterMrpNo" data-i18n="成品代号">成品代号</label>
             <input type="text" id="filterMrpNo" class="form-input" data-i18n-placeholder="全部" placeholder="全部">
           </div>
+          <div class="form-group filter-group-bookno" style="display:none;">
+            <label for="filterBookNo" data-i18n="账簿">账簿</label>
+            <select id="filterBookNo" class="form-input">
+              <option value="">— 演示占位 —</option>
+            </select>
+          </div>
           <div class="form-group filter-group-ygno" style="display:none;">
             <label for="filterYgNo" data-i18n="员工代号">员工代号</label>
             <input type="text" id="filterYgNo" class="form-input" data-i18n-placeholder="全部" placeholder="全部">
@@ -283,6 +289,11 @@
           </div>
         </div>
         <div class="table-wrapper" id="tableWrapper">
+          <!-- 流式进度条：position:fixed 悬浮在视口正中央（白卡片 + 进度条 + 阶段文字），不随表格滚动 -->
+          <div class="stream-progress" id="streamProgress" style="display:none;">
+            <div class="stream-progress-bar"><div class="stream-progress-fill" id="streamProgressFill"></div></div>
+            <span class="stream-progress-text" id="streamProgressText"></span>
+          </div>
           <div class="table-loading" id="tableLoading" style="display:none;">
             <div class="loading-spinner"></div>
             <span data-i18n="正在查询...">正在查询...</span>
@@ -481,6 +492,8 @@
       <button id="demoConfirm" data-i18n="确认弹窗">确认弹窗</button>
       <button id="demoPrompt" data-i18n="输入弹窗">输入弹窗</button>
       <button id="demoToast" data-i18n="Toast 示例">Toast 示例</button>
+      <button id="demoLedger" data-i18n="预览：总分类账">预览：总分类账</button>
+      <button id="demoStream" data-i18n="预览：流式进度条">预览：流式进度条</button>
     </div>
   </div>
 </div>
@@ -491,19 +504,20 @@
      ========================================================= -->
 <!-- I18n Foundation -->
 <script src="js/i18n.js?v=20260814a"></script>
-<script src="js/i18n-data.js?v=20260814b"></script>
+<script src="js/i18n-data.js?v=20260818b"></script>
 <!-- Foundation -->
 <script src="js/utils.js?v=20260814a"></script>
-<script src="js/dialog.js?v=20260814a"></script>
+<script src="js/dialog.js?v=20260818a"></script>
 <script src="js/settings-store.js?v=20260813a"></script>
 <script src="js/datasource-store.js?v=20260813a"></script>
+<script src="js/book-store.js?v=20260818b"></script>
 <!-- Auth & API -->
 <script src="js/auth.js?v=20260814a"></script>
-<script src="js/api.js?v=20260814a"></script>
-<script src="js/reports.js?v=20260814a"></script>
+<script src="js/api.js?v=20260818a"></script>
+<script src="js/reports.js?v=20260818c"></script>
 <!-- 报表菜单（搜索/折叠/收藏） -->
 <script src="js/report-menu-store.js?v=20260813b"></script>
-<script src="js/report-menu.js?v=20260814a"></script>
+<script src="js/report-menu.js?v=20260818a"></script>
 <!-- UI Rendering -->
 <script src="js/datasource-list.js?v=20260814a"></script>
 <script src="js/tabs.js?v=20260813a"></script>
@@ -522,7 +536,7 @@
 <script src="js/ai-suggestions.js?v=20260814a"></script>
 <script src="js/settings-ui.js?v=20260814a"></script>
 <!-- App Entry（DOMContentLoaded 自动初始化） -->
-<script src="js/app.js?v=20260814b"></script>
+<script src="js/app.js?v=20260818c"></script>
 
 <script>
 /* ============================================================
@@ -608,6 +622,154 @@
   document.getElementById('demoToggle').addEventListener('click', function() {
     document.getElementById('demoBody').classList.toggle('collapsed');
   });
+
+  /* ============================================================
+     DEMO ONLY — 总分类账筛选原型（长连接报表 UI 原型，确认后进生产）
+     演示内容：
+     ① 筛选面板仅显示「账簿」下拉 + 「会计期间」，账簿下拉预选第一条
+     ② 加载层内的流式进度条（模拟实测 PERCENT 序列 + TITLE）
+     ============================================================ */
+
+  /* 账簿演示数据（形状与 AccBook/GetList 实测返回一致） */
+  var BOOK_DEMO = [
+    { BOOK_NO: '00000000', NAME: 'First Department' },
+    { BOOK_NO: '001', NAME: '主账簿01' },
+    { BOOK_NO: '002', NAME: '副账簿02' }
+  ];
+
+  /* 实测消息序列（API服务调用说明文档 9.1 实测表）：PERCENT → TITLE */
+  var STREAM_SEQ = [
+    { p: 0,   t: '' },
+    { p: 10,  t: '' },
+    { p: 30,  t: '' },
+    { p: 40,  t: '查询本期数据' },
+    { p: 50,  t: '查询期初数据' },
+    { p: 70,  t: '' },
+    { p: 90,  t: '' },
+    { p: 100, t: '' }
+  ];
+
+  /** 预览：总分类账筛选面板 */
+  function showLedgerPreview() {
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('dashboardPage').classList.add('active');
+
+    // 报表标题
+    document.getElementById('reportTitle').textContent = I18n.t('总分类账');
+
+    // 筛选面板：只显示 账簿 + 会计期间
+    var grid = document.querySelector('.filter-grid');
+    if (grid) {
+      grid.querySelectorAll(':scope > .form-group').forEach(function(g) { g.style.display = 'none'; });
+      var bookEl = grid.querySelector('.filter-group-bookno');
+      var cstEl = grid.querySelector('.filter-group-datecst');
+      if (bookEl) bookEl.style.display = '';
+      if (cstEl) cstEl.style.display = '';
+    }
+    // 会计期间 label 改写（该输入框生产中被总分类账复用）
+    var cstLabel = document.querySelector('label[for="filterDateCst"]');
+    if (cstLabel) cstLabel.textContent = I18n.t('会计期间');
+    // 打开总分类账默认当前月（生产：updateFilterPanel accgl 分支同步此规则）
+    var cstInput = document.getElementById('filterDateCst');
+    if (cstInput) {
+      var now = new Date();
+      var mm = String(now.getMonth() + 1);
+      if (mm.length === 1) mm = '0' + mm;
+      cstInput.value = now.getFullYear() + '-' + mm;
+    }
+
+    // 账簿下拉：填充演示数据 + 预选第一条（设计规则：>1 预选第一个）
+    var sel = document.getElementById('filterBookNo');
+    if (sel && sel.options.length <= 1) {
+      sel.innerHTML = '';
+      BOOK_DEMO.forEach(function(b) {
+        var o = document.createElement('option');
+        o.value = b.BOOK_NO;
+        o.textContent = b.BOOK_NO + ' · ' + b.NAME;
+        sel.appendChild(o);
+      });
+    }
+    if (sel) sel.selectedIndex = 0;
+
+    // 收起加载层与进度条
+    document.getElementById('tableLoading').style.display = 'none';
+    document.getElementById('streamProgress').style.display = 'none';
+
+    // ── 演示数据表：摘要类型 REM_TYPE 映射展示（1=期初余额 2=本期合计 3=本年合计，彩色 badge）──
+    var GL_DEMO_COLUMNS = [
+      { field: 'ACC_NO',      label: I18n.t('科目代号') },
+      { field: 'ACC_NAME',    label: I18n.t('科目名称') },
+      { field: 'ACC_IPERIOD', label: I18n.t('会计期间') },
+      { field: 'DC',          label: I18n.t('借贷方向') },
+      { field: 'REM_TYPE',    label: I18n.t('摘要类型') },
+      { field: 'FZHS_TITLE',  label: I18n.t('辅助核算') },
+      { field: 'CUR_NAME',    label: I18n.t('币别名称') },
+      { field: 'AMTN_D',      label: I18n.t('借方金额'), isNum: true },
+      { field: 'AMTN_C',      label: I18n.t('贷方金额'), isNum: true },
+      { field: 'AMTN_BAL',    label: I18n.t('余额'), isNum: true }
+    ];
+    var GL_DEMO_ROWS = [
+      { ACC_NO: '1001', ACC_NAME: '库存现金', ACC_IPERIOD: '2026-01', DC: '', REM_TYPE: '1', FZHS_TITLE: '', CUR_NAME: '人民币', AMTN_D: '0.00', AMTN_C: '0.00', AMTN_BAL: '50,000.00' },
+      { ACC_NO: '1001', ACC_NAME: '库存现金', ACC_IPERIOD: '2026-01', DC: '借', REM_TYPE: '2', FZHS_TITLE: '', CUR_NAME: '人民币', AMTN_D: '120,000.00', AMTN_C: '80,000.00', AMTN_BAL: '40,000.00' },
+      { ACC_NO: '1001', ACC_NAME: '库存现金', ACC_IPERIOD: '2026-01', DC: '借', REM_TYPE: '3', FZHS_TITLE: '', CUR_NAME: '人民币', AMTN_D: '1,500,000.00', AMTN_C: '1,450,000.00', AMTN_BAL: '50,000.00' }
+    ];
+    function glRemTypeBadge(v) {
+      v = String(v);
+      if (v === '1') return '<span class="badge badge-info">' + I18n.t('期初余额') + '</span>';
+      if (v === '2') return '<span class="badge badge-warning">' + I18n.t('本期合计') + '</span>';
+      if (v === '3') return '<span class="badge badge-success">' + I18n.t('本年合计') + '</span>';
+      return Utils.escapeHtml(v);
+    }
+    var theadRow = document.getElementById('tableHeadRow');
+    var tbody = document.getElementById('tableBody');
+    if (theadRow) {
+      theadRow.innerHTML = GL_DEMO_COLUMNS.map(function(c) {
+        return '<th class="' + (c.isNum ? 'num' : '') + '">' + Utils.escapeHtml(c.label) + '</th>';
+      }).join('');
+    }
+    if (tbody) {
+      tbody.innerHTML = GL_DEMO_ROWS.map(function(row) {
+        return '<tr>' + GL_DEMO_COLUMNS.map(function(c) {
+          var v = row[c.field];
+          if (c.field === 'REM_TYPE') return '<td>' + glRemTypeBadge(v) + '</td>';
+          return '<td class="' + (c.isNum ? 'num' : '') + '">' + Utils.escapeHtml(String(v)) + '</td>';
+        }).join('') + '</tr>';
+      }).join('');
+    }
+  }
+
+  /** 预览：流式进度条（按实测 PERCENT 序列推进） */
+  function demoStreamProgress() {
+    showLedgerPreview();
+    var loading = document.getElementById('tableLoading');
+    var prog = document.getElementById('streamProgress');
+    var fill = document.getElementById('streamProgressFill');
+    var text = document.getElementById('streamProgressText');
+    if (!loading || !prog || !fill || !text) return;
+
+    loading.style.display = 'flex';
+    prog.style.display = '';
+    var i = 0;
+    function step() {
+      if (i >= STREAM_SEQ.length) {
+        // 完成态：600ms 后收起，模拟查询结束
+        setTimeout(function() {
+          loading.style.display = 'none';
+          prog.style.display = 'none';
+          fill.style.width = '0%';
+        }, 600);
+        return;
+      }
+      var s = STREAM_SEQ[i++];
+      fill.style.width = s.p + '%';
+      text.textContent = s.p + '%' + (s.t ? ' · ' + s.t : '');
+      setTimeout(step, 450);
+    }
+    step();
+  }
+
+  document.getElementById('demoLedger').addEventListener('click', showLedgerPreview);
+  document.getElementById('demoStream').addEventListener('click', demoStreamProgress);
 })();
 </script>
 </body>

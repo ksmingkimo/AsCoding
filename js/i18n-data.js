@@ -674,7 +674,27 @@ var I18nData = {
   ' (续{0}/{1})': ' (續{0}/{1})',
   '（图表 — 请查看原始分析结果）': '（圖表 — 請查看原始分析結果）',
   '已截断': '已截斷',
-  '(图表数据解析失败)': '(圖表資料解析失敗)'
+  '(图表数据解析失败)': '(圖表資料解析失敗)',
+
+  /* ── 总账报表（长连接 SSE + 账簿下拉，Round 45）── */
+  '总账报表': '總帳報表',
+  '总分类账': '總分類帳',
+  '账簿': '帳簿',
+  '会计期间': '會計期間',
+  '请选择账簿': '請選擇帳簿',
+  '你的账套没有启用总账，所以你不能操作这个查询': '你的帳套沒有啟用總帳，所以你不能操作這個查詢',
+  '账簿清单加载失败: {0}': '帳簿清單載入失敗: {0}',
+  '查询超时（120秒），请稍后重试': '查詢逾時（120秒），請稍後重試',
+  '借贷方向': '借貸方向',
+  '摘要类型': '摘要類型',
+  '借方金额': '借方金額',
+  '贷方金额': '貸方金額',
+  '加载中...': '載入中...',
+  '预览：总分类账': '預覽：總分類帳',
+  '预览：流式进度条': '預覽：流式進度條',
+  '期初余额': '期初餘額',
+  '本期合计': '本期合計',
+  '本年合计': '本年合計'
 },
 
   'en': {
@@ -1342,7 +1362,27 @@ var I18nData = {
   ' (续{0}/{1})': ' (cont. {0}/{1})',
   '（图表 — 请查看原始分析结果）': '(Chart — see original analysis results)',
   '已截断': 'truncated',
-  '(图表数据解析失败)': '(chart data parse failed)'
+  '(图表数据解析失败)': '(chart data parse failed)',
+
+  /* ── General Ledger (SSE long-connection + book dropdown, Round 45) ── */
+  '总账报表': 'General Ledger Reports',
+  '总分类账': 'General Ledger',
+  '账簿': 'Ledger Book',
+  '会计期间': 'Accounting Period',
+  '请选择账簿': 'Please select a ledger book',
+  '你的账套没有启用总账，所以你不能操作这个查询': 'Your account set has not enabled General Ledger, so you cannot operate this query',
+  '账簿清单加载失败: {0}': 'Failed to load ledger book list: {0}',
+  '查询超时（120秒），请稍后重试': 'Query timed out (120s). Please retry later',
+  '借贷方向': 'Debit/Credit',
+  '摘要类型': 'Remark Type',
+  '借方金额': 'Debit Amount',
+  '贷方金额': 'Credit Amount',
+  '加载中...': 'Loading...',
+  '预览：总分类账': 'Preview: General Ledger',
+  '预览：流式进度条': 'Preview: Stream Progress',
+  '期初余额': 'Opening Balance',
+  '本期合计': 'Current Period Total',
+  '本年合计': 'Year-to-Date Total'
 }
 };
 

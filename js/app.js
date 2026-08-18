@@ -33,9 +33,20 @@ var App = (function() {
       return;
     }
     if (ReportEngine.isLoading) return;
+    // 0 账簿拦截兜底：按钮已禁用时查询也不该跑（键盘/其他路径）
+    if (_ledgerBlocked) return;
 
     var reportKey = AppState.currentReport;
+    var cfg = ReportEngine.getConfig(reportKey);
     var filters = ReportEngine.readFilters();
+    var isStream = !!(cfg && cfg.apiMethod === 'getReportStream');
+
+    // BOOK_NO 铁律（实测：空值 → 服务端 406；前端先拦，不发请求）
+    if (isStream && !filters.filterBookNo) {
+      Utils.showToast(I18n.t('请选择账簿'), 'error');
+      return;
+    }
+
     var viewPage = ReportEngine.currentPage || 1;
     var pageSizeSelect = document.getElementById('pageSizeSelect');
     var pageSize = pageSizeSelect ? parseInt(pageSizeSelect.value, 10) || 20 : 20;
@@ -51,8 +62,11 @@ var App = (function() {
     var pagination = document.querySelector('.pagination');
     if (loadingEl) loadingEl.style.display = 'flex';
 
+    // 长连接流式报表：显示进度条（PERCENT 消息实时驱动）
+    if (isStream) resetStreamProgress();
+
     // API 不认 offset start，始终用 [0, 5000] 取全量数据
-    ReportEngine.query(reportKey, filters, 1, 5000)
+    ReportEngine.query(reportKey, filters, 1, 5000, isStream ? onStreamProgress : null)
       .then(function(result) {
         _allData = result.data;
         ReportEngine.currentData = _allData;
@@ -101,7 +115,32 @@ var App = (function() {
       .finally(function() {
         ReportEngine.isLoading = false;
         if (loadingEl) loadingEl.style.display = 'none';
+        var streamProgress = document.getElementById('streamProgress');
+        if (streamProgress) streamProgress.style.display = 'none';
       });
+  }
+
+  /* ================================================================
+     长连接流式报表 — 进度条 UI（PERCENT 消息实时驱动）
+     ================================================================ */
+
+  /** 查询开始时：进度条归零并显示（仅流式报表调用） */
+  function resetStreamProgress() {
+    var box = document.getElementById('streamProgress');
+    var fill = document.getElementById('streamProgressFill');
+    var text = document.getElementById('streamProgressText');
+    if (box) box.style.display = '';
+    if (fill) fill.style.width = '0%';
+    if (text) text.textContent = '0%';
+  }
+
+  /** 每条流消息回调：PERCENT → 宽度/文字；TITLE 原样显示不翻译（实测含混合内容） */
+  function onStreamProgress(percent, title) {
+    var fill = document.getElementById('streamProgressFill');
+    var text = document.getElementById('streamProgressText');
+    var p = Math.round(percent);
+    if (fill) fill.style.width = p + '%';
+    if (text) text.textContent = p + '%' + (title ? ' · ' + title : '');
   }
 
   /**
@@ -244,6 +283,52 @@ var App = (function() {
     });
   }
 
+  /* ================================================================
+     账簿依赖报表（总分类账）— 0 账簿拦截 + 按钮禁用
+     设计规则（API服务调用说明文档 10.3）：
+       · 打开前 ensureLoaded（失败重试一次；失败 ≠ 0 账簿，toast 报错不切换）
+       · code===0 且 0 账簿 → 弹警告 + 【查询】【转入】禁用，不调流不切换
+       · 切换到其他报表时按钮恢复
+     ================================================================ */
+  var _ledgerBlocked = false;   // 0 账簿警告后为 true，直到切换报表
+
+  function setLedgerButtonsDisabled(disabled) {
+    var queryBtn = document.getElementById('queryBtn');
+    var transferBtn = document.getElementById('transferBtn');
+    if (queryBtn) queryBtn.disabled = disabled;
+    if (transferBtn) transferBtn.disabled = disabled;
+  }
+
+  function blockLedgerReport() {
+    _ledgerBlocked = true;
+    setLedgerButtonsDisabled(true);
+  }
+
+  function unblockLedgerReport() {
+    _ledgerBlocked = false;
+    setLedgerButtonsDisabled(false);
+  }
+
+  /** 账簿下拉填充：BOOK_NO · NAME；保持已选值，无效/未选则预选第一个 */
+  function populateBookSelect(books) {
+    var sel = document.getElementById('filterBookNo');
+    if (!sel) return;
+    var current = sel.value;
+    sel.innerHTML = '';
+    books.forEach(function(b) {
+      var o = document.createElement('option');
+      o.value = b.BOOK_NO;
+      o.textContent = b.BOOK_NO + ' · ' + b.NAME;
+      sel.appendChild(o);
+    });
+    var keepCurrent = books.some(function(b) { return b.BOOK_NO === current; });
+    if (current && keepCurrent) {
+      sel.value = current;
+    } else {
+      sel.selectedIndex = 0;
+    }
+  }
+
   /**
    * 打开指定报表：更新状态/标题/菜单高亮/筛选面板并执行查询
    * @param {string} reportKey — REPORT_CONFIG 的 key
@@ -251,6 +336,34 @@ var App = (function() {
   function openReport(reportKey) {
     var cfg = ReportEngine.getConfig(reportKey);
     if (!cfg) return;
+
+    // 账簿依赖报表：先确保账簿清单已加载
+    if (cfg.needsBook && typeof BookStore !== 'undefined') {
+      BookStore.ensureLoaded().then(function(res) {
+        if (!res.ok) {
+          // 拉取失败 ≠ 0 账簿：toast 报错，不切换报表、不调流
+          Utils.showToast(I18n.t('账簿清单加载失败: {0}', res.error), 'error');
+          return;
+        }
+        if (res.books.length === 0) {
+          // 0 账簿：警告 + 禁用【查询】【转入】，不调流、不切换
+          blockLedgerReport();
+          Dialog.alert(I18n.t('你的账套没有启用总账，所以你不能操作这个查询'));
+          return;
+        }
+        populateBookSelect(res.books);
+        _openReportCore(reportKey);
+      });
+      return;
+    }
+    _openReportCore(reportKey);
+  }
+
+  /** openReport 主体（无账簿检查；进入即恢复被禁用的按钮） */
+  function _openReportCore(reportKey) {
+    var cfg = ReportEngine.getConfig(reportKey);
+    if (!cfg) return;
+    if (_ledgerBlocked) unblockLedgerReport();   // 切换到其他报表 → 按钮恢复
 
     AppState.currentReport = reportKey;
     AppState.currentReportName = cfg.name;   // 从配置取名，不依赖 DOM 文本
@@ -313,11 +426,21 @@ var App = (function() {
       // ③ 异步拉取全量数据
       ReportEngine.query(reportKey, ReportEngine.readFilters(), 1, 5000)
         .then(function(result) {
+          var rows = result.data || [];
+          // 总分类账：摘要类型 REM_TYPE 映射成语义文字（1=期初余额/2=本期合计/3=本年合计），
+          // AI 数据源里存的是「期初余额」而不是原始数字「1」（用户 2026-08-18 指定，API 文档 9.1）
+          rows = rows.map(function(row) {
+            if (!row || row.REM_TYPE === null || row.REM_TYPE === undefined) return row;
+            var copy = {};
+            for (var k in row) { copy[k] = row[k]; }
+            copy.REM_TYPE = ReportEngine.formatCellValue(row.REM_TYPE, 'REM_TYPE');
+            return copy;
+          });
           DataSourceStore.update(pendingDS.id, {
             status: 'ready',
-            data: result.data || [],
+            data: rows,
             columnInfo: result.columnInfo || {},
-            recordCount: result.data ? result.data.length : 0
+            recordCount: rows.length
           });
           DatasourceList.renderDataSourceList();
           Utils.showToast(I18n.t('数据源已就绪：{0} 条', result.data ? result.data.length.toLocaleString() : '0'), 'success');
@@ -393,7 +516,20 @@ var App = (function() {
         if (filterDateFrom) filterDateFrom.value = '2026-01-01';
         if (filterDateTo) filterDateTo.value = '2026-12-31';
         var filterDateCst = document.getElementById('filterDateCst');
-        if (filterDateCst) filterDateCst.value = '2025-07';
+        if (filterDateCst) {
+          // 总分类账：会计期间重置回当前月（YYYY-MM）；其余报表保持默认成本年月
+          if (AppState.currentReport === 'accgl') {
+            var now = new Date();
+            var mm = String(now.getMonth() + 1);
+            if (mm.length === 1) mm = '0' + mm;
+            filterDateCst.value = now.getFullYear() + '-' + mm;
+          } else {
+            filterDateCst.value = '2025-07';
+          }
+        }
+        // 账簿下拉：重置回第一个账簿（若有选项；0 账簿时保持空）
+        var filterBookNo = document.getElementById('filterBookNo');
+        if (filterBookNo && filterBookNo.options.length > 0) filterBookNo.selectedIndex = 0;
 
         ReportEngine.currentPage = 1;
         doQuery();
@@ -452,6 +588,17 @@ var App = (function() {
   /* ================================================================
      Login / Logout
      ================================================================ */
+  /** 登出/过期时清账簿状态：内存缓存作废 + 下拉回占位 + 解除按钮阻断
+      （否则重登后下拉还挂上一次登录的账簿） */
+  function resetLedgerBooksState() {
+    if (typeof BookStore !== 'undefined') BookStore.reset();
+    var bookSel = document.getElementById('filterBookNo');
+    if (bookSel) {
+      bookSel.innerHTML = '<option value="">' + I18n.t('加载中...') + '</option>';
+    }
+    unblockLedgerReport();
+  }
+
   function initAuth() {
     var loginPage = document.getElementById('loginPage');
     var dashboardPage = document.getElementById('dashboardPage');
@@ -493,12 +640,14 @@ var App = (function() {
             if (userAvatarEl) userAvatarEl.textContent = usr.substring(0, 2).toUpperCase();
             if (userCompanyEl) userCompanyEl.textContent = compno;
 
-            // 登录后按当前语言重渲染表头（init 渲染的是登录前语言）
-            renderCurrentTableHead();
-            doQuery();
+            // 登录后走 openReport 全链路（重登场景：账簿下拉重填/筛选面板重置/按钮解除阻断），
+            // 不再裸 doQuery——否则下拉还挂着上一次登录的账簿
+            openReport(AppState.currentReport);
             DatasourceList.renderDataSourceList();
             Utils.showToast(I18n.t('登录成功'), 'success');
             SettingsUI.checkFirstRun();
+            // 后台预拉账簿清单（总分类账下拉），失败静默，不阻塞登录
+            if (typeof BookStore !== 'undefined') BookStore.prefetch();
           } else {
             if (loginError) {
               loginError.textContent = result.error;
@@ -521,6 +670,7 @@ var App = (function() {
         Auth.logout();
         AppState.chatHistory = [];
         AppState.lastQueryData = null;
+        resetLedgerBooksState();
         if (dashboardPage) dashboardPage.classList.remove('active');
         if (loginPage) loginPage.classList.remove('hidden');
         Utils.showToast(I18n.t('已退出登录'), 'success');
@@ -529,6 +679,7 @@ var App = (function() {
 
     // 监听 auth:expired 事件
     window.addEventListener('auth:expired', function() {
+      resetLedgerBooksState();
       if (dashboardPage) dashboardPage.classList.remove('active');
       if (loginPage) loginPage.classList.remove('hidden');
       Utils.showToast(I18n.t('登录已过期，请重新登录'), 'error');
@@ -645,6 +796,8 @@ var App = (function() {
           doQuery();
           DatasourceList.renderDataSourceList();
           SettingsUI.checkFirstRun();
+          // 后台预拉账簿清单（总分类账下拉），失败静默，不阻塞登录
+          if (typeof BookStore !== 'undefined') BookStore.prefetch();
         } else {
           if (loginPage) loginPage.classList.remove('hidden');
         }

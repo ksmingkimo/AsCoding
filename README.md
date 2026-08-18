@@ -40,12 +40,12 @@
 ┌─────────────────────────────────────────────────────────┐
 │                     Browser (SPA)                        │
 │  ┌──────────┐  ┌──────────┐  ┌──────────────────────┐  │
-│  │  Login   │  │ 31 报表   │  │   AI 数据分析         │  │
+│  │  Login   │  │ 32 报表   │  │   AI 数据分析         │  │
 │  │  Auth    │  │  查询     │  │   Chat + Chart + 导出 │  │
 │  └────┬─────┘  └────┬─────┘  └──────────┬───────────┘  │
 │       │              │                    │              │
 │  ┌────┴──────────────┴────────────────────┴──────────┐  │
-│  │              24 模块化 JS 引擎                      │  │
+│  │              25 模块化 JS 引擎                      │  │
 │  │  i18n / utils / auth / api / reports / menu /      │  │
 │  │  datasource / chat / ai / parser / chart /         │  │
 │  │  export / notepad / dialog / app                   │  │
@@ -64,6 +64,8 @@
     │  • /invSa/getReport│
     │  • /monAA/getReport│
     │  • /monBA/getReport│
+    │  • /accGeneralLedger│
+    │    /GetReportStream│
     └────────────────────┘
 ```
 
@@ -75,7 +77,7 @@
 
 ### 01 — 系统整体流程
 
-从登录认证、Token 管理，到 31 大报表查询、AI 数据分析的端到端全链路（含 MRPPU getList 特殊路径）。
+从登录认证、Token 管理，到 32 大报表查询、AI 数据分析的端到端全链路（含 MRPPU getList 特殊路径）。
 
 ![系统整体流程](流程图/流程图_01_系统整体流程.png)
 
@@ -106,7 +108,7 @@ SEARCH_INFO 10 元素数组按索引 [0]~[9] 固定顺序组装，displayFields 
 
 ### 06 — UI 页面流
 
-登录页 → Dashboard 主界面 → 侧边栏导航（7 分组 31 报表切换） → 17 布局筛选面板 → Tab 页签 → 多模型 AI。
+登录页 → Dashboard 主界面 → 侧边栏导航（8 分组 32 报表切换） → 18 布局筛选面板 → Tab 页签 → 多模型 AI。
 
 ![UI页面流](流程图/流程图_06_UI页面流.png)
 
@@ -168,7 +170,7 @@ python -m http.server 8080
 
 ```
 AsCoding/
-├── index.html                  ← 生产入口（完整 Dashboard + 31 报表 + AI 分析）
+├── index.html                  ← 生产入口（完整 Dashboard + 32 报表 + AI 分析）
 ├── ui-template.html            ← UI 原型模板（与 index.html 同步）
 │
 ├── css/
@@ -177,17 +179,18 @@ AsCoding/
 │   ├── ai-analysis.css         ← AI Chat、数据源面板、设置弹窗、表格增强
 │   └── notepad.css             ← 记事本页签样式
 │
-├── js/（24 个，index.html 加载清单）
+├── js/（25 个，index.html 加载清单）
 │   ├── i18n.js                 ← 多语言核心（gettext 风格 t() / applyStatic / 语言解析链）
 │   ├── i18n-data.js            ← 三语静态字典（zh-tw / en，简体原文即 key，末尾同步 boot）
 │   ├── utils.js                ← 通用工具（Toast / 转义 / 格式化 / deepClone）
 │   ├── dialog.js               ← 应用内 confirm/prompt 弹窗
 │   ├── settings-store.js       ← 设置持久化（API Key / 服务器地址）
 │   ├── datasource-store.js     ← 数据源 CRUD（localStorage，上限 20）
+│   ├── book-store.js           ← 账簿清单缓存（AccBook/GetList，登录/会话恢复预热，登出世代计数重置）
 │   │
 │   ├── auth.js                 ← 认证模块（登录/登出/Token/会话恢复，LANG_ID 随语言）
 │   ├── api.js                  ← API 客户端（fetch 封装/认证注入/错误拦截）
-│   ├── reports.js              ← 报表引擎（31 报表配置/SEARCH_INFO 构造/动态表格/17 布局筛选）
+│   ├── reports.js              ← 报表引擎（32 报表配置/SEARCH_INFO 构造/动态表格/18 布局筛选/REM_TYPE 摘要类型 badge）
 │   ├── report-menu-store.js    ← 报表菜单持久化（收藏列表）
 │   ├── report-menu.js          ← 动态菜单渲染（搜索/折叠分组/收藏置顶）
 │   │
@@ -213,8 +216,8 @@ AsCoding/
 │
 ├── screenshots/                ← 应用截图（界面预览）
 │
-├── deploy.ps1                  ← 部署包生成脚本（v1.3，29 文件）
-├── sunlike-erp-report-v1.x.zip ← 部署包（解压到 Web 服务器目录）
+├── deploy.ps1                  ← 部署包生成脚本（v1.4，30 文件）
+├── sunlike-erp-report-v1.4.zip ← 部署包（解压到 Web 服务器目录）
 │
 └── 文档（项目根目录）
     ├── 需求架构文档.md          ← 项目需求 & 技术架构
@@ -224,7 +227,9 @@ AsCoding/
     ├── 标准报表制表API.md        ← v1 6 个 API 原始文档
     ├── 标准报表制表API2.md       ← v2 4 个 API 原始文档（生产制造 + 人力资源）
     ├── 标准报表制表API3.md       ← v3 21 个 API 原始文档（财务/库存/采购价格/生产/人事/固定资产）
-    ├── 流程图.md                ← 14 节业务流程图文字参考
+    ├── 标准报表制表API4.md       ← v4 总分类账长连接（GetReportStream SSE）原始文档
+    ├── 账簿列表查询.md           ← AccBook/GetList 账簿清单 API 原始文档
+    ├── 流程图.md                ← 15 节业务流程图文字参考
     ├── 部署指南.md              ← Web 服务器部署说明
     └── 项目经验行动指南.md       ← 通用开发纪律速查卡
 ```
@@ -269,10 +274,11 @@ Authorization: Bearer {TOKEN}
 # 成功 → { code: 0, data: { REPORT__TAB: [...], COLUMN_INFO: {...} } }
 ```
 
-### 31 报表速查（7 分组）
+### 32 报表速查（8 分组）
 
 | 分组 | 报表数 | 包含报表 |
 |------|--------|---------|
+| 总账报表 | 1 | 总分类账（⚠️长连接 SSE，账簿必选，摘要类型 1=期初余额/2=本期合计/3=本年合计） |
 | 进销存 | 4 | 采购、进货、受订、销货 |
 | 财务管理 | 8 | 收款、付款、科目预算、信用额度、报销、员工借款、应收票据、应付票据 |
 | 库存管理 | 5 | 过期货品预警、安全存量预警、负库存预警、库存调拨、库存调整 |
@@ -284,6 +290,15 @@ Authorization: Bearer {TOKEN}
 > ⚠️ **关键**：成功判断用 `response.code === 0`，不是 `response.ok`！
 > ⚠️ **MRPPU** 使用 `getList` 端点（非 `getReport`），请求体含 OTHERINFO + PAGE_INFO，响应数据在 `data.TRANS`。
 
+### 长连接报表（总分类账）
+
+系统第一个长连接（SSE）报表，后续长连接报表统一此模式：
+
+- **流式查询**：`POST /accGeneralLedger/GetReportStream` → `text/event-stream`，每条消息 `data: {CODE, PERCENT, TITLE, ERR, DATA}`；EventSource 不支持 POST，用 fetch + ReadableStream 行缓冲手动解析；三步判别（HTTP 状态 → Content-Type → 流解析）+ AbortController 120s 超时
+- **进度条**：PERCENT 实时驱动，白卡片 `position:fixed` 悬浮视口正中央
+- **账簿下拉**：登录/会话恢复即后台拉取 `AccBook/GetList`（BookStore 缓存 + 登出世代计数重置）；>1 预选第一个；0 账簿弹「未启用总账」警告并禁用查询/转入按钮；BOOK_NO 空值前端拦截（实测空值 → HTTP 406）
+- **摘要类型映射**：数据行 `REM_TYPE` —— `1`=期初余额 / `2`=本期合计 / `3`=本年合计；表格彩色徽章展示，转入 AI 数据源时替换为语义文字
+
 ---
 
 ## 🌐 多语言支持（简 / 繁 / 英）
@@ -291,7 +306,7 @@ Authorization: Bearer {TOKEN}
 登录页【简繁英】分段按钮切换，**简体 / 繁体 zh-TW / 英文 en** 三语系，ERP 数据不翻译。
 
 - **切换入口**：仅登录页三个分段按钮（语言自称不翻译）；默认按操作系统预判（zh-TW/zh-HK→繁体，en→英文），用户显式点击才持久化（localStorage `sunlike_lang`），下次沿用
-- **机制**：gettext 风格 —— 简体原文即 key，`I18n.t(key)` 本地查静态字典（601+ key × 2 语言），缺失优雅回退简体；`data-i18n` 四属性覆盖静态文字，`i18n:changed` 事件驱动动态内容（表头/表体徽章/分页）即时重刷
+- **机制**：gettext 风格 —— 简体原文即 key，`I18n.t(key)` 本地查静态字典（620+ key × 2 语言），缺失优雅回退简体；`data-i18n` 四属性覆盖静态文字，`i18n:changed` 事件驱动动态内容（表头/表体徽章/分页）即时重刷
 - **LANG_ID 跟随**：登录/会话恢复/验证服务器三处请求传 LangTag（`zh-cn`/`zh-tw`/`en`），服务器错误消息天然按语系返回
 - **存储与显示分离**：报表名/收藏/记事本等持久化值保留简体规范值，仅渲染点翻译——跨语系切换不损坏已存内容
 - **AI 与导出随语言**：系统提示词/推荐问题三语分发（AI 用对应语言作答），导出标题文件名（HTML/PPTX/CSV）随语言
@@ -333,10 +348,10 @@ AI 被训练为 ERP 数据分析专家，会：
 
 ## 🗂 报表菜单（搜索 / 折叠 / 收藏）
 
-31 报表侧边栏为 **REPORT_CONFIG 驱动的动态渲染**：
+32 报表侧边栏为 **REPORT_CONFIG 驱动的动态渲染**：
 
 - **搜索**：中文名模糊 + 拼音首字母匹配，`Ctrl+K` 聚焦（侧边栏折叠时自动展开）、`Esc` 清空
-- **分组折叠**：7 分组可折叠（点击标题 / Enter / Space），默认全部折叠（登录/刷新复位）
+- **分组折叠**：8 分组可折叠（点击标题 / Enter / Space），默认全部折叠（登录/刷新复位）
 - **收藏置顶**：条目右侧 ★/☆，收藏后置顶显示在"★ 收藏"区，localStorage 持久化
 - **折叠侧边栏（56px）**：全部报表 emoji 平铺，收藏去重置顶
 
@@ -393,6 +408,7 @@ AI 被训练为 ERP 数据分析专家，会：
 | 财务/库存/价格报表 (14 个) | ✅ 已完成 |
 | 固定资产报表 (1 个) | ✅ 已完成 |
 | 报表菜单改进（搜索 / 折叠 / 收藏置顶） | ✅ 已完成 |
+| API4 — 总分类账（长连接 SSE + 账簿下拉 + REM_TYPE 摘要类型） | 🟡 待浏览器验证 |
 | 记事本（多数据源快照） | 🟡 待浏览器 E2E |
 | 多语言支持（简 / 繁 / 英） | 🟡 待浏览器三语走查 |
 | AI 流式响应 | ⬜ 待开发 |

@@ -14,7 +14,7 @@ $ErrorActionPreference = "Stop"
 # ============================================================
 # Config
 # ============================================================
-$Version   = "1.3"
+$Version   = "1.4"
 $OutputZip = "sunlike-erp-report-v$Version.zip"
 $TempDir   = Join-Path $PSScriptRoot "deploy-package"
 
@@ -65,6 +65,7 @@ $jsFiles = @(
     "dialog.js",
     "settings-store.js",
     "datasource-store.js",
+    "book-store.js",
     "auth.js",
     "api.js",
     "reports.js",
@@ -125,7 +126,7 @@ Write-Host "==============================================" -ForegroundColor Cya
 Write-Host ""
 Write-Host "  Output file :  $outputPath" -ForegroundColor White
 Write-Host "  File size   :  $zipSize KB" -ForegroundColor White
-Write-Host "  Contents    :  29 files (1 html + 4 css + 24 js)" -ForegroundColor White
+Write-Host "  Contents    :  30 files (1 html + 4 css + 25 js)" -ForegroundColor White
 Write-Host ""
 Write-Host "  Next steps:" -ForegroundColor Yellow
 Write-Host "  1. Extract $OutputZip to your web server directory" -ForegroundColor Yellow

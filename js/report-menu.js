@@ -10,7 +10,7 @@ var ReportMenu = (function() {
      不在 MENU_ORDER 中的新 key 兜底追加到其 group 末尾；
      group 不在 MENU_GROUPS 中则新分组追加到侧边栏最底部。
      即：新增报表只需在 REPORT_CONFIG 加一条含 group/icon/pinyin 的配置。 */
-  var MENU_GROUPS = ['进销存报表','财务管理','库存管理','采购与价格','生产制造','人力资源','固定资产'];
+  var MENU_GROUPS = ['总账报表','进销存报表','财务管理','库存管理','采购与价格','生产制造','人力资源','固定资产'];
   var MENU_ORDER = ['invpo','invpc','invSO','invSa','monAA','monBA','accabgt','rptsarp','monbx','monjk',
     'monCA','monCB','rptinvdo','rptinvdl','rptinvswa','invic','invij','scmdrpti','invpopc','invtwpc',
     'invhp','invhs','mrpPK','mrpPS','mrppu','mrpag','mrpcf','wagCG3','rptwagyg0','rptwagyg','fixaa'];

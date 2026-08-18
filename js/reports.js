@@ -331,6 +331,29 @@ var ReportEngine = (function() {
       ]
     },
 
+    // ─── 总账报表 (v4 API 长连接 SSE) ──────────────────────────
+
+    accgl: {
+      name: '总分类账',
+      group: '总账报表',
+      icon: '📗',
+      pinyin: 'zflz',
+      apiPath: 'accGeneralLedger/GetReportStream',   // 相对 /SUNFUSION/API（文档 298 行；URL 里的 api 段就是 API 本身）
+      apiMethod: 'getReportStream',
+      pgm: 'ACCRPTGL',
+      dateField: null,
+      filterLayout: 'accgl',
+      needsBook: true,   // 账簿依赖报表：打开前必须确保账簿清单已加载
+      displayFields: [
+        'ACC_NO','ACC_NAME','ACC_IPERIOD','DC','REM_TYPE','FZHS_TITLE',
+        'CUR_NAME','AMTN_D','AMTN_C','AMTN_BAL'
+      ],
+      // BOOK_NO 不进标准 filters 循环——它在 buildRequestStream 的 fixCondition 里动态构造
+      filters: [
+        { index: 4, field: 'BOOK_NO', operator: 'equal', label: '账簿', filterId: 'filterBookNo' }
+      ]
+    },
+
     rptsarp: {
       name: '信用额度查询表',
       group: '财务管理',
@@ -1124,7 +1147,15 @@ var ReportEngine = (function() {
     'ACC_NO_SHARE_NAME':'折旧科目',
     'ACC_NO_CAS_NAME':'现金科目',
     'ACC_NO_JZ_NAME':'净值科目',
-    'ACC_NO_QL_NAME':'清理科目'
+    'ACC_NO_QL_NAME':'清理科目',
+    // ─── 总分类账 (accgl, v4 长连接) ───
+    'ACC_NAME':      '科目名称',
+    'ACC_IPERIOD':   '会计期间',
+    'DC':            '借贷方向',
+    'REM_TYPE':      '摘要类型',
+    'AMTN_D':        '借方金额',
+    'AMTN_C':        '贷方金额',
+    'AMTN_BAL':      '余额'
   };
 
   // Decimal-type fields (right-aligned, numeric formatting)
@@ -1157,7 +1188,9 @@ var ReportEngine = (function() {
     'QTY_DY','QTY_MJ','QTY_WJK','QTY_TC','QTY_CJ','QTY_ZJ','QTY_WD','QTY_ML',
     'AMTN_JZ','AMTN_SHARE','AMTN_NET','AMTN_REST','AMTN_QQ_SHARE','AMTN_BQ_SHARE','AMTN_BQLJ_SHARE','AMTN_NET_BQ',
     'CST_PRD1','CST_PRD1_RT','CST_MAN_RT','CST_MK_RT','CST_OUT_RT','CST_PRD2','CST_PRD2_RT',
-    'QTY_DZ','QTY_UNPS','QTY_PRE','QTY_PRE_UNSH','QTY_RK','QTY_RK_UNSH','QTY_JH','ITM'
+    'QTY_DZ','QTY_UNPS','QTY_PRE','QTY_PRE_UNSH','QTY_RK','QTY_RK_UNSH','QTY_JH','ITM',
+    // v4 总分类账（长连接）
+    'AMT_D','AMT_C','AMT_BAL','AMTN_D','AMTN_C','AMTN_BAL','QTY_D','QTY_C','QTY_BAL','UP_D','UP_C','UP_BAL'
   ];
 
   // Currency fields (prefix with ¥)
@@ -1171,7 +1204,9 @@ var ReportEngine = (function() {
     'AMTN_CRD','AMTN_CRDED','AMTN_CHK','AMTN_SO','AMTN_IRP','AMTN_TRP','AMTN_BALANCE',
     'AMTN_CJK','AMTN_SH','AMTN_UNSH','AMT_BACK','AMTN_BACK','AMT',
     'AMTN_JZ','AMTN_SHARE','AMTN_NET','AMTN_REST','AMTN_QQ_SHARE','AMTN_BQ_SHARE','AMTN_BQLJ_SHARE','AMTN_NET_BQ',
-    'CST_PRD1','CST_PRD2','CST_STD','CST_AMT','UP_AVG_CST','CST_UP'
+    'CST_PRD1','CST_PRD2','CST_STD','CST_AMT','UP_AVG_CST','CST_UP',
+    // v4 总分类账（长连接）
+    'AMT_D','AMT_C','AMT_BAL','AMTN_D','AMTN_C','AMTN_BAL','UP_D','UP_C','UP_BAL'
   ];
 
   /* ================================================================
@@ -1252,6 +1287,12 @@ var ReportEngine = (function() {
       return value === 'Y' ? I18n.t('已审核') : (value === 'N' ? I18n.t('未审核') : String(value));
     }
 
+    // 总分类账摘要类型 REM_TYPE：1=期初余额 2=本期合计 3=本年合计（用户 2026-08-18 确认语义，API 文档 9.1）
+    if (fieldName === 'REM_TYPE') {
+      var remLabel = REM_TYPE_LABELS[String(value)];
+      return remLabel ? I18n.t(remLabel) : String(value);
+    }
+
     return String(value);
   }
 
@@ -1272,6 +1313,21 @@ var ReportEngine = (function() {
     if (value === 'Y') return '<span class="badge badge-success">' + I18n.t('已审核') + '</span>';
     if (value === 'N') return '<span class="badge badge-warning">' + I18n.t('未审核') + '</span>';
     return '';
+  }
+
+  // 总分类账摘要类型 REM_TYPE 值 → 语义 key（用户 2026-08-18 确认：1=期初余额 2=本期合计 3=本年合计）
+  var REM_TYPE_LABELS = { '1': '期初余额', '2': '本期合计', '3': '本年合计' };
+
+  /**
+   * Get badge HTML for REM_TYPE (总分类账摘要类型)
+   */
+  function getRemTypeBadge(value) {
+    var s = String(value);
+    if (REM_TYPE_LABELS[s]) {
+      var cls = s === '1' ? 'badge-info' : (s === '2' ? 'badge-warning' : 'badge-success');
+      return '<span class="badge ' + cls + '">' + I18n.t(REM_TYPE_LABELS[s]) + '</span>';
+    }
+    return escapeHtml(s);
   }
 
   /**
@@ -1540,16 +1596,92 @@ var ReportEngine = (function() {
   }
 
   /**
+   * Build request body for the stream report (accgl 总分类账, v4 长连接 API)
+   * 结构对照 标准报表制表API4.md：SEARCH_INFO [0]展示配置 [1]fixCondition [2]orderBy + DISPLAY_FIELDS
+   * BOOK_NO 铁律：必填（空值服务端回 406；前端 app.js 已拦，此处再兜底传空）
+   */
+  function buildRequestStream(cfg, filters) {
+    filters = filters || {};
+    var bookNo = filters.filterBookNo || '';
+    var period = filters.dateCst || '';
+    if (!/^\d{4}-\d{2}$/.test(period)) {
+      // 非法/空期间 → 默认当前月（YYYY-MM）
+      var now = new Date();
+      period = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    }
+    var years = parseInt(period.slice(0, 4), 10);
+    var iperiod = parseInt(period.slice(5, 7), 10);
+    var dateB = period + '-01';
+    var lastDay = new Date(years, iperiod, 0).getDate();
+    var dateE = period + '-' + String(lastDay).padStart(2, '0');
+
+    var fixCondition = {
+      BOOK_NO: bookNo,                     // 账簿（下拉选中值，必填）
+      CUR_ID: '',
+      ACC_IPERIOD_B: period,               // 会计期间起 YYYY-MM
+      ACC_IPERIOD_E: period,               // 会计期间止 YYYY-MM
+      CHK_ACCN_TYPE: '2',
+      ACC_NO: '',
+      ACC_NO_B: '',
+      ACC_NO_E: '',
+      REL_CLS_B: 1,
+      REL_CLS_E: 10,
+      AMTN_BAL_TYPE: '1',
+      CHK_POSTACC: 'F',
+      CHK_STOP: 'F',
+      CHK_NOVOH: 'F',
+      CHK_NOVOH_BAL_ZERO: 'F',
+      CHK_FZHS_DETAIL: 'F',
+      CHK_ARP_DAT: 'F',
+      CHK_DETAIL_ACCN: 'F',
+      CHK_NO_POA_VOH: 'F',
+      CHK_NO_SYTZ_VOH: 'F',
+      SHOW_BN_TYPE: '1',
+      ORDERBY_TYPE: '1',
+      START_DD: dateB + 'T00:00:00',
+      YEARS: years,
+      IPERIOD: iperiod,
+      TYPE_NO: '01',
+      CHK_GROUP_CUR_LOC: 'F',
+      DATE_B: dateB,
+      DATE_E: dateE
+    };
+
+    return {
+      PGM: cfg.pgm,
+      SEARCH_INFO: [
+        { showBody: 'T', showLadder: 'F', displayFields: cfg.displayFields.slice(), sumFields: [] },
+        { fixCondition: fixCondition },
+        { orderBy: { SYS_DATE: 'asc' } }
+      ],
+      DISPLAY_FIELDS: cfg.displayFields.join(',')
+    };
+  }
+
+  /**
    * Query a report via API
    * @param {string} reportKey
    * @param {object} filters
    * @param {number} page
    * @param {number} pageSize
+   * @param {function} onProgress 长连接进度回调 (percent, title)，仅流式报表使用
    * @returns {Promise<{data: Array, columnInfo: Array, totalEstimate: number}>}
    */
-  function query(reportKey, filters, page, pageSize) {
+  function query(reportKey, filters, page, pageSize, onProgress) {
     var cfg = REPORT_CONFIG[reportKey];
     if (!cfg) { return Promise.reject(new Error('Unknown report: ' + reportKey)); }
+
+    // ── 长连接流式报表（v4）：独立请求体 + fetchStreamReport ──
+    if (cfg.apiMethod === 'getReportStream') {
+      var streamBody = buildRequestStream(cfg, filters);
+      return Api.fetchStreamReport(cfg.apiPath, streamBody, { onProgress: onProgress }).then(function(rows) {
+        return {
+          data: rows,
+          columnInfo: [],
+          totalEstimate: rows.length
+        };
+      });
+    }
 
     var request = buildRequest(reportKey, filters, page, pageSize);
 
@@ -1629,6 +1761,10 @@ var ReportEngine = (function() {
           return '<td class="' + cssClass + '">' + getStatusBadge(raw) + '</td>';
         }
 
+        if (col.field === 'REM_TYPE') {
+          return '<td class="' + cssClass + '">' + getRemTypeBadge(raw) + '</td>';
+        }
+
         return '<td class="' + cssClass + '">' + escapeHtml(display) + '</td>';
       }).join('') + '</tr>';
     }).join('');
@@ -1670,7 +1806,9 @@ var ReportEngine = (function() {
       // v3 新增筛选器
       filterBatNo:     _val('filterBatNo'),
       filterPrdMark:   _val('filterPrdMark'),
-      filterFxKnd:     _val('filterFxKnd')
+      filterFxKnd:     _val('filterFxKnd'),
+      // v4 总分类账（长连接）
+      filterBookNo:    _val('filterBookNo')
     };
   }
 
@@ -1704,6 +1842,7 @@ var ReportEngine = (function() {
       batNo:   document.querySelector('.filter-group-batno'),
       prdMark: document.querySelector('.filter-group-prdmark'),
       fxKnd:   document.querySelector('.filter-group-fxknd'),
+      bookNo:  document.querySelector('.filter-group-bookno'),
       dateRange: document.querySelector('.filter-date-group')
     };
 
@@ -1736,7 +1875,9 @@ var ReportEngine = (function() {
       'invij':       ['docNo','prd','dep','dateRange'],
       'fixAsset':    ['docNo','status','fxKnd','dateRange'],
       'hrNoDate':    ['ygNo','dep'],
-      'hrDate':      ['ygNo','dep','outDay','status']
+      'hrDate':      ['ygNo','dep','outDay','status'],
+      // v4 总分类账（长连接）：账簿下拉 + 会计期间
+      'accgl':       ['bookNo','dateCst']
     };
 
     // Remove dateRange if hideDateUI is true (SYS_DATE reports)
@@ -1828,6 +1969,24 @@ var ReportEngine = (function() {
     var prdMarkLabel = document.querySelector('label[for="filterPrdMark"]');
     if (prdMarkLabel) {
       prdMarkLabel.textContent = I18n.t('货品特征');
+    }
+
+    // Update label for filterDateCst（总分类账复用为「会计期间」）
+    var dateCstLabel = document.querySelector('label[for="filterDateCst"]');
+    if (dateCstLabel) {
+      if (reportKey === 'accgl') {
+        dateCstLabel.textContent = I18n.t('会计期间');
+        // 打开总分类账即默认当前月（HTML 硬编码 2025-07 是旧演示值，不能用）
+        var cstEl = document.getElementById('filterDateCst');
+        if (cstEl) {
+          var now = new Date();
+          var mm = String(now.getMonth() + 1);
+          if (mm.length === 1) mm = '0' + mm;
+          cstEl.value = now.getFullYear() + '-' + mm;
+        }
+      } else {
+        dateCstLabel.textContent = I18n.t('成本年月');
+      }
     }
   }
 
