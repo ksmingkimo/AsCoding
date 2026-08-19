@@ -13,7 +13,7 @@ var App = (function() {
   window.AppState = {
     currentReport: 'invSO',
     currentReportName: '受订报表',
-    lastQueryData: null,       // { pgm, data, columnInfo, columnProp, displayFields }
+    lastQueryData: null,       // { pgm, reportKey, filters, data, columnInfo, columnProp, displayFields }
     chatHistory: [],           // { role, content }
     activeDSId: null
   };
@@ -74,6 +74,8 @@ var App = (function() {
         var cfg = ReportEngine.getConfig(reportKey);
         AppState.lastQueryData = {
           pgm: cfg ? cfg.pgm : '',
+          reportKey: reportKey,     // 转入数据源 0 笔前置判断用
+          filters: filters,         // 查询时的筛选快照（转入前比对是否变化）
           data: _allData,
           columnInfo: result.columnInfo || [],
           columnProp: {},
@@ -404,6 +406,16 @@ var App = (function() {
         return;
       }
 
+      // 0 笔拒绝（前置快查）：最近一次查询结果为空，且报表与筛选条件都没变 →
+      // 重新转入必然还是 0 笔，直接拒绝、不发请求（用户 2026-08-19 指定）
+      var lastQuery = AppState.lastQueryData;
+      if (lastQuery && lastQuery.reportKey === reportKey &&
+          JSON.stringify(lastQuery.filters || {}) === JSON.stringify(ReportEngine.readFilters()) &&
+          (!lastQuery.data || lastQuery.data.length === 0)) {
+        Utils.showToast(I18n.t('查无数据，所以无法为您进行转入数据源'), 'warning');
+        return;
+      }
+
       var origHTML = transferBtn.innerHTML;
 
       // ① 立即创建占位数据源 + 切换到 AI Tab
@@ -427,6 +439,15 @@ var App = (function() {
       ReportEngine.query(reportKey, ReportEngine.readFilters(), 1, 5000)
         .then(function(result) {
           var rows = result.data || [];
+          // 0 笔拒绝（查询后兜底）：重新拉取后仍是 0 笔 → 撤销占位数据源、切回查询页
+          // 并告知，不留下无意义的空数据源（用户 2026-08-19 指定）
+          if (rows.length === 0) {
+            DataSourceStore.remove(pendingDS.id);
+            DatasourceList.renderDataSourceList();
+            Utils.showToast(I18n.t('查无数据，所以无法为您进行转入数据源'), 'warning');
+            if (typeof Tabs !== 'undefined') Tabs.switchTab('tabQuery');
+            return;
+          }
           // 总分类账：摘要类型 REM_TYPE 映射成语义文字（1=期初余额/2=本期合计/3=本年合计），
           // AI 数据源里存的是「期初余额」而不是原始数字「1」（用户 2026-08-18 指定，API 文档 9.1）
           rows = rows.map(function(row) {
