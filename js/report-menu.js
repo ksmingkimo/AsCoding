@@ -11,9 +11,11 @@ var ReportMenu = (function() {
      group 不在 MENU_GROUPS 中则新分组追加到侧边栏最底部。
      即：新增报表只需在 REPORT_CONFIG 加一条含 group/icon/pinyin 的配置。 */
   var MENU_GROUPS = ['总账报表','进销存报表','财务管理','库存管理','采购与价格','生产制造','人力资源','固定资产'];
-  var MENU_ORDER = ['invpo','invpc','invSO','invSa','monAA','monBA','accabgt','rptsarp','monbx','monjk',
+  // v5 API5（2026-08-19）：accgl 排总账组首位，4 总账随后；生产 4 只排生产制造组末尾
+  var MENU_ORDER = ['accgl','accBalTable','accZcfzb','accLrb','accXjllb','invpo','invpc','invSO','invSa','monAA','monBA','accabgt','rptsarp','monbx','monjk',
     'monCA','monCB','rptinvdo','rptinvdl','rptinvswa','invic','invij','scmdrpti','invpopc','invtwpc',
-    'invhp','invhs','mrpPK','mrpPS','mrppu','mrpag','mrpcf','wagCG3','rptwagyg0','rptwagyg','fixaa'];
+    'invhp','invhs','mrpPK','mrpPS','mrppu','mrpag','mrpcf','wagCG3','rptwagyg0','rptwagyg','fixaa',
+    'mrpcu','mrpct','mrpcx','mrpce'];
 
   var _query = '';   // 当前搜索词（已 trim + 小写）
 

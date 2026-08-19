@@ -4,7 +4,7 @@
 .DESCRIPTION
     Extracts deployment-required files from the project, excludes dev docs and tools,
     and generates a ZIP deployment package.
-    Output: sunlike-erp-report-v1.3.zip
+    Output: sunlike-erp-report-v1.6.zip
 .NOTES
     Run from project root: .\deploy.ps1
 #>
@@ -14,7 +14,7 @@ $ErrorActionPreference = "Stop"
 # ============================================================
 # Config
 # ============================================================
-$Version   = "1.4"
+$Version   = "1.6"
 $OutputZip = "sunlike-erp-report-v$Version.zip"
 $TempDir   = Join-Path $PSScriptRoot "deploy-package"
 
@@ -66,6 +66,7 @@ $jsFiles = @(
     "settings-store.js",
     "datasource-store.js",
     "book-store.js",
+    "rpt-style-store.js",
     "auth.js",
     "api.js",
     "reports.js",
@@ -126,7 +127,7 @@ Write-Host "==============================================" -ForegroundColor Cya
 Write-Host ""
 Write-Host "  Output file :  $outputPath" -ForegroundColor White
 Write-Host "  File size   :  $zipSize KB" -ForegroundColor White
-Write-Host "  Contents    :  30 files (1 html + 4 css + 25 js)" -ForegroundColor White
+Write-Host "  Contents    :  31 files (1 html + 4 css + 26 js)" -ForegroundColor White
 Write-Host ""
 Write-Host "  Next steps:" -ForegroundColor Yellow
 Write-Host "  1. Extract $OutputZip to your web server directory" -ForegroundColor Yellow

@@ -10,7 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <link rel="stylesheet" href="css/auth.css?v=20260813b">
-<link rel="stylesheet" href="css/dashboard.css?v=20260818d">
+<link rel="stylesheet" href="css/dashboard.css?v=20260819b">
 <link rel="stylesheet" href="css/ai-analysis.css?v=20260813b">
 <link rel="stylesheet" href="css/notepad.css?v=20260814a">
 <style>
@@ -229,6 +229,12 @@
           <div class="form-group filter-group-bookno" style="display:none;">
             <label for="filterBookNo" data-i18n="账簿">账簿</label>
             <select id="filterBookNo" class="form-input">
+              <option value="">— 演示占位 —</option>
+            </select>
+          </div>
+          <div class="form-group filter-group-rptstyle" style="display:none;">
+            <label for="filterRptNo" data-i18n="报表样式">报表样式</label>
+            <select id="filterRptNo" class="form-input">
               <option value="">— 演示占位 —</option>
             </select>
           </div>
@@ -493,7 +499,10 @@
       <button id="demoPrompt" data-i18n="输入弹窗">输入弹窗</button>
       <button id="demoToast" data-i18n="Toast 示例">Toast 示例</button>
       <button id="demoLedger" data-i18n="预览：总分类账">预览：总分类账</button>
+      <button id="demoFinStyle" data-i18n="预览：财务报表查询条件">预览：财务报表查询条件</button>
       <button id="demoStream" data-i18n="预览：流式进度条">预览：流式进度条</button>
+      <button id="demoFinRpt" data-i18n="预览：财务报表层级">预览：财务报表层级</button>
+      <button id="demoMrpce" data-i18n="预览：MRPCE 汇总行">预览：MRPCE 汇总行</button>
     </div>
   </div>
 </div>
@@ -504,22 +513,23 @@
      ========================================================= -->
 <!-- I18n Foundation -->
 <script src="js/i18n.js?v=20260814a"></script>
-<script src="js/i18n-data.js?v=20260819a"></script>
+<script src="js/i18n-data.js?v=20260819c"></script>
 <!-- Foundation -->
 <script src="js/utils.js?v=20260814a"></script>
 <script src="js/dialog.js?v=20260818a"></script>
 <script src="js/settings-store.js?v=20260813a"></script>
 <script src="js/datasource-store.js?v=20260813a"></script>
 <script src="js/book-store.js?v=20260818b"></script>
+<script src="js/rpt-style-store.js?v=20260819c"></script>
 <!-- Auth & API -->
 <script src="js/auth.js?v=20260814a"></script>
 <script src="js/api.js?v=20260818a"></script>
-<script src="js/reports.js?v=20260818c"></script>
+<script src="js/reports.js?v=20260819c"></script>
 <!-- 报表菜单（搜索/折叠/收藏） -->
 <script src="js/report-menu-store.js?v=20260813b"></script>
-<script src="js/report-menu.js?v=20260818a"></script>
+<script src="js/report-menu.js?v=20260819b"></script>
 <!-- UI Rendering -->
-<script src="js/datasource-list.js?v=20260814a"></script>
+<script src="js/datasource-list.js?v=20260819c"></script>
 <script src="js/tabs.js?v=20260813a"></script>
 <script src="js/chat-ui.js?v=20260814a"></script>
 <!-- AI Core -->
@@ -536,7 +546,7 @@
 <script src="js/ai-suggestions.js?v=20260814a"></script>
 <script src="js/settings-ui.js?v=20260814a"></script>
 <!-- App Entry（DOMContentLoaded 自动初始化） -->
-<script src="js/app.js?v=20260819a"></script>
+<script src="js/app.js?v=20260819d"></script>
 
 <script>
 /* ============================================================
@@ -738,6 +748,55 @@
     }
   }
 
+  /* ============================================================
+     DEMO ONLY — 财务报表查询条件原型（Round 52，确认后进生产）
+     演示内容：
+     ① 筛选面板 = 账簿 + 报表样式 + 会计期间
+     ② 样式下拉按 RPT_TYPE 过滤（资产负债表=2 → 只列 STD001 月结 / STD004 年结）
+     ③ 预选第一个匹配样式；option 文案「RPT_NO · NAME」
+     ④ 查询请求传所选样式的 RPT_NO + 其 TYPE_NO（链路：AccBook/GetList 账簿行 TYPE_NO
+        → accRptStyle/getlist 样式清单；账簿改变样式须重取）
+     ============================================================ */
+
+  /* 报表样式演示数据（形状与 accRptStyle/getlist 实测返回一致；
+     RPT_TYPE：2=资产负债表 3=利润表 4=现金流量表；TYPE_NO=1 来自账簿行（AccBook/GetList 实测）） */
+  var RPT_STYLE_DEMO = [
+    { RPT_NO: 'STD001', RPT_TYPE: '2', TYPE_NO: '1', NAME: '资产负债表（企业会计准则）-月结' },
+    { RPT_NO: 'STD002', RPT_TYPE: '3', TYPE_NO: '1', NAME: '利润表（企业会计准则）' },
+    { RPT_NO: 'STD003', RPT_TYPE: '4', TYPE_NO: '1', NAME: '现金流量表（企业会计准则）' },
+    { RPT_NO: 'STD004', RPT_TYPE: '2', TYPE_NO: '1', NAME: '资产负债表（企业会计准则）-年结' }
+  ];
+
+  /** 预览：财务报表查询条件（生产：populateRptStyleSelect + accglStyle 布局同规则） */
+  function showFinStylePreview() {
+    showLedgerPreview();   // 复用：进入主界面 + 账簿/会计期间筛选面板
+    document.getElementById('reportTitle').textContent = I18n.t('资产负债表');
+
+    // 筛选面板追加显示「报表样式」
+    var grid = document.querySelector('.filter-grid');
+    if (grid) {
+      var styleEl = grid.querySelector('.filter-group-rptstyle');
+      if (styleEl) styleEl.style.display = '';
+    }
+
+    // 样式下拉：按 RPT_TYPE 过滤 + 预选第一个（>1 项时仅列匹配类型）
+    var sel = document.getElementById('filterRptNo');
+    if (sel && sel.options.length <= 1) {
+      sel.innerHTML = '';
+      RPT_STYLE_DEMO.filter(function(s) { return s.RPT_TYPE === '2'; }).forEach(function(s) {
+        var o = document.createElement('option');
+        o.value = s.RPT_NO;
+        o.textContent = s.RPT_NO + ' · ' + s.NAME;
+        sel.appendChild(o);
+      });
+    }
+    if (sel) sel.selectedIndex = 0;
+
+    // 演示说明（生产无此行）
+    var info = document.getElementById('tableInfoText');
+    if (info) info.textContent = I18n.t('演示：样式清单来自 accRptStyle/getlist（TYPE_NO 取自账簿行），查询时传所选 RPT_NO + 其 TYPE_NO');
+  }
+
   /** 预览：流式进度条（按实测 PERCENT 序列推进） */
   function demoStreamProgress() {
     showLedgerPreview();
@@ -768,8 +827,134 @@
     step();
   }
 
+  /* ============================================================
+     DEMO ONLY — API5 渲染特例原型（Round 51，确认后进生产）
+     ① 财务报表层级表格：COLUMN_INFO 动态列 + 前导列 +
+        SPACES 层级缩进（16px/级）+ 一级行加粗（.row-level1）
+     ② MRPCE 汇总行：_SKIP_STAT="T" 行加粗（.row-total），转入数据源剔除
+     ============================================================ */
+
+  /** 预览：财务报表层级表格（镜像生产 getVisibleColumns columnInfo 分支） */
+  function showFinRptPreview() {
+    showLedgerPreview();   // 复用：进入主界面 + 账簿/会计期间筛选面板
+    document.getElementById('reportTitle').textContent = I18n.t('资产负债表');
+
+    // 模拟 SSE 消息里的 COLUMN_INFO（生产：动态生成数值列）
+    var FIN_COLUMN_INFO = [
+      { NAME: 'STD001', TITLE: '期末数' },
+      { NAME: 'STD004', TITLE: '本年累计数' }
+    ];
+    var FIN_LEADING = [
+      { field: 'ITEM_NO',   label: I18n.t('项目编号') },
+      { field: 'ITEM_NAME', label: I18n.t('项目名称') }
+    ];
+    var FIN_ROWS = [
+      { ITEM_NO: '1',   ITEM_NAME: '资产',          SPACES: 0, IS_SUM: 'F', STD001: '1,200,000.00', STD004: '1,200,000.00' },
+      { ITEM_NO: '11',  ITEM_NAME: '流动资产',      SPACES: 1, IS_SUM: 'F', STD001: '800,000.00',   STD004: '800,000.00' },
+      { ITEM_NO: '111', ITEM_NAME: '货币资金',      SPACES: 2, IS_SUM: 'F', STD001: '300,000.00',   STD004: '300,000.00' },
+      { ITEM_NO: '112', ITEM_NAME: '应收账款',      SPACES: 2, IS_SUM: 'F', STD001: '500,000.00',   STD004: '500,000.00' },
+      { ITEM_NO: '11',  ITEM_NAME: '流动资产合计',  SPACES: 1, IS_SUM: 'T', STD001: '800,000.00',   STD004: '800,000.00' },
+      { ITEM_NO: '1',   ITEM_NAME: '资产总计',      SPACES: 0, IS_SUM: 'T', STD001: '1,200,000.00', STD004: '1,200,000.00' }
+    ];
+    var theadRow = document.getElementById('tableHeadRow');
+    var tbody = document.getElementById('tableBody');
+    if (theadRow) {
+      theadRow.innerHTML = FIN_LEADING.map(function(c) {
+        return '<th>' + Utils.escapeHtml(c.label) + '</th>';
+      }).join('') + FIN_COLUMN_INFO.map(function(c) {
+        return '<th class="num">' + Utils.escapeHtml(I18n.t(c.TITLE)) + '</th>';
+      }).join('');
+    }
+    if (tbody) {
+      tbody.innerHTML = FIN_ROWS.map(function(row) {
+        var cls = (row.SPACES === 0) ? ' class="row-level1"' : '';
+        var nameCell = '<td style="padding-left:' + (row.SPACES * 16) + 'px;">' + Utils.escapeHtml(row.ITEM_NAME) + '</td>';
+        return '<tr' + cls + '><td>' + Utils.escapeHtml(row.ITEM_NO) + '</td>' + nameCell +
+          FIN_COLUMN_INFO.map(function(c) {
+            return '<td class="num">' + Utils.escapeHtml(row[c.NAME]) + '</td>';
+          }).join('') + '</tr>';
+      }).join('');
+    }
+    var info = document.getElementById('tableInfoText');
+    if (info) info.textContent = I18n.t('共 {0} 条记录', FIN_ROWS.length);
+  }
+
+  /** 预览：MRPCE 直接原料明细表（汇总行加粗 + 转入剔除说明） */
+  function showMrpcePreview() {
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('dashboardPage').classList.add('active');
+    document.getElementById('reportTitle').textContent = I18n.t('直接原料明细表');
+
+    // 筛选面板：生产货品 + 日期区间（预填年初~今天，可编辑）
+    var grid = document.querySelector('.filter-grid');
+    if (grid) {
+      grid.querySelectorAll(':scope > .form-group').forEach(function(g) { g.style.display = 'none'; });
+      var dg = grid.querySelector('.filter-date-group');
+      var mp = grid.querySelector('.filter-group-mrpno');
+      if (dg) dg.style.display = '';
+      if (mp) mp.style.display = '';
+    }
+    var mrpLabel = document.querySelector('label[for="filterMrpNo"]');
+    if (mrpLabel) mrpLabel.textContent = I18n.t('生产货品');
+    var now = new Date();
+    var mm = String(now.getMonth() + 1); if (mm.length === 1) mm = '0' + mm;
+    var dd = String(now.getDate()); if (dd.length === 1) dd = '0' + dd;
+    var dFrom = document.getElementById('filterDateFrom');
+    var dTo = document.getElementById('filterDateTo');
+    if (dFrom) dFrom.value = now.getFullYear() + '-01-01';
+    if (dTo) dTo.value = now.getFullYear() + '-' + mm + '-' + dd;
+
+    document.getElementById('tableLoading').style.display = 'none';
+    document.getElementById('streamProgress').style.display = 'none';
+
+    // 列 = MRPCE displayFields 14 列（标签走 I18n.t，与生产 COLUMN_LABELS 同源）
+    var MRPCE_COLUMNS = [
+      { field: 'MRP_NO',      label: I18n.t('MRP单号') },
+      { field: 'MRP_NAME',    label: I18n.t('MRP名称') },
+      { field: 'SPC',         label: I18n.t('规格') },
+      { field: 'UNIT_NAME_H', label: I18n.t('母件单位') },
+      { field: 'QTY',         label: I18n.t('数量'), isNum: true },
+      { field: 'PRD_NO',      label: I18n.t('货品代号') },
+      { field: 'PRD_NAME',    label: I18n.t('货品名称') },
+      { field: 'SPC_PRD',     label: I18n.t('材料规格') },
+      { field: 'UNIT_NAME',   label: I18n.t('单位') },
+      { field: 'QTY_PRD',     label: I18n.t('材料数量'), isNum: true },
+      { field: 'UP',          label: I18n.t('单价'), isNum: true },
+      { field: 'CST',         label: I18n.t('单位成本'), isNum: true },
+      { field: 'QTY_AVE',     label: I18n.t('平均耗用数量'), isNum: true },
+      { field: 'CST_AVE',     label: I18n.t('平均成本'), isNum: true }
+    ];
+    var MRPCE_ROWS = [
+      { MRP_NO: 'MRP202608-01', MRP_NAME: '手机主板', SPC: 'V1', UNIT_NAME_H: '件', QTY: '1,000', PRD_NO: 'A001', PRD_NAME: '芯片', SPC_PRD: 'SMD-8', UNIT_NAME: '颗', QTY_PRD: '8,000', UP: '2.50', CST: '20,000.00', QTY_AVE: '8', CST_AVE: '20.00' },
+      { MRP_NO: 'MRP202608-01', MRP_NAME: '手机主板', SPC: 'V1', UNIT_NAME_H: '件', QTY: '1,000', PRD_NO: 'A002', PRD_NAME: '电容', SPC_PRD: '0402', UNIT_NAME: '颗', QTY_PRD: '12,000', UP: '0.10', CST: '1,200.00', QTY_AVE: '12', CST_AVE: '1.20' },
+      { MRP_NO: 'MRP202608-01', MRP_NAME: '小计', SPC: '', UNIT_NAME_H: '', QTY: '', PRD_NO: '', PRD_NAME: '', SPC_PRD: '', UNIT_NAME: '', QTY_PRD: '', UP: '', CST: '21,200.00', QTY_AVE: '', CST_AVE: '', _SKIP_STAT: 'T' },
+      { MRP_NO: '', MRP_NAME: '合计', SPC: '', UNIT_NAME_H: '', QTY: '', PRD_NO: '', PRD_NAME: '', SPC_PRD: '', UNIT_NAME: '', QTY_PRD: '', UP: '', CST: '21,200.00', QTY_AVE: '', CST_AVE: '', _SKIP_STAT: 'T' }
+    ];
+    var theadRow = document.getElementById('tableHeadRow');
+    var tbody = document.getElementById('tableBody');
+    if (theadRow) {
+      theadRow.innerHTML = MRPCE_COLUMNS.map(function(c) {
+        return '<th class="' + (c.isNum ? 'num' : '') + '">' + Utils.escapeHtml(c.label) + '</th>';
+      }).join('');
+    }
+    if (tbody) {
+      tbody.innerHTML = MRPCE_ROWS.map(function(row) {
+        var cls = row._SKIP_STAT === 'T' ? ' class="row-total"' : '';
+        return '<tr' + cls + '>' + MRPCE_COLUMNS.map(function(c) {
+          return '<td class="' + (c.isNum ? 'num' : '') + '">' + Utils.escapeHtml(String(row[c.field] === undefined ? '' : row[c.field])) + '</td>';
+        }).join('') + '</tr>';
+      }).join('');
+    }
+    var info = document.getElementById('tableInfoText');
+    // 汇总行不计入条数且转入数据源时剔除（生产：initTransferBtn 过滤 _SKIP_STAT="T"）
+    if (info) info.textContent = I18n.t('共 {0} 条记录', 2) + ' · ' + I18n.t('汇总行转入时剔除');
+  }
+
   document.getElementById('demoLedger').addEventListener('click', showLedgerPreview);
+  document.getElementById('demoFinStyle').addEventListener('click', showFinStylePreview);
   document.getElementById('demoStream').addEventListener('click', demoStreamProgress);
+  document.getElementById('demoFinRpt').addEventListener('click', showFinRptPreview);
+  document.getElementById('demoMrpce').addEventListener('click', showMrpcePreview);
 })();
 </script>
 </body>

@@ -120,6 +120,8 @@
 | 标准报表制表API3.md | 21 个报表 API 原始文档（财务/库存/采购价格/生产/人事/固定资产 — 全部 getReport） |
 | 标准报表制表API4.md | 总分类账 API 原始文档（accGeneralLedger/GetReportStream 长连接 SSE） |
 | 账簿列表查询.md | 账簿清单 API 原始文档（AccBook/GetList） |
+| 科目表 列表查询.md | 科目表清单 API 原始文档（AccType/getlist — 需要 TYPE_NAME 时才查，不在报表样式链路内） |
+| 报表样式 列表查询.md | 报表样式清单 API 原始文档（accRptStyle/getlist — 三财务报表 RPT_NO 来源） |
 | 标准报表制表API5.md | 8 个报表 API 原始文档（科目余额表/资产负债表/利润表/现金流量表/物料分析明细/在制成本明细/在制原料明细/直接原料明细 — 全部 GetReportStream 长连接） |
 | API服务调用说明文档.md | Login + 报表 API 实测文档（curl + 字段 + 错误码） |
 | 需求架构文档.md | 项目需求和技术架构 |

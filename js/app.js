@@ -41,10 +41,26 @@ var App = (function() {
     var filters = ReportEngine.readFilters();
     var isStream = !!(cfg && cfg.apiMethod === 'getReportStream');
 
-    // BOOK_NO 铁律（实测：空值 → 服务端 406；前端先拦，不发请求）
-    if (isStream && !filters.filterBookNo) {
+    // BOOK_NO 铁律（仅 needsBook 的流式报表；实测 API5：空值 → 200 + SSE ERR「账簿不能为空」，
+    // API4 总分类账：空值 → HTTP 406；前端先拦，不发请求）
+    if (isStream && cfg.needsBook && !filters.filterBookNo) {
       Utils.showToast(I18n.t('请选择账簿'), 'error');
       return;
+    }
+
+    // RPT_NO 铁律（三财务报表）：未选样式不发请求（样式加载失败/该类型无样式都会拦住）
+    if (isStream && cfg.needsRptStyle && !filters.filterRptNo) {
+      Utils.showToast(I18n.t('请选择报表样式'), 'error');
+      return;
+    }
+    // TYPE_NO 注入：所选样式所属科目表代号（按账簿+样式查样式行，账簿切换后必为新清单）
+    if (isStream && cfg.needsRptStyle) {
+      var style = (typeof RptStyleStore !== 'undefined') ? RptStyleStore.getStyle(filters.filterBookNo, filters.filterRptNo) : null;
+      if (!style) {
+        Utils.showToast(I18n.t('请选择报表样式'), 'error');
+        return;
+      }
+      filters.styleTypeNo = style.TYPE_NO;
     }
 
     var viewPage = ReportEngine.currentPage || 1;
@@ -81,6 +97,9 @@ var App = (function() {
           columnProp: {},
           displayFields: cfg ? cfg.displayFields.join(',') : ''
         };
+
+        // 财务报表动态列（COLUMN_INFO）异步到达 → 先重渲染表头再切片渲染行
+        renderCurrentTableHead();
 
         // 客户端切片当前页
         renderPageSlice(viewPage, pageSize);
@@ -311,7 +330,8 @@ var App = (function() {
     setLedgerButtonsDisabled(false);
   }
 
-  /** 账簿下拉填充：BOOK_NO · NAME；保持已选值，无效/未选则预选第一个 */
+  /** 账簿下拉填充：BOOK_NO · NAME；保持已选值，无效/未选则预选第一个
+      option 带 data-type-no（账簿行 TYPE_NO）——报表样式清单按账簿获取时从选中项读取 */
   function populateBookSelect(books) {
     var sel = document.getElementById('filterBookNo');
     if (!sel) return;
@@ -321,6 +341,7 @@ var App = (function() {
       var o = document.createElement('option');
       o.value = b.BOOK_NO;
       o.textContent = b.BOOK_NO + ' · ' + b.NAME;
+      if (b.TYPE_NO !== null && b.TYPE_NO !== undefined) { o.dataset.typeNo = String(b.TYPE_NO); }
       sel.appendChild(o);
     });
     var keepCurrent = books.some(function(b) { return b.BOOK_NO === current; });
@@ -329,6 +350,61 @@ var App = (function() {
     } else {
       sel.selectedIndex = 0;
     }
+  }
+
+  /** 报表样式下拉填充：按账簿 + 报表类型过滤（RPT_TYPE），选项 "RPT_NO · NAME"；预选第一个匹配样式 */
+  function populateRptStyleSelect(reportKey, bookNo) {
+    var cfg = ReportEngine.getConfig(reportKey);
+    var sel = document.getElementById('filterRptNo');
+    if (!sel || !cfg || !cfg.rptTypeFilter) return;
+    var styles = (typeof RptStyleStore !== 'undefined') ? RptStyleStore.getStyles(bookNo) : [];
+    var matched = styles.filter(function(s) { return String(s.RPT_TYPE) === cfg.rptTypeFilter; });
+    sel.innerHTML = '';
+    if (matched.length === 0) {
+      // 该报表类型无可用样式：空值占位（doQuery 会拦「请选择报表样式」）
+      var o0 = document.createElement('option');
+      o0.value = '';
+      o0.textContent = I18n.t('无可用样式');
+      sel.appendChild(o0);
+      return;
+    }
+    matched.forEach(function(s) {
+      var o = document.createElement('option');
+      o.value = s.RPT_NO;
+      o.textContent = s.RPT_NO + ' · ' + s.NAME;
+      sel.appendChild(o);
+    });
+    sel.selectedIndex = 0;   // 预选匹配类型的第一个样式
+  }
+
+  /**
+   * 账簿 → 报表样式联动加载：账簿改变样式清单必须重取（用户指定链路）
+   * TYPE_NO 取自账簿下拉选中 option（populateBookSelect 时写入 data-type-no，来自账簿行）
+   * @param {string} reportKey 目标报表（下拉按该报表的类型过滤——绝不能读 AppState.currentReport，
+   *   异步完成时用户可能已切换报表，会填错过滤条件）
+   * @param {string} bookNo 当前账簿
+   * @param {Function} [onOk] 样式就绪回调（含预选第一项）
+   * @param {Function} [onFail] 失败回调（toast 已弹）
+   */
+  function loadRptStylesForBook(reportKey, bookNo, onOk, onFail) {
+    var bookSel = document.getElementById('filterBookNo');
+    var opt = bookSel && bookSel.options[bookSel.selectedIndex];
+    var typeNo = opt ? (opt.dataset.typeNo || '') : '';
+    if (!typeNo) {
+      Utils.showToast(I18n.t('报表样式加载失败: {0}', I18n.t('账簿无科目表代号')), 'error');
+      if (onFail) onFail();
+      return;
+    }
+    RptStyleStore.ensureLoaded(bookNo, typeNo).then(function(res) {
+      if (!res.ok) {
+        // 拉取失败 ≠ 0 样式：toast 报错，走失败分支
+        Utils.showToast(I18n.t('报表样式加载失败: {0}', res.error), 'error');
+        if (onFail) onFail();
+        return;
+      }
+      populateRptStyleSelect(reportKey, bookNo);
+      if (onOk) onOk();
+    });
   }
 
   /**
@@ -354,6 +430,24 @@ var App = (function() {
           return;
         }
         populateBookSelect(res.books);
+        // 报表样式依赖（三财务报表）：先打开报表渲染面板（下拉停在「加载中...」占位），
+        // 再异步按账簿拉样式清单填充（TYPE_NO 来自账簿行），样式就绪后才自动查询。
+        // 顺序不能反：若先填充再 _openReportCore，updateFilterPanel 会重建下拉把
+        // 填充覆盖掉（曾致「加载中」卡死）；若先查后填，filterRptNo 为空会被 doQuery 拦下
+        if (cfg.needsRptStyle && typeof RptStyleStore !== 'undefined') {
+          var bookEl = document.getElementById('filterBookNo');
+          var styleEl0 = document.getElementById('filterRptNo');
+          if (styleEl0) { styleEl0.innerHTML = '<option value="">' + I18n.t('加载中...') + '</option>'; }
+          _openReportCore(reportKey, true);   // 跳过自动查询，等样式就绪再查
+          loadRptStylesForBook(reportKey, bookEl ? bookEl.value : '', function() {
+            ReportEngine.currentPage = 1;
+            doQuery();
+          }, function() {
+            var s = document.getElementById('filterRptNo');
+            if (s) { s.innerHTML = '<option value="">' + I18n.t('无可用样式') + '</option>'; }
+          });
+          return;
+        }
         _openReportCore(reportKey);
       });
       return;
@@ -361,8 +455,9 @@ var App = (function() {
     _openReportCore(reportKey);
   }
 
-  /** openReport 主体（无账簿检查；进入即恢复被禁用的按钮） */
-  function _openReportCore(reportKey) {
+  /** openReport 主体（无账簿检查；进入即恢复被禁用的按钮）
+   *  @param {boolean} [skipAutoQuery] 跳过末尾自动查询（报表样式等异步就绪后再查时用） */
+  function _openReportCore(reportKey, skipAutoQuery) {
     var cfg = ReportEngine.getConfig(reportKey);
     if (!cfg) return;
     if (_ledgerBlocked) unblockLedgerReport();   // 切换到其他报表 → 按钮恢复
@@ -388,7 +483,7 @@ var App = (function() {
     }
 
     ReportEngine.currentPage = 1;
-    doQuery();
+    if (!skipAutoQuery) doQuery();
   }
 
   /* ================================================================
@@ -439,6 +534,9 @@ var App = (function() {
       ReportEngine.query(reportKey, ReportEngine.readFilters(), 1, 5000)
         .then(function(result) {
           var rows = result.data || [];
+          // API5 MRPCE 汇总行剔除：_SKIP_STAT="T" 的小计/合计行不转入数据源（用户决策）；
+          // 其他报表无此字段恒通过
+          rows = rows.filter(function(r) { return !r || r._SKIP_STAT !== 'T'; });
           // 0 笔拒绝（查询后兜底）：重新拉取后仍是 0 笔 → 撤销占位数据源、切回查询页
           // 并告知，不留下无意义的空数据源（用户 2026-08-19 指定）
           if (rows.length === 0) {
@@ -517,6 +615,21 @@ var App = (function() {
       });
     }
 
+    // 账簿切换 → 报表样式清单必须重取（用户指定链路：样式按账簿获取）
+    var bookSel = document.getElementById('filterBookNo');
+    if (bookSel) {
+      bookSel.addEventListener('change', function() {
+        var cfg = ReportEngine.getConfig(AppState.currentReport);
+        if (!cfg || !cfg.needsRptStyle || typeof RptStyleStore === 'undefined') return;
+        var styleSel = document.getElementById('filterRptNo');
+        if (styleSel) { styleSel.innerHTML = '<option value="">' + I18n.t('加载中...') + '</option>'; }
+        loadRptStylesForBook(AppState.currentReport, bookSel.value, null, function() {
+          var s2 = document.getElementById('filterRptNo');
+          if (s2) { s2.innerHTML = '<option value="">' + I18n.t('无可用样式') + '</option>'; }
+        });
+      });
+    }
+
     if (resetBtn) {
       resetBtn.addEventListener('click', function() {
         var fields = ['filterCust', 'filterPrd', 'filterDep', 'filterWh',
@@ -538,8 +651,10 @@ var App = (function() {
         if (filterDateTo) filterDateTo.value = '2026-12-31';
         var filterDateCst = document.getElementById('filterDateCst');
         if (filterDateCst) {
-          // 总分类账：会计期间重置回当前月（YYYY-MM）；其余报表保持默认成本年月
-          if (AppState.currentReport === 'accgl') {
+          // 总账系列报表（总分类账/科目余额表/三财务报表，accgl/accglStyle 布局）：
+          // 会计期间重置回当前月（YYYY-MM）；其余报表保持默认成本年月
+          var resetCfg = ReportEngine.getConfig(AppState.currentReport);
+          if (resetCfg && (resetCfg.filterLayout === 'accgl' || resetCfg.filterLayout === 'accglStyle')) {
             var now = new Date();
             var mm = String(now.getMonth() + 1);
             if (mm.length === 1) mm = '0' + mm;
@@ -551,8 +666,19 @@ var App = (function() {
         // 账簿下拉：重置回第一个账簿（若有选项；0 账簿时保持空）
         var filterBookNo = document.getElementById('filterBookNo');
         if (filterBookNo && filterBookNo.options.length > 0) filterBookNo.selectedIndex = 0;
-
         ReportEngine.currentPage = 1;
+        // 财务报表：账簿可能已变 → 样式清单须按账簿重取；就绪/失败后再 doQuery
+        var resetRcfg = ReportEngine.getConfig(AppState.currentReport);
+        if (resetRcfg && resetRcfg.needsRptStyle && typeof RptStyleStore !== 'undefined') {
+          var styleSel = document.getElementById('filterRptNo');
+          if (styleSel) { styleSel.innerHTML = '<option value="">' + I18n.t('加载中...') + '</option>'; }
+          loadRptStylesForBook(AppState.currentReport, filterBookNo ? filterBookNo.value : '', doQuery, doQuery);
+          return;
+        }
+        // 报表样式下拉：重置回第一个匹配样式（非账簿联动报表无此下拉，此处兜底）
+        var filterRptNo = document.getElementById('filterRptNo');
+        if (filterRptNo && filterRptNo.options.length > 0) filterRptNo.selectedIndex = 0;
+
         doQuery();
       });
     }
@@ -609,13 +735,18 @@ var App = (function() {
   /* ================================================================
      Login / Logout
      ================================================================ */
-  /** 登出/过期时清账簿状态：内存缓存作废 + 下拉回占位 + 解除按钮阻断
-      （否则重登后下拉还挂上一次登录的账簿） */
+  /** 登出/过期时清账簿+报表样式状态：内存缓存作废 + 下拉回占位 + 解除按钮阻断
+      （否则重登后下拉还挂上一次登录的账簿/样式） */
   function resetLedgerBooksState() {
     if (typeof BookStore !== 'undefined') BookStore.reset();
     var bookSel = document.getElementById('filterBookNo');
     if (bookSel) {
       bookSel.innerHTML = '<option value="">' + I18n.t('加载中...') + '</option>';
+    }
+    if (typeof RptStyleStore !== 'undefined') RptStyleStore.reset();
+    var styleSel = document.getElementById('filterRptNo');
+    if (styleSel) {
+      styleSel.innerHTML = '<option value="">' + I18n.t('加载中...') + '</option>';
     }
     unblockLedgerReport();
   }
@@ -669,6 +800,8 @@ var App = (function() {
             SettingsUI.checkFirstRun();
             // 后台预拉账簿清单（总分类账下拉），失败静默，不阻塞登录
             if (typeof BookStore !== 'undefined') BookStore.prefetch();
+            // 报表样式清单按账簿获取（TYPE_NO 来自账簿行），登录时不预取——
+            // 打开财务报表/切换账簿时由 loadRptStylesForBook 加载
           } else {
             if (loginError) {
               loginError.textContent = result.error;

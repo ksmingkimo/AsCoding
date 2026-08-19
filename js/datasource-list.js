@@ -36,6 +36,17 @@ var DatasourceList = (function() {
     if (ywType && ywType.value.trim()) { parts.push(I18n.t('业务类型') + '=' + ywType.value.trim()); }
     var kb = document.getElementById('filterKb');
     if (kb && kb.value.trim()) { parts.push(I18n.t('收付款方式') + '=' + kb.value.trim()); }
+    // v4/v5 总账报表：账簿 + 会计期间（filterBookNo 显示下拉选中的 BOOK_NO 值）
+    var bookNo = document.getElementById('filterBookNo');
+    if (bookNo && bookNo.value) { parts.push(I18n.t('账簿') + '=' + bookNo.value); }
+    // v6 三财务报表：报表样式（显示选中 option 文本 "RPT_NO · NAME"，比裸 RPT_NO 可读）
+    var rptNo = document.getElementById('filterRptNo');
+    if (rptNo && rptNo.value) {
+      var rptOpt = rptNo.options[rptNo.selectedIndex];
+      parts.push(I18n.t('报表样式') + '=' + (rptOpt && rptOpt.textContent ? rptOpt.textContent : rptNo.value));
+    }
+    var dateCst = document.getElementById('filterDateCst');
+    if (dateCst && dateCst.value.trim()) { parts.push(I18n.t('会计期间') + '=' + dateCst.value.trim()); }
     return parts.length > 0 ? parts.join(', ') : I18n.t('全部条件');
   }
 

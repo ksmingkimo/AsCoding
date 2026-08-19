@@ -582,6 +582,10 @@ td.currency { text-align: right; font-variant-numeric: tabular-nums; }
 td.currency::before { content: '¥'; margin-right: 1px; font-size: 10px; color: var(--color-text-muted); }
 td.date { color: var(--color-text-secondary); }
 
+/* API5 财务报表层级行 / MRPCE 汇总行 */
+.row-level1 td { font-weight: 600; }                                   /* 一级项目行加粗 */
+.row-total td { font-weight: 700; background: #FAFAFA; }               /* _SKIP_STAT 汇总行加粗 */
+
 /* Status badges */
 .badge {
   display: inline-block;

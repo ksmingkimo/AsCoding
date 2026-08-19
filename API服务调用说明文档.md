@@ -613,3 +613,142 @@ async function fetchStreamReport(path, body, onProgress, onData) {
 - 筛选控件是 HTML 硬编码（index.html:142-177 与 ui-template.html:205-253 必须同步）→ 动态下拉需新增 `select#filterBookNo` form-group；reports.js `updateFilterPanel` 的 `allGroups`/`layoutMap` 注册新布局、`readFilters` 读值、config 用 `filterId: 'filterBookNo'`（⚠️ `fieldToKey` 里 BOOK_NO 已映射到 filterMrpNo，必须用 filterId 避开）；参考 `accabgt` 配置（reports.js:316-332）
 - ⚠️ `Dialog` 目前只有 `confirm`/`prompt`，**没有 `alert`**（dialog.js:141-144）→ 实施时仿 confirm 模式新增 `Dialog.alert(message) → Promise<void>`
 - 拦截点：`openReport`（app.js:251-277，菜单点击唯一收口，无现成 before-open 钩子）+ `doQuery` 顶部兜底；查询/转入按钮禁用即在此处理（转入按钮 handler 在 app.js initTransferBtn）
+
+---
+
+## 十一、长连接（SSE）流式报表 — API5 八报表（2026-08-19 新增，实测中）
+
+### 11.1 概述
+
+`标准报表制表API5.md`：8 只新报表，**全部长连接（SSE）模式**，分两组：
+
+- **总账 4 只**（依赖【账簿】BOOK_NO）：科目余额表、资产负债表、利润表、现金流量表
+- **生产制造 4 只**（无账簿）：物料分析明细表、在制成本明细表、在制原料明细表、直接原料明细表
+
+| 端点 | PGM | 报表 | SEARCH_INFO 元素数 | 顶层额外字段 |
+|------|-----|------|--------------------|--------------|
+| `accBalanceTable/GetReportStream` | `ACCRPTABT` | 科目余额表 | 3（[0]展示 [1]fixCondition [2]orderBy） | — |
+| `accRptPreview/GetReportStream` | `CUS_ACC_RPT__2_ZCFZB` | 资产负债表 | 3 | `RPT_NO:"STD001"` + `TYPE_NO:"3"` |
+| 同上 | `CUS_ACC_RPT__3_LRB` | 利润表 | 3 | `RPT_NO:"STD002"` + `TYPE_NO:"3"` |
+| 同上 | `CUS_ACC_RPT__4_XJLL` | 现金流量表 | 3 | `RPT_NO:"STD003"` + `TYPE_NO:"3"` |
+| `mrpcu/GetReportStream` | `MRPCU` | 物料分析明细表 | 7（[0]展示 [1]fixCondition [2]MO_NO [3]BOM_NO [4]MRP_NO [5]QTY [6]orderBy） | — |
+| `mrpct/GetReportStream` | `MRPCT` | 在制成本明细表 | 5（[0]展示 [1]fixCondition [2]YYMM [3]MRP_NO [4]orderBy） | `STAT_GROUP`×3（MRP_NO/PRD_MARK/BAT_NO） |
+| `mrpcx/GetReportStream` | `MRPCX` | 在制原料明细表 | 5（[0]展示 [1]fixCondition [2]BIL_DD [3]PRD_NO [4]orderBy） | `STAT_GROUP`×3（PRD_NO/PRD_MARK/BAT_NO） |
+| `mrpce/GetReportStream` | `MRPCE` | 直接原料明细表 | 5（[0]展示 [1]fixCondition [2]BIL_DD [3]MRP_NO [4]orderBy） | `STAT_GROUP`×2（MRP_NO/PRD_NO） |
+
+> ⚠️ **部署状态**：2026-08-19 上午 6 个端点全部 404（路由不存在），用户部署 ERP 后端后全部 200。文档刚到手时后端可能尚未更新，404 = 路由未部署，不是路径写错。
+
+**信封**：与 API4 相同的 6 字段 `{ CODE, PERCENT, TITLE, ERR, DATA, IS_RES_ID }`，制造 4 只多一个 `TITLEBIL` 字段（常为空串）。**前端解析按字段名取值，不按字段个数**。
+
+**CODE 语义（实测，勿依赖）**：正常消息全程 `1`；无数据结束消息 `12`（MRPCT 实测）；错误信封 `0` + `ERR` 非空。→ **前端只认 `ERR` 与 `DATA.REPORT__TAB`，不认 CODE**（与 API4 结论一致）。
+
+**实测 PERCENT 序列**（各报表不同，UI 勿假设单调递增）：
+
+| 报表 | 实测序列（2026-08-19） |
+|------|------------------------|
+| 科目余额表 | 0 → 10 → 30 → 40 → 50 → 60 → 65 → 70 → 70 → 80 → **90（REPORT__TAB）** → 100（结束） |
+| MRPCU | 0 → 1 → 1 → 10 → 11 → 12 → 14 → 15 → 16 → 17 → **20（REPORT__TAB）** → 100 |
+| MRPCT（无数据） | 0 → 1 → **0** → 100（CODE=12）← 中途回落 |
+| MRPCX | 0 → 1 → 1 → 10 → 20 → 30 → 40 → 50 → 70 → 81 → 82 → 90 → **80** → 100 ← 尾部落序 |
+| MRPCE | 0 → 1 → 11 → 13 → 14 → 15 → 16 → 17 → 18 → **20** → 100 |
+| 财务报表 | ⚠️ 未实测（样式缺失，见 11.3 #7）；文档标注 REPORT__TAB 在 **PERCENT 100** 消息 |
+
+### 11.2 八报表对照速查表
+
+| 项 | 科目余额表 | 资产负债表 | 利润表 | 现金流量表 | MRPCU | MRPCT | MRPCX | MRPCE |
+|----|-----------|-----------|--------|-----------|-------|-------|-------|-------|
+| BOOK_NO | ✅ 必填（空→ERR"账簿不能为空"） | ✅ | ✅ | ✅ | — | — | — | — |
+| [0] showBody | `"T"` | `"T"` | `"T"` | `"T"` | 无 | 无 | 无 | 无 |
+| [0] showLadder | `"F"` | `"F"` | `"F"` | `"F"` | `"F"` | `"F"` | `"F"` | **`"T"`** |
+| [0] displayFields | 12 金额列（AMTN_*_D/C） | `[]` | 5 列 `_1` 后缀 | `[]` | 25 列 | 36 列 | 25 列 | 14 列 |
+| 顶层 DISPLAY_FIELDS | 与 displayFields 同 | `""` | **前导逗号** `,ITEM_NO_1,...` | `""` | 同 displayFields | 同 displayFields | 同 displayFields | 同 displayFields |
+| 日期条件 | 期间 ACC_IPERIOD_B/E（fixCondition） | 期间（fixCondition） | 期间（fixCondition） | 期间（fixCondition） | **无** | YYMM range `need:true fieldDisabled:true` | BIL_DD `operator:"this_month"` | BIL_DD range `dateOperator:"this_month"` |
+| 关键 fixCondition 差异 | REL_CLS_B/E=1/10、AMTN_BAL_TYPE="1"、TYPE_NO="01"、CHK_ACCN_TYPE="2" | CHK_NO_SYTZ_VOH="F"、SHOW_RPT_ITEM_AMTN_ZERO="T" | CHK_NO_SYTZ_VOH="**T**" | CHK_NO_SYTZ_VOH="F" | ED_QTY_END 分号列表原文 | CHKBILS="MO;TW"、COMBODATE/COMBOCLS/COMBOSVS="1"、SHOWDATA="1" | COMBOBILKND="1"、CHKBILS="MO;MB;MD" | COMBOSVS="1"、COMBOFCP="T"、COMBOSUM="1"、WASTERCHANGE="" |
+| 动态列 COLUMN_INFO | 无 | ✅ 数组（STD002 年初数/STD001 期末数） | ✅（STD003/STD004） | ✅ | 空数据时是 **`{}` 对象** | 空数据时 `{}` | 空数据时 `{}` | 空数据时 `{}` |
+| 层级字段 | — | SPACES + ITEM_NO/ITEM_NAME | SPACES | SPACES | — | — | — | — |
+| 汇总行 | REM_TYPE（**本服务器不返回**） | IS_SUM | IS_SUM | IS_SUM | — | — | — | **`_SKIP_STAT="T"`** |
+| 五阶段列 | — | — | — | — | — | QC/TR/WG/DQ/QM | QC/TR/HY/DQ/QM | — |
+| orderBy | SYS_DATE asc | SYS_DATE asc | SYS_DATE asc | SYS_DATE asc | REPORT_DD asc | BIL_DD asc | BIL_DD asc | BIL_DD asc |
+
+### 11.3 实测结果（2026-08-19 curl 实测）
+
+| # | 验证项 | 结果 |
+|---|--------|------|
+| 1 | 6 端点存在性 | ✅ 部署后全部 200（部署前 404，见 11.1 部署状态） |
+| 2 | SSE 信封复用 | ✅ 与 API4 同构；fetchStreamReport 零改动可用；制造报表多 TITLEBIL 字段 |
+| 3 | BOOK_NO="00000000" | ✅ 科目余额表正常出数据（真实账簿，替代文档样例 001/10） |
+| 4 | BOOK_NO 空 | ✅ HTTP 200 + SSE 错误信封 `CODE:0, ERR:"账簿不能为空"`——⚠️ **不是 API4 的 406** |
+| 5 | REM_TYPE | ⚠️ **本服务器响应行无 REM_TYPE**（显式加入 displayFields 也不返回）→ 扁平行（每科目一行，12 金额列齐备）；REM_TYPE 徽章分支自然不触发 |
+| 6 | 科目余额表数据 | ✅ 真实数据（库存现金 1001 / 银行存款 1002…），REPORT__TAB 在 PERCENT 90 |
+| 7 | 财务报表样式 | ❌ **阻塞**：`ERR:"报表样式[STD001]不存在或无访问权限"`（STD002/STD003 同样）→ 需 ERP 侧建立/导入标准样式或授权 SAN 用户 |
+| 8 | MRPCU 空条件 | ✅ 0.3s 完成、0 行（本服务器无制造数据），空结果消息 `REPORT__TAB:[]` 在 PERCENT 20 |
+| 9 | MRPCT/MRPCX/MRPCE | ✅ 端点正常；本服务器无制造数据 → MRPCT 结束 CODE=12（PERCENT 中途 0 回落），MRPCX/MRPCE 空 REPORT__TAB 正常结束 |
+| 10 | STAT_GROUP 缺省 | ✅ 不报错（MRPCT 去 STAT_GROUP 结果与带时一致）；按用户决策前端仍原样传 |
+| 11 | YYMM range 任意值 | ✅ 传两端不同值不报错（无数据无法验证过滤语义） |
+| 12 | PAGE_COUNT 可靠性 | ❌ 科目余额表结束消息 PAGE_COUNT=0；MRPCU 0 行却 PAGE_COUNT=1 → **一律不依赖 PAGE_COUNT** |
+| 13 | COLUMN_INFO 形态 | ⚠️ 财务报表是数组；制造报表空数据时是 `{}` 对象 → 前端必须 `Array.isArray` 防护 |
+| 14 | 登录端点 | ⚠️ 当日实测 `/user/login` 返回 `code 10002 REGCHECK_ERR`（旧 token 仍可用）——环境性现象，非 API5 问题，记录备查 |
+
+### 11.4 与 getReport / API4 的差异
+
+**vs 标准 getReport**：
+- SEARCH_INFO 无 offset 分页元素；无 PAGENUM；`PAGE_INFO` 顶层无
+- 响应是 SSE 流而非 JSON；`DISPLAY_FIELDS` 是顶层字符串（拼接展示字段）
+- 财务报表 `displayFields` 可为 `[]`（列全走 COLUMN_INFO 动态生成）；请求字段带 `_1` 后缀仅请求侧使用（响应无后缀字段）
+
+**vs API4 总分类账**：
+- 错误消息信封 `CODE=0`（accgl 全程 CODE=1）；BOOK_NO 空 = SSE ERR 而非 HTTP 406
+- 制造报表信封多 `TITLEBIL` 字段；PERCENT 序列存在回落/落序（UI 直接取最新值即可，勿做单调校验）
+- 顶层新增 `RPT_NO`/`TYPE_NO`（财务报表）、`STAT_GROUP`（制造 3 只，含 `_X_ROW_KEY` 行键）
+- `showBody` 可选（总账 4 只有，制造 4 只无）；`showLadder` 可为 `"T"`（MRPCE）
+- 财务报表响应多 `COLUMN_INFO`（动态列）、`SPACES`（层级缩进）、`IS_SUM`（小计行）、`OTHER_DATA`
+
+### 11.5 坑清单（八报表版）
+
+1. **别带 `api/` 前缀**——前端相对路径 `accBalanceTable/GetReportStream` 等，URL 中 `api` 段就是 `/SUNFUSION/API`（与 API4 同类坑，2026-08-18 已踩）
+2. **BOOK_NO 空 ≠ 406**——API5 端点返回 200 + SSE `ERR:"账簿不能为空"`；前端客户端拦截仍必要（UX），但错误文案来自服务端
+3. **REM_TYPE 不保证返回**——科目余额表渲染按 12 金额列直接展示；REM_TYPE 徽章逻辑保留（有值才显示）
+4. **COLUMN_INFO 可能是 `{}`**——所有消费点必须 `Array.isArray` 判断，否则 `.map` 崩
+5. **CODE 语义混乱**（正常 1 / 无数据 12 / 错误 0）——前端只认 ERR 与 REPORT__TAB
+6. **财务报表样式需 ERP 侧建立**——STD001/STD002/STD003 不存在时返回 `报表样式[XXX]不存在或无访问权限`，前端如实展示即可
+7. **PAGE_COUNT 完全不可靠**——有数据为 0、无数据为 1；分页/总数一律客户端计算
+8. **利润表 DISPLAY_FIELDS 前导逗号**——`,ITEM_NO_1,...` 必须逐字保留（服务端行为待样式建立后验证）
+9. **PERCENT 会回落/落序**——进度条直接赋值最新值，勿做"只增不减"处理
+10. **STAT_GROUP 原样传**（用户决策）——缺省不报错，但分组效果以文档为准
+11. **制造报表空数据 ≠ 错误**——MRPCT 以 CODE=12 结束，UI 应显示"无数据"而非报错
+12. **登录 REGCHECK_ERR**——若 `code 10002`，旧 token 可能仍可用；真正修复在 ERP 侧
+13. **文档样例账号（BOOK_NO 001/10、MRP_NO 000 原油）是演示数据**——本服务器只有 BOOK_NO=00000000 且无制造数据；生产报表数据形态以文档响应样例为准，服务器有数据后需回归验证
+
+---
+
+## 十二、账簿 TYPE_NO + 报表样式 accRptStyle/getlist（2026-08-19 实测，Round 52 修正）
+
+### 12.1 概述
+
+三财务报表（资产负债表/利润表/现金流量表）查询必须先选【报表样式】（RPT_NO）。样式清单由 `accRptStyle/getlist` 提供，该端点的必填入参 TYPE_NO 来自 **`AccBook/GetList`（账簿查询）的账簿行**——账簿行自带 TYPE_NO/TYPE_NAME（displayFields 请求了即返回），**无需查科目表**。链路：`AccBook/GetList 账簿行 TYPE_NO → accRptStyle/getlist(TYPE_NO) → 样式清单`；**账簿一旦改变，样式清单必须重新获取**（前端缓存按 BOOK_NO 隔离）。
+
+| 端点 | 用途 | 请求要点 | 响应数据 |
+|---|---|---|---|
+| `POST /SUNFUSION/API/AccBook/GetList` | 账簿清单（取账簿行 TYPE_NO） | displayFields 含 `TYPE_NO`/`TYPE_NAME`（BookStore 请求体已含，零变更）；SEARCH_INFO 4 元素 + PAGE_INFO | `code===0`，`data.ACC_BOOK_BS`（BOOK_NO/NAME/**TYPE_NO**/TYPE_NAME） |
+| `POST /SUNFUSION/API/accRptStyle/getlist` | 报表样式清单（取 RPT_NO） | 顶层 `PGM:"ACCRPTSTYLE"` + `TYPE_NO`（账簿行科目表代号）；SEARCH_INFO 5 元素（[0] 7 个 displayFields、[1] fixCondition:{}、[2] RPT_NO in 空值 **need:true**、[3] NAME contain 空值、[4] orderBy{RPT_NO:"asc"}）+ PAGE_INFO{200,1} | `code===0`，`data.MF_RPTSTYLE_BS`（RPT_NO/RPT_TYPE/NAME/TYPE_NO/TYPE_NAME） |
+
+> 路径大小写按文档原文（AccBook/GetList、accRptStyle/getlist）；文档 `/api` 段即 `/SUNFUSION/API`。
+> `AccType/getlist`（科目表清单）**不在链路内**——仅将来需要 TYPE_NAME 等科目表信息时才查。
+
+### 12.2 实测结果
+
+| # | 验证项 | 结果 |
+|---|--------|------|
+| 1 | AccBook/GetList 账簿行 TYPE_NO | ✅ code=0；响应行直接带 `TYPE_NO: "1"`、`TYPE_NAME: "企业会计准则-First Department"` |
+| 2 | accRptStyle/getlist(TYPE_NO=1) | ✅ 4 个样式：STD001 资产负债表月结（RPT_TYPE=2）/ STD002 利润表（3）/ STD003 现金流量表（4）/ STD004 资产负债表年结（2） |
+| 3 | 三报表 TYPE_NO="3"（写死历史值） | ❌ 立即 SSE ERR「报表样式[STD001]不存在或无访问权限」 |
+| 4 | 三报表 TYPE_NO="1" + RPT_NO=STD001 + BOOK_NO 00000000 | ✅ 67 行完整数据——**TYPE_NO 必须来自账簿行，不能写死** |
+
+### 12.3 坑清单（第十二节追加）
+
+1. **TYPE_NO 不能写死**——真实值来自**账簿行**（AccBook/GetList 响应自带，本服务器 "1"）；写死历史值 "3" 直接报样式不存在
+2. **账簿改变 → 样式清单必须重取**——样式清单跟账簿走（用户指定链路），前端缓存键 = 公司+BOOK_NO，切换账簿即重拉
+3. **样式清单顶层必须带 `PGM:"ACCRPTSTYLE"` + `TYPE_NO`**——缺一不可（文档原文）
+4. **RPT_NO/TYPE_NO 双层**——请求顶层与 fixCondition 内都带（与 API5 三报表请求结构一致），前端两处均须随所选样式走
+5. **RPT_TYPE 过滤在前端**——2=资产负债表、3=利润表、4=现金流量表；同一账簿下可有多只同类型样式（如 STD004 也是资产负债表）
+6. **报表样式 ≠ 报表名称**——下拉选的是样式（RPT_NO · NAME），不是报表

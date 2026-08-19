@@ -40,7 +40,7 @@
 ┌─────────────────────────────────────────────────────────┐
 │                     Browser (SPA)                        │
 │  ┌──────────┐  ┌──────────┐  ┌──────────────────────┐  │
-│  │  Login   │  │ 32 报表   │  │   AI 数据分析         │  │
+│  │  Login   │  │ 40 报表   │  │   AI 数据分析         │  │
 │  │  Auth    │  │  查询     │  │   Chat + Chart + 导出 │  │
 │  └────┬─────┘  └────┬─────┘  └──────────┬───────────┘  │
 │       │              │                    │              │
@@ -77,7 +77,7 @@
 
 ### 01 — 系统整体流程
 
-从登录认证、Token 管理，到 32 大报表查询、AI 数据分析的端到端全链路（含 MRPPU getList 特殊路径）。
+从登录认证、Token 管理，到 40 大报表查询、AI 数据分析的端到端全链路（含 MRPPU getList 特殊路径 + 9 只长连接 SSE 报表）。
 
 ![系统整体流程](流程图/流程图_01_系统整体流程.png)
 
@@ -108,7 +108,7 @@ SEARCH_INFO 10 元素数组按索引 [0]~[9] 固定顺序组装，displayFields 
 
 ### 06 — UI 页面流
 
-登录页 → Dashboard 主界面 → 侧边栏导航（8 分组 32 报表切换） → 18 布局筛选面板 → Tab 页签 → 多模型 AI。
+登录页 → Dashboard 主界面 → 侧边栏导航（8 分组 40 报表切换） → 18 布局筛选面板 → Tab 页签 → 多模型 AI。
 
 ![UI页面流](流程图/流程图_06_UI页面流.png)
 
@@ -170,7 +170,7 @@ python -m http.server 8080
 
 ```
 AsCoding/
-├── index.html                  ← 生产入口（完整 Dashboard + 32 报表 + AI 分析）
+├── index.html                  ← 生产入口（完整 Dashboard + 40 报表 + AI 分析）
 ├── ui-template.html            ← UI 原型模板（与 index.html 同步）
 │
 ├── css/
@@ -187,10 +187,11 @@ AsCoding/
 │   ├── settings-store.js       ← 设置持久化（API Key / 服务器地址）
 │   ├── datasource-store.js     ← 数据源 CRUD（localStorage，上限 20）
 │   ├── book-store.js           ← 账簿清单缓存（AccBook/GetList，登录/会话恢复预热，登出世代计数重置）
+│   ├── rpt-style-store.js      ← 报表样式缓存（accRptStyle/getlist，按账簿 BOOK_NO 隔离，TYPE_NO 来自账簿行；财务报表 RPT_NO/TYPE_NO 动态化）
 │   │
 │   ├── auth.js                 ← 认证模块（登录/登出/Token/会话恢复，LANG_ID 随语言）
 │   ├── api.js                  ← API 客户端（fetch 封装/认证注入/错误拦截）
-│   ├── reports.js              ← 报表引擎（32 报表配置/SEARCH_INFO 构造/动态表格/18 布局筛选/REM_TYPE 摘要类型 badge）
+│   ├── reports.js              ← 报表引擎（40 报表配置/SEARCH_INFO 构造/动态表格/28 布局筛选/REM_TYPE 摘要类型 badge/流式请求构造）
 │   ├── report-menu-store.js    ← 报表菜单持久化（收藏列表）
 │   ├── report-menu.js          ← 动态菜单渲染（搜索/折叠分组/收藏置顶）
 │   │
@@ -216,8 +217,8 @@ AsCoding/
 │
 ├── screenshots/                ← 应用截图（界面预览）
 │
-├── deploy.ps1                  ← 部署包生成脚本（v1.4，30 文件）
-├── sunlike-erp-report-v1.4.zip ← 部署包（解压到 Web 服务器目录）
+├── deploy.ps1                  ← 部署包生成脚本（v1.6，31 文件）
+├── sunlike-erp-report-v1.6.zip ← 部署包（解压到 Web 服务器目录）
 │
 └── 文档（项目根目录）
     ├── 需求架构文档.md          ← 项目需求 & 技术架构
@@ -229,8 +230,10 @@ AsCoding/
     ├── 标准报表制表API3.md       ← v3 21 个 API 原始文档（财务/库存/采购价格/生产/人事/固定资产）
     ├── 标准报表制表API4.md       ← v4 总分类账长连接（GetReportStream SSE）原始文档
     ├── 账簿列表查询.md           ← AccBook/GetList 账簿清单 API 原始文档
+    ├── 科目表 列表查询.md         ← AccType/getlist 科目表清单 API 原始文档（仅需 TYPE_NAME 时才查，不在报表样式链路内）
+    ├── 报表样式 列表查询.md       ← accRptStyle/getlist 报表样式清单 API 原始文档（财务报表 RPT_NO 来源）
     ├── 标准报表制表API5.md       ← v5 八报表长连接（8 个 GetReportStream：科目余额/资产负债/利润/现金流量/物料分析明细/在制成本明细/在制原料明细/直接原料明细）原始文档
-    ├── 流程图.md                ← 15 节业务流程图文字参考
+    ├── 流程图.md                ← 16 节业务流程图文字参考
     ├── 部署指南.md              ← Web 服务器部署说明
     └── 项目经验行动指南.md       ← 通用开发纪律速查卡
 ```
@@ -275,30 +278,34 @@ Authorization: Bearer {TOKEN}
 # 成功 → { code: 0, data: { REPORT__TAB: [...], COLUMN_INFO: {...} } }
 ```
 
-### 32 报表速查（8 分组）
+### 40 报表速查（8 分组）
 
 | 分组 | 报表数 | 包含报表 |
 |------|--------|---------|
-| 总账报表 | 1 | 总分类账（⚠️长连接 SSE，账簿必选，摘要类型 1=期初余额/2=本期合计/3=本年合计） |
+| 总账报表 | 5 | 总分类账、科目余额表、资产负债表、利润表、现金流量表（⚠️全部长连接 SSE，账簿必选；财务报表样式 STD001/2/3 需 ERP 侧授权） |
 | 进销存 | 4 | 采购、进货、受订、销货 |
 | 财务管理 | 8 | 收款、付款、科目预算、信用额度、报销、员工借款、应收票据、应付票据 |
 | 库存管理 | 5 | 过期货品预警、安全存量预警、负库存预警、库存调拨、库存调整 |
 | 采购与价格 | 5 | 送货单、采购交货状况、委外交货状况、采购政策价格、售价政策价格 |
-| 生产制造 | 5 | 工单完成、完工入库、产品成本分析(⚠️getList)、领退补料、单位成本分析 |
+| 生产制造 | 9 | 工单完成、完工入库、产品成本分析(⚠️getList)、领退补料、单位成本分析、物料分析明细(⚠️SSE)、在制成本明细(⚠️SSE)、在制原料明细(⚠️SSE)、直接原料明细(⚠️SSE) |
 | 人力资源 | 3 | 员工年度薪资、人事资料分析、员工明细 |
 | 固定资产 | 1 | 财产目录 |
 
 > ⚠️ **关键**：成功判断用 `response.code === 0`，不是 `response.ok`！
 > ⚠️ **MRPPU** 使用 `getList` 端点（非 `getReport`），请求体含 OTHERINFO + PAGE_INFO，响应数据在 `data.TRANS`。
 
-### 长连接报表（总分类账）
+### 长连接报表（总分类账 + API5 八报表，共 9 只）
 
-系统第一个长连接（SSE）报表，后续长连接报表统一此模式：
+系统长连接（SSE）报表统一模式（2026-08-19 API5 推广后共 9 只）：
 
-- **流式查询**：`POST /accGeneralLedger/GetReportStream` → `text/event-stream`，每条消息 `data: {CODE, PERCENT, TITLE, ERR, DATA}`；EventSource 不支持 POST，用 fetch + ReadableStream 行缓冲手动解析；三步判别（HTTP 状态 → Content-Type → 流解析）+ AbortController 120s 超时
-- **进度条**：PERCENT 实时驱动，白卡片 `position:fixed` 悬浮视口正中央
-- **账簿下拉**：登录/会话恢复即后台拉取 `AccBook/GetList`（BookStore 缓存 + 登出世代计数重置）；>1 预选第一个；0 账簿弹「未启用总账」警告并禁用查询/转入按钮；BOOK_NO 空值前端拦截（实测空值 → HTTP 406）
-- **摘要类型映射**：数据行 `REM_TYPE` —— `1`=期初余额 / `2`=本期合计 / `3`=本年合计；表格彩色徽章展示，转入 AI 数据源时替换为语义文字
+- **流式查询**：`POST /{module}/GetReportStream` → `text/event-stream`，每条消息 `data: {CODE, PERCENT, TITLE, ERR, DATA}`；EventSource 不支持 POST，用 fetch + ReadableStream 行缓冲手动解析；三步判别（HTTP 状态 → Content-Type → 流解析）+ AbortController 120s 超时；请求构造由 `cfg.stream` 配置驱动（fixCondition @占位符 + elements + topFields + statGroup）
+- **进度条**：PERCENT 实时驱动，白卡片 `position:fixed` 悬浮视口正中央（序列因报表而异、可能回退，UI 只取最新值）
+- **账簿下拉**：登录/会话恢复即后台拉取 `AccBook/GetList`（BookStore 缓存 + 登出世代计数重置）；>1 预选第一个；0 账簿弹「未启用总账」警告并禁用查询/转入按钮；BOOK_NO 空值前端拦截（⚠️ API4 总分类账 → HTTP 406；API5 总账 4 只 → HTTP 200 + SSE ERR「账簿不能为空」）
+- **报表样式下拉**（财务报表 3 只）：数据链路 `AccBook/GetList 账簿行 TYPE_NO → accRptStyle/getlist 样式清单 → 按 RPT_TYPE 过滤（2=资产负债表/3=利润表/4=现金流量表）→ 预选第一个匹配样式`；查询传所选 RPT_NO + 该样式 TYPE_NO（不能写死——实测写死 "3" 报「报表样式不存在」，动态后出 67 行完整数据）；**账簿一改变样式清单即重取**（缓存按账簿隔离）
+- **摘要类型映射**（总分类账/科目余额表）：数据行 `REM_TYPE` —— `1`=期初余额 / `2`=本期合计 / `3`=本年合计；表格彩色徽章展示，转入 AI 数据源时替换为语义文字
+- **动态列**（财务报表 3 只）：消息携带 `COLUMN_INFO [{NAME,TITLE}]` 动态生成数值列（年初数/期末数/本期发生数/本年累计数），前导列项目编号+项目名称；行 SPACES 层级缩进 16px/级 + 一级行加粗
+- **汇总行**（直接原料明细表）：`_SKIP_STAT='T'` 行表格加粗展示，转入数据源剔除
+- **分页**：长连接无 PAGE_COUNT/offset，全量累积 + 客户端切片
 
 ---
 
@@ -349,7 +356,7 @@ AI 被训练为 ERP 数据分析专家，会：
 
 ## 🗂 报表菜单（搜索 / 折叠 / 收藏）
 
-32 报表侧边栏为 **REPORT_CONFIG 驱动的动态渲染**：
+40 报表侧边栏为 **REPORT_CONFIG 驱动的动态渲染**：
 
 - **搜索**：中文名模糊 + 拼音首字母匹配，`Ctrl+K` 聚焦（侧边栏折叠时自动展开）、`Esc` 清空
 - **分组折叠**：8 分组可折叠（点击标题 / Enter / Space），默认全部折叠（登录/刷新复位）
@@ -410,6 +417,7 @@ AI 被训练为 ERP 数据分析专家，会：
 | 固定资产报表 (1 个) | ✅ 已完成 |
 | 报表菜单改进（搜索 / 折叠 / 收藏置顶） | ✅ 已完成 |
 | API4 — 总分类账（长连接 SSE + 账簿下拉 + REM_TYPE 摘要类型） | 🟡 待浏览器验证 |
+| API5 — 8 只长连接报表（总账 4 需账簿 + 生产制造 4，SSE + 动态列 + 汇总行） | 🟡 待浏览器验证 |
 | 记事本（多数据源快照） | 🟡 待浏览器 E2E |
 | 多语言支持（简 / 繁 / 英） | 🟡 待浏览器三语走查 |
 | AI 流式响应 | ⬜ 待开发 |

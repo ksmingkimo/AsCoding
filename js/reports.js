@@ -331,7 +331,7 @@ var ReportEngine = (function() {
       ]
     },
 
-    // ─── 总账报表 (v4 API 长连接 SSE) ──────────────────────────
+    // ─── 总账报表 (v4/v5 API 长连接 SSE) ──────────────────────
 
     accgl: {
       name: '总分类账',
@@ -351,7 +351,432 @@ var ReportEngine = (function() {
       // BOOK_NO 不进标准 filters 循环——它在 buildRequestStream 的 fixCondition 里动态构造
       filters: [
         { index: 4, field: 'BOOK_NO', operator: 'equal', label: '账簿', filterId: 'filterBookNo' }
-      ]
+      ],
+      stream: {
+        showBody: 'T',
+        showLadder: 'F',
+        fixCondition: {
+          BOOK_NO: '@BOOK_NO',
+          CUR_ID: '',
+          ACC_IPERIOD_B: '@PERIOD',
+          ACC_IPERIOD_E: '@PERIOD',
+          CHK_ACCN_TYPE: '2',
+          ACC_NO: '',
+          ACC_NO_B: '',
+          ACC_NO_E: '',
+          REL_CLS_B: 1,
+          REL_CLS_E: 10,
+          AMTN_BAL_TYPE: '1',
+          CHK_POSTACC: 'F',
+          CHK_STOP: 'F',
+          CHK_NOVOH: 'F',
+          CHK_NOVOH_BAL_ZERO: 'F',
+          CHK_FZHS_DETAIL: 'F',
+          CHK_ARP_DAT: 'F',
+          CHK_DETAIL_ACCN: 'F',
+          CHK_NO_POA_VOH: 'F',
+          CHK_NO_SYTZ_VOH: 'F',
+          SHOW_BN_TYPE: '1',
+          ORDERBY_TYPE: '1',
+          START_DD: '@START_DD',
+          YEARS: '@YEARS',
+          IPERIOD: '@IPERIOD',
+          TYPE_NO: '01',
+          CHK_GROUP_CUR_LOC: 'F',
+          DATE_B: '@DATE_B',
+          DATE_E: '@DATE_E'
+        },
+        orderBy: { SYS_DATE: 'asc' }
+      }
+    },
+
+    // ─── API5 总账 4 只（2026-08-19 新增，长连接 SSE，依赖账簿） ───
+
+    accBalTable: {
+      name: '科目余额表',
+      group: '总账报表',
+      icon: '📊',
+      pinyin: 'kmyeb',
+      apiPath: 'accBalanceTable/GetReportStream',   // 相对 /SUNFUSION/API，勿带 api/ 前缀
+      apiMethod: 'getReportStream',
+      pgm: 'ACCRPTABT',
+      dateField: null,
+      filterLayout: 'accgl',   // 账簿下拉 + 会计期间
+      needsBook: true,
+      displayFields: [
+        'ACC_NO','ACC_NAME',
+        'AMTN_NC_D','AMTN_NC_C','AMTN_QC_D','AMTN_QC_C',
+        'AMTN_D','AMTN_C','AMTN_Y_D','AMTN_Y_C','AMTN_QM_D','AMTN_QM_C'
+      ],
+      filters: [
+        { index: 4, field: 'BOOK_NO', operator: 'equal', label: '账簿', filterId: 'filterBookNo' }
+      ],
+      stream: {
+        showBody: 'T',
+        showLadder: 'F',
+        // fixCondition 25 字段逐字取自 API5.md 请求示例（REL_CLS_B/E 为 Int32 数字）
+        fixCondition: {
+          BOOK_NO: '@BOOK_NO',
+          CUR_ID: '',
+          ACC_IPERIOD_B: '@PERIOD',
+          ACC_IPERIOD_E: '@PERIOD',
+          CHK_ACCN_TYPE: '2',
+          ACC_NO: '',
+          DATE_TYPE: '1',
+          ACC_NO_B: '',
+          ACC_NO_E: '',
+          DATE_B: '@DATE_B',
+          DATE_E: '@DATE_E',
+          REL_CLS_B: 1,
+          REL_CLS_E: 10,
+          AMTN_BAL_TYPE: '1',
+          CHK_POSTACC: 'F',
+          CHK_STOP: 'F',
+          CHK_NOVOH_BAL_ZERO: 'F',
+          CHK_FZHS_DETAIL: 'F',
+          CHK_DETAIL_ACCN: 'F',
+          CHK_NO_POA_VOH: 'F',
+          CHK_NO_SYTZ_VOH: 'F',
+          CHK_GROUP_CUR_LOC: 'F',
+          START_DD: '@START_DD',
+          YEARS: '@YEARS',
+          IPERIOD: '@IPERIOD',
+          TYPE_NO: '01'
+        },
+        orderBy: { SYS_DATE: 'asc' }
+      }
+    },
+
+    accZcfzb: {
+      name: '资产负债表',
+      group: '总账报表',
+      icon: '📊',
+      pinyin: 'zcfzb',
+      apiPath: 'accRptPreview/GetReportStream',
+      apiMethod: 'getReportStream',
+      pgm: 'CUS_ACC_RPT__2_ZCFZB',
+      dateField: null,
+      filterLayout: 'accglStyle',
+      needsBook: true,
+      needsRptStyle: true,   // 需【报表样式】下拉：RPT_NO 动态化（TYPE_NO 取自科目表）
+      rptTypeFilter: '2',    // 报表样式按 RPT_TYPE 过滤：2=资产负债表
+      displayFields: [],   // 列全走 COLUMN_INFO 动态生成
+      renderColumns: 'columnInfo',
+      leadingColumns: ['ITEM_NO', 'ITEM_NAME'],
+      filters: [
+        { index: 4, field: 'BOOK_NO', operator: 'equal', label: '账簿', filterId: 'filterBookNo' }
+      ],
+      stream: {
+        showBody: 'T',
+        showLadder: 'F',
+        // fixCondition 20 字段取自 API5.md（CHK_NO_SYTZ_VOH="F"）；RPT_NO/TYPE_NO 动态：
+        // @RPT_NO 来自样式下拉所选 RPT_NO、@TYPE_NO 来自该样式所属科目表代号
+        // （样式行 TYPE_NO；链路：账簿行 TYPE_NO → accRptStyle/getlist，AccType/getlist 不在链路内）
+        fixCondition: {
+          RPT_NO: '@RPT_NO',
+          BOOK_NO: '@BOOK_NO',
+          CYCLE_TYPE: '1',
+          IPERIOD_TYPE: '1',
+          ACC_IPERIOD_B: '@PERIOD',
+          ACC_IPERIOD_E: '@PERIOD',
+          UP_AMTN: '1',
+          CHK_POSTACC: 'F',
+          CHK_NO_POA_VOH: 'F',
+          DOUBLE_CLASS: 'F',
+          SHOW_RPT_ITEM_AMTN_ZERO: 'T',
+          CHK_NO_SYTZ_VOH: 'F',
+          START_DD: '@START_DD',
+          YEARS: '@YEARS',
+          IPERIOD: '@IPERIOD',
+          TYPE_NO: '@TYPE_NO',
+          DATE_TYPE: '1',
+          DATE_B: '@DATE_B',
+          DATE_E: '@DATE_E',
+          CHK_DATE: '1'
+        },
+        orderBy: { SYS_DATE: 'asc' },
+        topFields: { RPT_NO: '@RPT_NO', TYPE_NO: '@TYPE_NO' }
+      }
+    },
+
+    accLrb: {
+      name: '利润表',
+      group: '总账报表',
+      icon: '📊',
+      pinyin: 'lrb',
+      apiPath: 'accRptPreview/GetReportStream',
+      apiMethod: 'getReportStream',
+      pgm: 'CUS_ACC_RPT__3_LRB',
+      dateField: null,
+      filterLayout: 'accglStyle',
+      needsBook: true,
+      needsRptStyle: true,   // 需【报表样式】下拉：RPT_NO 动态化（TYPE_NO 取自科目表）
+      rptTypeFilter: '3',    // 报表样式按 RPT_TYPE 过滤：3=利润表
+      displayFields: [],   // 动态列
+      renderColumns: 'columnInfo',
+      leadingColumns: ['ITEM_NO', 'ITEM_NAME'],
+      filters: [
+        { index: 4, field: 'BOOK_NO', operator: 'equal', label: '账簿', filterId: 'filterBookNo' }
+      ],
+      stream: {
+        showBody: 'T',
+        showLadder: 'F',
+        // fixCondition 20 字段（CHK_NO_SYTZ_VOH="T"，与资产负债表不同）；RPT_NO/TYPE_NO 动态（同资产负债表）
+        fixCondition: {
+          RPT_NO: '@RPT_NO',
+          BOOK_NO: '@BOOK_NO',
+          CYCLE_TYPE: '1',
+          IPERIOD_TYPE: '1',
+          ACC_IPERIOD_B: '@PERIOD',
+          ACC_IPERIOD_E: '@PERIOD',
+          UP_AMTN: '1',
+          CHK_POSTACC: 'F',
+          CHK_NO_POA_VOH: 'F',
+          DOUBLE_CLASS: 'F',
+          SHOW_RPT_ITEM_AMTN_ZERO: 'T',
+          CHK_NO_SYTZ_VOH: 'T',
+          START_DD: '@START_DD',
+          YEARS: '@YEARS',
+          IPERIOD: '@IPERIOD',
+          TYPE_NO: '@TYPE_NO',
+          DATE_TYPE: '1',
+          DATE_B: '@DATE_B',
+          DATE_E: '@DATE_E',
+          CHK_DATE: '1'
+        },
+        orderBy: { SYS_DATE: 'asc' },
+        // 请求侧字段带 _1 后缀（响应无后缀）；DISPLAY_FIELDS 前导逗号逐字保留
+        requestFields: ['ITEM_NO_1', 'ITEM_NAME_1', 'ROW_ID_1', 'STD003_1', 'STD004_1'],
+        disFieldsPrefix: ',',
+        topFields: { RPT_NO: '@RPT_NO', TYPE_NO: '@TYPE_NO' }
+      }
+    },
+
+    accXjllb: {
+      name: '现金流量表',
+      group: '总账报表',
+      icon: '📊',
+      pinyin: 'xjllb',
+      apiPath: 'accRptPreview/GetReportStream',
+      apiMethod: 'getReportStream',
+      pgm: 'CUS_ACC_RPT__4_XJLL',
+      dateField: null,
+      filterLayout: 'accglStyle',
+      needsBook: true,
+      needsRptStyle: true,   // 需【报表样式】下拉：RPT_NO 动态化（TYPE_NO 取自科目表）
+      rptTypeFilter: '4',    // 报表样式按 RPT_TYPE 过滤：4=现金流量表
+      displayFields: [],
+      renderColumns: 'columnInfo',
+      leadingColumns: ['ITEM_NO', 'ITEM_NAME'],
+      filters: [
+        { index: 4, field: 'BOOK_NO', operator: 'equal', label: '账簿', filterId: 'filterBookNo' }
+      ],
+      stream: {
+        showBody: 'T',
+        showLadder: 'F',
+        fixCondition: {
+          RPT_NO: '@RPT_NO',
+          BOOK_NO: '@BOOK_NO',
+          CYCLE_TYPE: '1',
+          IPERIOD_TYPE: '1',
+          ACC_IPERIOD_B: '@PERIOD',
+          ACC_IPERIOD_E: '@PERIOD',
+          UP_AMTN: '1',
+          CHK_POSTACC: 'F',
+          CHK_NO_POA_VOH: 'F',
+          DOUBLE_CLASS: 'F',
+          SHOW_RPT_ITEM_AMTN_ZERO: 'T',
+          CHK_NO_SYTZ_VOH: 'F',
+          START_DD: '@START_DD',
+          YEARS: '@YEARS',
+          IPERIOD: '@IPERIOD',
+          TYPE_NO: '@TYPE_NO',
+          DATE_TYPE: '1',
+          DATE_B: '@DATE_B',
+          DATE_E: '@DATE_E',
+          CHK_DATE: '1'
+        },
+        orderBy: { SYS_DATE: 'asc' },
+        topFields: { RPT_NO: '@RPT_NO', TYPE_NO: '@TYPE_NO' }
+      }
+    },
+
+    // ─── API5 生产制造 4 只（2026-08-19 新增，长连接 SSE，无账簿） ───
+
+    mrpcu: {
+      name: '物料分析明细表',
+      group: '生产制造',
+      icon: '📦',
+      pinyin: 'wlfxmxb',
+      apiPath: 'mrpcu/GetReportStream',
+      apiMethod: 'getReportStream',
+      pgm: 'MRPCU',
+      dateField: null,
+      filterLayout: 'mrpcu',   // 母件代号 + 工单号（无日期条件）
+      displayFields: [
+        'MO_NO','MO_ITM','QTY_BIL','BOM_NO','MRP_NO','MRP_NAME','BOM_NO1','ITEM',
+        'PRD_NO','PRD_NAME','SPC','PRD_MARK','A001','ID_NO','UNIT_NAME',
+        'QTY_STD','LOS_RTO','QTY_LOST_FIX','QTY','QTY_RSV','QTY_ADDLOST',
+        'UP_STD','CST','QTY_NOW','QTY_END'
+      ],
+      filters: [],
+      stream: {
+        showLadder: 'F',
+        // fixCondition 14 字段（ED_QTY_END 分号列表原文）
+        fixCondition: {
+          COMBOEXP: '3',
+          BOM_ITEM: '1',
+          COMBOCST: '1',
+          SELUPS: '',
+          CHKTW_ID: '',
+          COMBOWHDTL: '1',
+          COMBO_KCWH: '1',
+          CHK_PRD: 'F',
+          ED_QTY_END: 'QTY_NOW;QTY_ON_ODR;QTY_SQ;QTY_ON_WAY;QTY_ON_RSV;QTY_ON_PRC',
+          EXP_VIR_DRC: 'F',
+          ED_KCWH: '',
+          WASTERCHANGE: 'F',
+          NOBOM: 'F',
+          REPORT_DD_FIELD: 'REPORT_DD'
+        },
+        elements: [
+          { field: 'MO_NO',  operator: 'in', fieldType: 'bilNo', filterId: 'filterDocNo' },   // 工单号
+          { field: 'BOM_NO', operator: 'in', fieldType: 'bilNo', value: '' },                  // 无 UI，请求体照传空
+          { field: 'MRP_NO', operator: 'in', filterId: 'filterMrpNo' },                       // 母件代号
+          { field: 'QTY',    operator: 'equal', fieldType: 'number', fieldDisabled: true, value: 0 }
+        ],
+        orderBy: { REPORT_DD: 'asc' }
+      }
+    },
+
+    mrpct: {
+      name: '在制成本明细表',
+      group: '生产制造',
+      icon: '📦',
+      pinyin: 'zzcbmxb',
+      apiPath: 'mrpct/GetReportStream',
+      apiMethod: 'getReportStream',
+      pgm: 'MRPCT',
+      dateField: null,
+      filterLayout: 'mrpct',   // 生产货品 + 日期区间（预填本月第一天×2，可编辑）
+      displayFields: [
+        'MRP_NO','MRP_NAME','PRD_MARK','A001','BAT_NO',
+        'QTY_QC','CST_QC','CST_MAN_QC','CST_MAK_QC','CST_PRD_QC','CST_OUT_QC',
+        'QTY_TR','CST_TR','CST_MAN_TR','CST_MAK_TR','CST_PRD_TR','CST_OUT_TR',
+        'QTY_WG','QTY_LOST_WG','CST_WG','CST_MAN_WG','CST_MAK_WG','CST_PRD_WG','CST_OUT_WG',
+        'QTY_DQ','CST_DQ','CST_MAN_DQ','CST_MAK_DQ','CST_PRD_DQ','CST_OUT_DQ',
+        'QTY_QM','CST_QM','CST_MAN_QM','CST_MAK_QM','CST_PRD_QM','CST_OUT_QM'
+      ],
+      filters: [],
+      stream: {
+        showLadder: 'F',
+        // fixCondition 8 字段
+        fixCondition: {
+          COMBODATE: '1',
+          CHKBILS: 'MO;TW',
+          CHK_QTYPRC: '',
+          COMBOCLS: '1',
+          CLSDD: '',
+          COMBOSVS: '1',
+          SHOWDATA: '1',
+          REPORT_DD_FIELD: 'BIL_DD'
+        },
+        elements: [
+          { field: 'YYMM', operator: 'range', fieldType: 'date', need: true, fieldDisabled: true,
+            dateOperator: 'this_month', presetFrom: 'dateRange', preset0: '@MONTH_FIRST', sameEndsFrom: true },
+          { field: 'MRP_NO', operator: 'in', filterId: 'filterMrpNo' }   // 生产货品
+        ],
+        orderBy: { BIL_DD: 'asc' },
+        // STAT_GROUP 原样传（用户决策；_X_ROW_KEY 行键照抄文档）
+        statGroup: [
+          { FIELD: 'MRP_NO',   CHK_DEF: 'T', ROW_TO_COL: 'F', TITLE: '生产货品', _X_ROW_KEY: 'row_17844' },
+          { FIELD: 'PRD_MARK', CHK_DEF: 'T', ROW_TO_COL: 'F', TITLE: '货品特征', _X_ROW_KEY: 'row_17845' },
+          { FIELD: 'BAT_NO',   CHK_DEF: 'T', ROW_TO_COL: 'F', TITLE: '批号',     _X_ROW_KEY: 'row_17846' }
+        ],
+        datePreset: { from: '@MONTH_FIRST', to: '@MONTH_FIRST' }
+      }
+    },
+
+    mrpcx: {
+      name: '在制原料明细表',
+      group: '生产制造',
+      icon: '📦',
+      pinyin: 'zzylmxb',
+      apiPath: 'mrpcx/GetReportStream',
+      apiMethod: 'getReportStream',
+      pgm: 'MRPCX',
+      dateField: null,
+      filterLayout: 'mrpcx',   // 材料代号 + 日期区间（预填本月 1 日~末日，可编辑）
+      displayFields: [
+        'PRD_NAME','PRD_MARK','A001','BAT_NO','UNIT_NAME',
+        'QTY_QC','QTY1_QC','CST_QC','CST_STD_QC',
+        'QTY_TR','QTY1_TR','CST_TR','CST_STD_TR',
+        'QTY_HY','QTY1_HY','CST_HY','CST_STD_HY',
+        'QTY_DQ','QTY1_DQ','CST_DQ','CST_STD_DQ',
+        'QTY_QM','QTY1_QM','CST_QM','CST_STD_QM'
+      ],
+      filters: [],
+      stream: {
+        showLadder: 'F',
+        // fixCondition 3 字段
+        fixCondition: {
+          COMBOBILKND: '1',
+          CHKBILS: 'MO;MB;MD',
+          REPORT_DD_FIELD: 'BIL_DD'
+        },
+        elements: [
+          { field: 'BIL_DD', operator: 'this_month', fieldType: 'date', need: true, fieldDisabled: true,
+            presetFrom: 'dateRange', preset0: '@MONTH_FIRST', preset1: '@MONTH_LAST' },
+          { field: 'PRD_NO', operator: 'in', filterId: 'filterPrd' }   // 材料代号
+        ],
+        orderBy: { BIL_DD: 'asc' },
+        statGroup: [
+          { FIELD: 'PRD_NO',   CHK_DEF: 'T', ROW_TO_COL: 'F', TITLE: '材料代号', _X_ROW_KEY: 'row_8211' },
+          { FIELD: 'PRD_MARK', CHK_DEF: 'T', ROW_TO_COL: 'F', TITLE: '货品特征', _X_ROW_KEY: 'row_8212' },
+          { FIELD: 'BAT_NO',   CHK_DEF: 'T', ROW_TO_COL: 'F', TITLE: '批号',     _X_ROW_KEY: 'row_8213' }
+        ],
+        datePreset: { from: '@MONTH_FIRST', to: '@MONTH_LAST' }
+      }
+    },
+
+    mrpce: {
+      name: '直接原料明细表',
+      group: '生产制造',
+      icon: '📦',
+      pinyin: 'zjylymxb',
+      apiPath: 'mrpce/GetReportStream',
+      apiMethod: 'getReportStream',
+      pgm: 'MRPCE',
+      dateField: null,
+      filterLayout: 'mrpce',   // 生产货品 + 日期区间（预填年初~今天，可编辑）
+      displayFields: [
+        'MRP_NO','MRP_NAME','SPC','UNIT_NAME_H','QTY',
+        'PRD_NO','PRD_NAME','SPC_PRD','UNIT_NAME','QTY_PRD',
+        'UP','CST','QTY_AVE','CST_AVE'
+      ],
+      filters: [],
+      stream: {
+        showLadder: 'T',   // 唯一 showLadder="T" 的报表（层级显示）
+        // fixCondition 5 字段（WASTERCHANGE 为空串原文）
+        fixCondition: {
+          REPORT_DD_FIELD: 'BIL_DD',
+          COMBOSVS: '1',
+          COMBOFCP: 'T',
+          COMBOSUM: '1',
+          WASTERCHANGE: ''
+        },
+        elements: [
+          { field: 'BIL_DD', operator: 'range', fieldType: 'date', need: true, fieldDisabled: true,
+            dateOperator: 'this_month', presetFrom: 'dateRange', preset0: '@YEAR_FIRST', preset1: '@TODAY' },
+          { field: 'MRP_NO', operator: 'in', filterId: 'filterMrpNo' }   // 生产货品
+        ],
+        orderBy: { BIL_DD: 'asc' },
+        statGroup: [
+          { FIELD: 'MRP_NO', CHK_DEF: 'T', ROW_TO_COL: 'F', TITLE: '生产货品',           _X_ROW_KEY: 'row_14023' },
+          { FIELD: 'PRD_NO', CHK_DEF: 'T', ROW_TO_COL: 'F', TITLE: '直接原料-材料代号',   _X_ROW_KEY: 'row_14024' }
+        ],
+        datePreset: { from: '@YEAR_FIRST', to: '@TODAY' }
+      }
     },
 
     rptsarp: {
@@ -1155,7 +1580,87 @@ var ReportEngine = (function() {
     'REM_TYPE':      '摘要类型',
     'AMTN_D':        '借方金额',
     'AMTN_C':        '贷方金额',
-    'AMTN_BAL':      '余额'
+    'AMTN_BAL':      '余额',
+    // ─── API5 科目余额表 (accBalTable) ───
+    'AMTN_NC_D':     '年初借方',
+    'AMTN_NC_C':     '年初贷方',
+    'AMTN_QC_D':     '期初借方',
+    'AMTN_QC_C':     '期初贷方',
+    'AMTN_Y_D':      '本年借方',
+    'AMTN_Y_C':      '本年贷方',
+    'AMTN_QM_D':     '期末借方',
+    'AMTN_QM_C':     '期末贷方',
+    // ─── API5 财务报表 (accZcfzb/accLrb/accXjllb) ───
+    'ITEM_NO':       '项目编号',
+    'ITEM_NAME':     '项目名称',
+    'ROW_ID':        '行号',
+    'STD001':        '期末数',
+    'STD002':        '年初数',
+    'STD003':        '本期发生数',
+    'STD004':        '本年累计数',
+    // ─── API5 MRPCU 物料分析明细表（语义待 ERP 数据回归校核） ───
+    'MO_ITM':        '加工项次',
+    'QTY_BIL':       '单据数量',
+    'BOM_NO':        '工单BOM代号',
+    'BOM_NO1':       'BOM代号',
+    'ITEM':          '组合项次',
+    'QTY':           '数量',
+    'QTY_STD':       '标准用量',
+    'LOS_RTO':       '损耗率',
+    'QTY_LOST_FIX':  '固定损耗量',
+    'QTY_RSV':       '已预留量',
+    'QTY_ADDLOST':   '附加损耗量',
+    'UP_STD':        '标准单价',
+    // ─── API5 五阶段列（用户确认：QC 期初在制/TR 本期投入/WG 本期完工/DQ 本期对冲/QM 期末在制/HY 本期耗用） ───
+    'QTY_QC':        '期初在制数量',
+    'QTY_TR':        '本期投入数量',
+    'QTY_WG':        '本期完工数量',
+    'QTY_LOST_WG':   '本期完工损耗数量',
+    'QTY_DQ':        '本期对冲数量',
+    'QTY_QM':        '期末在制数量',
+    'QTY_HY':        '本期耗用数量',
+    'QTY1_QC':       '期初在制基本数量',
+    'QTY1_TR':       '本期投入基本数量',
+    'QTY1_HY':       '本期耗用基本数量',
+    'QTY1_DQ':       '本期对冲基本数量',
+    'QTY1_QM':       '期末在制基本数量',
+    'CST_QC':        '期初在制成本',
+    'CST_TR':        '本期投入成本',
+    'CST_WG':        '本期完工成本',
+    'CST_DQ':        '本期对冲成本',
+    'CST_QM':        '期末在制成本',
+    'CST_HY':        '本期耗用成本',
+    'CST_MAN_QC':    '期初在制人工成本',
+    'CST_MAN_TR':    '本期投入人工成本',
+    'CST_MAN_WG':    '本期完工人工成本',
+    'CST_MAN_DQ':    '本期对冲人工成本',
+    'CST_MAN_QM':    '期末在制人工成本',
+    'CST_MAK_QC':    '期初在制制造费用',
+    'CST_MAK_TR':    '本期投入制造费用',
+    'CST_MAK_WG':    '本期完工制造费用',
+    'CST_MAK_DQ':    '本期对冲制造费用',
+    'CST_MAK_QM':    '期末在制制造费用',
+    'CST_PRD_QC':    '期初在制材料成本',
+    'CST_PRD_TR':    '本期投入材料成本',
+    'CST_PRD_WG':    '本期完工材料成本',
+    'CST_PRD_DQ':    '本期对冲材料成本',
+    'CST_PRD_QM':    '期末在制材料成本',
+    'CST_OUT_QC':    '期初在制委外成本',
+    'CST_OUT_TR':    '本期投入委外成本',
+    'CST_OUT_WG':    '本期完工委外成本',
+    'CST_OUT_DQ':    '本期对冲委外成本',
+    'CST_OUT_QM':    '期末在制委外成本',
+    'CST_STD_QC':    '期初在制标准成本',
+    'CST_STD_TR':    '本期投入标准成本',
+    'CST_STD_HY':    '本期耗用标准成本',
+    'CST_STD_DQ':    '本期对冲标准成本',
+    'CST_STD_QM':    '期末在制标准成本',
+    // ─── API5 MRPCE 直接原料明细表 ───
+    'UNIT_NAME_H':   '母件单位',
+    'SPC_PRD':       '材料规格',
+    'QTY_PRD':       '材料数量',
+    'QTY_AVE':       '平均耗用数量',
+    'CST_AVE':       '平均成本'
   };
 
   // Decimal-type fields (right-aligned, numeric formatting)
@@ -1190,7 +1695,19 @@ var ReportEngine = (function() {
     'CST_PRD1','CST_PRD1_RT','CST_MAN_RT','CST_MK_RT','CST_OUT_RT','CST_PRD2','CST_PRD2_RT',
     'QTY_DZ','QTY_UNPS','QTY_PRE','QTY_PRE_UNSH','QTY_RK','QTY_RK_UNSH','QTY_JH','ITM',
     // v4 总分类账（长连接）
-    'AMT_D','AMT_C','AMT_BAL','AMTN_D','AMTN_C','AMTN_BAL','QTY_D','QTY_C','QTY_BAL','UP_D','UP_C','UP_BAL'
+    'AMT_D','AMT_C','AMT_BAL','AMTN_D','AMTN_C','AMTN_BAL','QTY_D','QTY_C','QTY_BAL','UP_D','UP_C','UP_BAL',
+    // v5 API5 八报表
+    // 财务报表动态列（STD001 期末数/STD002 年初数/STD003 本期发生数/STD004 本年累计数）
+    'STD001','STD002','STD003','STD004',
+    // 科目余额表
+    'AMTN_NC_D','AMTN_NC_C','AMTN_QC_D','AMTN_QC_C','AMTN_Y_D','AMTN_Y_C','AMTN_QM_D','AMTN_QM_C',
+    // MRPCU 物料分析明细表
+    'QTY_BIL','QTY_STD','LOS_RTO','QTY_LOST_FIX','QTY_RSV','QTY_ADDLOST','UP_STD',
+    // 五阶段列（QC 期初在制/TR 本期投入/WG 本期完工/DQ 本期对冲/QM 期末在制/HY 本期耗用）
+    'QTY_QC','QTY_TR','QTY_WG','QTY_LOST_WG','QTY_DQ','QTY_QM','QTY_HY',
+    'QTY1_QC','QTY1_TR','QTY1_HY','QTY1_DQ','QTY1_QM',
+    // MRPCE 直接原料明细表
+    'QTY_PRD','QTY_AVE','CST_AVE'
   ];
 
   // Currency fields (prefix with ¥)
@@ -1206,7 +1723,17 @@ var ReportEngine = (function() {
     'AMTN_JZ','AMTN_SHARE','AMTN_NET','AMTN_REST','AMTN_QQ_SHARE','AMTN_BQ_SHARE','AMTN_BQLJ_SHARE','AMTN_NET_BQ',
     'CST_PRD1','CST_PRD2','CST_STD','CST_AMT','UP_AVG_CST','CST_UP',
     // v4 总分类账（长连接）
-    'AMT_D','AMT_C','AMT_BAL','AMTN_D','AMTN_C','AMTN_BAL','UP_D','UP_C','UP_BAL'
+    'AMT_D','AMT_C','AMT_BAL','AMTN_D','AMTN_C','AMTN_BAL','UP_D','UP_C','UP_BAL',
+    // v5 API5 八报表
+    // 科目余额表 12 金额列
+    'AMTN_NC_D','AMTN_NC_C','AMTN_QC_D','AMTN_QC_C','AMTN_Y_D','AMTN_Y_C','AMTN_QM_D','AMTN_QM_C',
+    // 五阶段成本列（X 成本/X 人工成本/X 制造费用/X 材料成本/X 委外成本/X 标准成本/平均成本）
+    'CST_QC','CST_MAN_QC','CST_MAK_QC','CST_PRD_QC','CST_OUT_QC',
+    'CST_TR','CST_MAN_TR','CST_MAK_TR','CST_PRD_TR','CST_OUT_TR',
+    'CST_WG','CST_MAN_WG','CST_MAK_WG','CST_PRD_WG','CST_OUT_WG',
+    'CST_DQ','CST_MAN_DQ','CST_MAK_DQ','CST_PRD_DQ','CST_OUT_DQ',
+    'CST_QM','CST_MAN_QM','CST_MAK_QM','CST_PRD_QM','CST_OUT_QM',
+    'CST_HY','CST_STD_QC','CST_STD_TR','CST_STD_HY','CST_STD_DQ','CST_STD_QM','CST_AVE'
   ];
 
   /* ================================================================
@@ -1596,65 +2123,123 @@ var ReportEngine = (function() {
   }
 
   /**
-   * Build request body for the stream report (accgl 总分类账, v4 长连接 API)
-   * 结构对照 标准报表制表API4.md：SEARCH_INFO [0]展示配置 [1]fixCondition [2]orderBy + DISPLAY_FIELDS
-   * BOOK_NO 铁律：必填（空值服务端回 406；前端 app.js 已拦，此处再兜底传空）
+   * Build request body for stream reports (v4 accgl / v5 API5 八报表, 长连接 API)
+   * 结构对照 标准报表制表API4/API5.md：SEARCH_INFO [0]展示配置 [1]fixCondition [2..]筛选元素 [末]orderBy
+   * + 顶层 DISPLAY_FIELDS；财务报表另有 RPT_NO/TYPE_NO，制造 3 只另有 STAT_GROUP
+   * cfg.stream 驱动：fixCondition 模板用 @占位符替换业务值，elements 描述中间筛选元素
+   * BOOK_NO 铁律：必填（空值服务端回 SSE ERR「账簿不能为空」；前端 app.js 已拦，此处再兜底传空）
    */
   function buildRequestStream(cfg, filters) {
     filters = filters || {};
-    var bookNo = filters.filterBookNo || '';
-    var period = filters.dateCst || '';
-    if (!/^\d{4}-\d{2}$/.test(period)) {
-      // 非法/空期间 → 默认当前月（YYYY-MM）
-      var now = new Date();
-      period = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    var s = cfg.stream || {};
+    var ctx = buildStreamCtx(filters);
+
+    function ph(v) {
+      // @占位符解析；非占位符（"F"/"1"/数字/null）原样返回
+      if (typeof v === 'string' && v.charAt(0) === '@') {
+        var name = v.slice(1);
+        return (name in ctx) ? ctx[name] : '';
+      }
+      return v;
     }
+
+    // [1] fixCondition：模板键值逐项解析占位符
+    var fixCondition = {};
+    Object.keys(s.fixCondition || {}).forEach(function(k) {
+      fixCondition[k] = ph(s.fixCondition[k]);
+    });
+
+    // [2]~[N-1] 筛选元素（日期/工单号/母件代号…，文档顺序固定）
+    var searchInfo = [];
+    (s.elements || []).forEach(function(el) {
+      var elem = {
+        field: el.field,
+        operator: el.operator || 'in',
+        fieldDisabled: el.fieldDisabled === true
+      };
+      if (el.fieldType)  { elem.fieldType = el.fieldType; }
+      if (el.need !== undefined) { elem.need = el.need; }
+      if (el.dateOperator) { elem.dateOperator = el.dateOperator; }
+
+      if (el.value !== undefined) {
+        elem.value = ph(el.value);            // 标量原样（如 MRPCU QTY=0）
+      } else if (el.presetFrom === 'dateRange') {
+        // 日期元素：优先取用户输入的日期区间，空则用 @占位符预设
+        var from = filters.dateFrom || ph(el.preset0) || null;
+        var to = filters.dateTo || ph(el.preset1) || null;
+        if (el.sameEndsFrom) { to = from; }   // MRPCT：两端都取 from
+        elem.value = [from, to];
+      } else {
+        var fid = el.filterId;                // 显式 filterId，避开 fieldToKey 的 BOOK_NO→filterMrpNo 坑
+        elem.value = (fid && filters[fid] !== undefined) ? filters[fid] : '';
+      }
+      searchInfo.push(elem);
+    });
+
+    // [末] orderBy
+    searchInfo.push({ orderBy: s.orderBy || { SYS_DATE: 'asc' } });
+
+    var requestFields = s.requestFields || cfg.displayFields;
+
+    // [0] 展示元素（总账 4 只有 showBody；MRPCE showLadder="T"）
+    var displayEl = {
+      showLadder: s.showLadder || 'F',
+      displayFields: requestFields.slice(),
+      sumFields: []
+    };
+    if (s.showBody) { displayEl.showBody = s.showBody; }
+
+    var body = {
+      PGM: cfg.pgm,
+      SEARCH_INFO: [displayEl, { fixCondition: fixCondition }].concat(searchInfo),
+      DISPLAY_FIELDS: (s.disFieldsPrefix || '') + requestFields.join(',')
+    };
+    // 顶层额外字段：财务报表 RPT_NO/TYPE_NO（占位符同样走 ph() 替换，不能直传）
+    if (s.topFields) {
+      Object.keys(s.topFields).forEach(function(k) { body[k] = ph(s.topFields[k]); });
+    }
+    // STAT_GROUP 原样传（用户决策：不做分组 UI，深拷贝防引用污染）
+    if (s.statGroup) {
+      body.STAT_GROUP = JSON.parse(JSON.stringify(s.statGroup));
+    }
+    return body;
+  }
+
+  /**
+   * 流式报表 @占位符上下文（BOOK_NO/会计期间/当前日期派生值）
+   * 会计期间非法/空 → 默认当前月（YYYY-MM，与 v4 总分类账行为一致）
+   */
+  function buildStreamCtx(filters) {
+    var now = new Date();
+    var y = now.getFullYear();
+    var m = String(now.getMonth() + 1).padStart(2, '0');
+    var d = String(now.getDate()).padStart(2, '0');
+
+    var period = filters.dateCst || '';
+    if (!/^\d{4}-\d{2}$/.test(period)) { period = y + '-' + m; }
     var years = parseInt(period.slice(0, 4), 10);
     var iperiod = parseInt(period.slice(5, 7), 10);
     var dateB = period + '-01';
-    var lastDay = new Date(years, iperiod, 0).getDate();
-    var dateE = period + '-' + String(lastDay).padStart(2, '0');
+    var dateE = period + '-' + String(new Date(years, iperiod, 0).getDate()).padStart(2, '0');
 
-    var fixCondition = {
-      BOOK_NO: bookNo,                     // 账簿（下拉选中值，必填）
-      CUR_ID: '',
-      ACC_IPERIOD_B: period,               // 会计期间起 YYYY-MM
-      ACC_IPERIOD_E: period,               // 会计期间止 YYYY-MM
-      CHK_ACCN_TYPE: '2',
-      ACC_NO: '',
-      ACC_NO_B: '',
-      ACC_NO_E: '',
-      REL_CLS_B: 1,
-      REL_CLS_E: 10,
-      AMTN_BAL_TYPE: '1',
-      CHK_POSTACC: 'F',
-      CHK_STOP: 'F',
-      CHK_NOVOH: 'F',
-      CHK_NOVOH_BAL_ZERO: 'F',
-      CHK_FZHS_DETAIL: 'F',
-      CHK_ARP_DAT: 'F',
-      CHK_DETAIL_ACCN: 'F',
-      CHK_NO_POA_VOH: 'F',
-      CHK_NO_SYTZ_VOH: 'F',
-      SHOW_BN_TYPE: '1',
-      ORDERBY_TYPE: '1',
-      START_DD: dateB + 'T00:00:00',
-      YEARS: years,
-      IPERIOD: iperiod,
-      TYPE_NO: '01',
-      CHK_GROUP_CUR_LOC: 'F',
-      DATE_B: dateB,
-      DATE_E: dateE
-    };
+    var monthLast = new Date(y, parseInt(m, 10), 0);
+    var ml = String(monthLast.getMonth() + 1).padStart(2, '0');
+    var md = String(monthLast.getDate()).padStart(2, '0');
 
     return {
-      PGM: cfg.pgm,
-      SEARCH_INFO: [
-        { showBody: 'T', showLadder: 'F', displayFields: cfg.displayFields.slice(), sumFields: [] },
-        { fixCondition: fixCondition },
-        { orderBy: { SYS_DATE: 'asc' } }
-      ],
-      DISPLAY_FIELDS: cfg.displayFields.join(',')
+      BOOK_NO: filters.filterBookNo || '',
+      RPT_NO: filters.filterRptNo || '',      // 所选报表样式（@RPT_NO）
+      TYPE_NO: filters.styleTypeNo || '',     // 所选样式所属科目表代号（@TYPE_NO，app.js 注入）
+      PERIOD: period,
+      YEARS: years,
+      IPERIOD: iperiod,
+      DATE_B: dateB,
+      DATE_E: dateE,
+      START_DD: dateB + 'T00:00:00',
+      MONTH_FIRST: y + '-' + m + '-01',
+      MONTH_LAST: y + '-' + ml + '-' + md,
+      YEAR_FIRST: y + '-01-01',
+      TODAY: y + '-' + m + '-' + d
     };
   }
 
@@ -1671,13 +2256,21 @@ var ReportEngine = (function() {
     var cfg = REPORT_CONFIG[reportKey];
     if (!cfg) { return Promise.reject(new Error('Unknown report: ' + reportKey)); }
 
-    // ── 长连接流式报表（v4）：独立请求体 + fetchStreamReport ──
+    // ── 长连接流式报表（v4/v5）：独立请求体 + fetchStreamReport ──
     if (cfg.apiMethod === 'getReportStream') {
       var streamBody = buildRequestStream(cfg, filters);
-      return Api.fetchStreamReport(cfg.apiPath, streamBody, { onProgress: onProgress }).then(function(rows) {
+      var colInfo = [];
+      return Api.fetchStreamReport(cfg.apiPath, streamBody, {
+        onProgress: onProgress,
+        onData: function(d) {
+          // COLUMN_INFO：财务报表是数组（动态列）；制造报表空数据时是 {} 对象（实测）→ 数组防护
+          if (d && Array.isArray(d.COLUMN_INFO)) { colInfo = d.COLUMN_INFO; }
+        }
+      }).then(function(rows) {
+        _currentColumnInfo = colInfo;   // renderColumns:'columnInfo' 的动态列表头读取
         return {
           data: rows,
-          columnInfo: [],
+          columnInfo: colInfo,
           totalEstimate: rows.length
         };
       });
@@ -1730,6 +2323,30 @@ var ReportEngine = (function() {
     var cfg = REPORT_CONFIG[reportKey];
     if (!cfg) return [];
 
+    // 财务报表动态列（renderColumns:'columnInfo'）：前导列 + COLUMN_INFO 映射
+    // COLUMN_INFO [{NAME, TITLE}] 异步到达（PERCENT 100 消息），TITLE 走 I18n.t，未知回退原文
+    if (cfg.renderColumns === 'columnInfo') {
+      var cols = [];
+      (cfg.leadingColumns || []).forEach(function(f) {
+        cols.push({
+          field: f,
+          label: getColumnLabel(f),
+          isDecimal: false,
+          isCurrency: false
+        });
+      });
+      (_currentColumnInfo || []).forEach(function(c) {
+        if (!c || !c.NAME) return;
+        cols.push({
+          field: c.NAME,
+          label: I18n.t(COLUMN_LABELS[c.NAME] || c.TITLE || c.NAME),
+          isDecimal: isDecimalField(c.NAME),
+          isCurrency: isCurrencyField(c.NAME)
+        });
+      });
+      return cols;
+    }
+
     return cfg.displayFields.map(function(field) {
       return {
         field: field,
@@ -1752,8 +2369,13 @@ var ReportEngine = (function() {
     if (!columns.length) { return; }
 
     tbody.innerHTML = data.map(function(row) {
-      return '<tr>' + columns.map(function(col) {
-        var raw = row[col.field];
+      // API5 行样式：_SKIP_STAT="T" 汇总行加粗（MRPCE）；财务报表一级项目行加粗
+      var trClass = '';
+      if (row && row._SKIP_STAT === 'T') { trClass = ' class="row-total"'; }
+      else if (row && row.SPACES === 0 && row.ITEM_NO !== undefined) { trClass = ' class="row-level1"'; }
+
+      return '<tr' + trClass + '>' + columns.map(function(col) {
+        var raw = row ? row[col.field] : '';
         var display = formatCellValue(raw, col.field);
         var cssClass = getCellClass(col.field);
 
@@ -1765,7 +2387,13 @@ var ReportEngine = (function() {
           return '<td class="' + cssClass + '">' + getRemTypeBadge(raw) + '</td>';
         }
 
-        return '<td class="' + cssClass + '">' + escapeHtml(display) + '</td>';
+        // 财务报表层级缩进：SPACES×16px 应用于项目名称列
+        var indent = '';
+        if (col.field === 'ITEM_NAME' && row && row.SPACES) {
+          indent = ' style="padding-left:' + (row.SPACES * 16) + 'px"';
+        }
+
+        return '<td class="' + cssClass + '"' + indent + '>' + escapeHtml(display) + '</td>';
       }).join('') + '</tr>';
     }).join('');
   }
@@ -1808,7 +2436,9 @@ var ReportEngine = (function() {
       filterPrdMark:   _val('filterPrdMark'),
       filterFxKnd:     _val('filterFxKnd'),
       // v4 总分类账（长连接）
-      filterBookNo:    _val('filterBookNo')
+      filterBookNo:    _val('filterBookNo'),
+      // v6 三财务报表（长连接）：报表样式（RPT_NO）
+      filterRptNo:     _val('filterRptNo')
     };
   }
 
@@ -1843,6 +2473,7 @@ var ReportEngine = (function() {
       prdMark: document.querySelector('.filter-group-prdmark'),
       fxKnd:   document.querySelector('.filter-group-fxknd'),
       bookNo:  document.querySelector('.filter-group-bookno'),
+      rptStyle: document.querySelector('.filter-group-rptstyle'),
       dateRange: document.querySelector('.filter-date-group')
     };
 
@@ -1877,7 +2508,14 @@ var ReportEngine = (function() {
       'hrNoDate':    ['ygNo','dep'],
       'hrDate':      ['ygNo','dep','outDay','status'],
       // v4 总分类账（长连接）：账簿下拉 + 会计期间
-      'accgl':       ['bookNo','dateCst']
+      'accgl':       ['bookNo','dateCst'],
+      // v6 三财务报表（长连接）：账簿 + 报表样式 + 会计期间（不动共用 accgl）
+      'accglStyle':  ['bookNo','rptStyle','dateCst'],
+      // v5 API5 八报表（4 总账复用 accgl 布局；生产 4 只）
+      'mrpcu':       ['mrpNo','docNo'],       // 母件代号 + 工单号（无日期）
+      'mrpct':       ['mrpNo','dateRange'],   // 生产货品 + 日期区间
+      'mrpcx':       ['prd','dateRange'],     // 材料代号 + 日期区间
+      'mrpce':       ['mrpNo','dateRange']    // 生产货品 + 日期区间
     };
 
     // Remove dateRange if hideDateUI is true (SYS_DATE reports)
@@ -1918,6 +2556,7 @@ var ReportEngine = (function() {
       else if (reportKey === 'invic') { docNoLabel.textContent = I18n.t('调拨单号'); }
       else if (reportKey === 'invij') { docNoLabel.textContent = I18n.t('调整单号'); }
       else if (reportKey === 'fixaa') { docNoLabel.textContent = I18n.t('资产代号'); }
+      else if (reportKey === 'mrpcu') { docNoLabel.textContent = I18n.t('工单号'); }   // API5 MO_NO
       else { docNoLabel.textContent = I18n.t('单号'); }
     }
 
@@ -1927,6 +2566,7 @@ var ReportEngine = (function() {
       if (reportKey === 'mrppu') { prdLabel.textContent = I18n.t('生产货品'); }
       else if (reportKey === 'mrpPK' || reportKey === 'mrpPS') { prdLabel.textContent = I18n.t('成品代号'); }
       else if (reportKey === 'accabgt') { prdLabel.textContent = I18n.t('科目代号'); }
+      else if (reportKey === 'mrpcx') { prdLabel.textContent = I18n.t('材料代号'); }   // API5 PRD_NO
       else { prdLabel.textContent = I18n.t('货品代号'); }
     }
 
@@ -1934,6 +2574,8 @@ var ReportEngine = (function() {
     var mrpNoLabel = document.querySelector('label[for="filterMrpNo"]');
     if (mrpNoLabel) {
       if (reportKey === 'accabgt') { mrpNoLabel.textContent = I18n.t('帐册代号'); }
+      else if (reportKey === 'mrpcu') { mrpNoLabel.textContent = I18n.t('母件代号'); }        // API5
+      else if (reportKey === 'mrpct' || reportKey === 'mrpce') { mrpNoLabel.textContent = I18n.t('生产货品'); }  // API5
       else { mrpNoLabel.textContent = I18n.t('成品代号'); }
     }
 
@@ -1971,12 +2613,12 @@ var ReportEngine = (function() {
       prdMarkLabel.textContent = I18n.t('货品特征');
     }
 
-    // Update label for filterDateCst（总分类账复用为「会计期间」）
+    // Update label for filterDateCst（总账 4 只复用为「会计期间」）
     var dateCstLabel = document.querySelector('label[for="filterDateCst"]');
     if (dateCstLabel) {
-      if (reportKey === 'accgl') {
+      if (cfg.filterLayout === 'accgl' || cfg.filterLayout === 'accglStyle') {
         dateCstLabel.textContent = I18n.t('会计期间');
-        // 打开总分类账即默认当前月（HTML 硬编码 2025-07 是旧演示值，不能用）
+        // 打开总账报表即默认当前月（HTML 硬编码 2025-07 是旧演示值，不能用）
         var cstEl = document.getElementById('filterDateCst');
         if (cstEl) {
           var now = new Date();
@@ -1987,6 +2629,16 @@ var ReportEngine = (function() {
       } else {
         dateCstLabel.textContent = I18n.t('成本年月');
       }
+    }
+
+    // 生产 3 只日期预填（可编辑，用户可改）：打开报表时按 cfg.stream.datePreset 填入
+    if (cfg.stream && cfg.stream.datePreset) {
+      var preset = cfg.stream.datePreset;
+      var presetCtx = buildStreamCtx({});
+      var fromEl = document.getElementById('filterDateFrom');
+      var toEl = document.getElementById('filterDateTo');
+      if (fromEl && preset.from) fromEl.value = preset.from.charAt(0) === '@' ? presetCtx[preset.from.slice(1)] : preset.from;
+      if (toEl && preset.to) toEl.value = preset.to.charAt(0) === '@' ? presetCtx[preset.to.slice(1)] : preset.to;
     }
   }
 
