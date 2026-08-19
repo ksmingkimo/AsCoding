@@ -202,7 +202,7 @@ AsCoding/
 │   ├── chat-core.js            ← Chat 发送流程编排
 │   ├── ai-client.js            ← 多模型 AI 统一客户端（Deepseek/QWen/Gemini/Claude，三语提示词）
 │   ├── ai-suggestions.js       ← AI 推荐提问（🧠 大脑按钮）
-│   ├── ai-parser.js            ← Markdown/表格/图表标记解析
+│   ├── ai-parser.js            ← Markdown/表格/图表标记解析（Round 53：裸 JSON·```json 围栏 → 表格；chart 前段落同走表格渲染；未闭合围栏兜底）
 │   ├── ai-chart.js             ← Chart.js 图表渲染
 │   ├── export.js               ← Excel / HTML / PDF / PPTX 导出（标题文件名随语言）
 │   │
@@ -217,8 +217,8 @@ AsCoding/
 │
 ├── screenshots/                ← 应用截图（界面预览）
 │
-├── deploy.ps1                  ← 部署包生成脚本（v1.6，31 文件）
-├── sunlike-erp-report-v1.6.zip ← 部署包（解压到 Web 服务器目录）
+├── deploy.ps1                  ← 部署包生成脚本（v1.7，31 文件）
+├── sunlike-erp-report-v1.7.zip ← 部署包（解压到 Web 服务器目录）
 │
 └── 文档（项目根目录）
     ├── 需求架构文档.md          ← 项目需求 & 技术架构

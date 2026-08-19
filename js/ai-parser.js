@@ -23,8 +23,9 @@ var AIParser = (function() {
     var chartMatch;
 
     while ((chartMatch = chartRegex.exec(rawText)) !== null) {
-      // 图表块之前的文本 → Markdown 渲染
-      html += renderMarkdown(rawText.substring(lastIndex, chartMatch.index));
+      // 图表块之前的文本 → 表格渲染（```table/裸 JSON 必须在这里也生效，
+      // 否则 chart 之前的 table 围栏会退化成代码块 —— Round 53 浏览器实测修复）
+      html += renderWithTables(rawText.substring(lastIndex, chartMatch.index));
       try {
         var chartConfig = JSON.parse(chartMatch[1].trim());
         var chartIdx = charts.length;
@@ -68,7 +69,133 @@ var AIParser = (function() {
       lastIdx = tableMatch.index + tableMatch[0].length;
     }
 
-    html += renderMarkdown(text.substring(lastIdx));
+    html += renderJsonTables(text.substring(lastIdx));
+    return html;
+  }
+
+  /**
+   * 判断值是否为普通对象（非 null、非数组）
+   */
+  function isPlainObject(v) {
+    return v !== null && typeof v === 'object' && !Array.isArray(v);
+  }
+
+  /**
+   * 判断值是否为非空对象数组（可渲染成表格的最小形态）
+   */
+  function isObjectArray(v) {
+    return Array.isArray(v) && v.length > 0 && v.every(isPlainObject);
+  }
+
+  /**
+   * 从 s[start]（必为 '['）起做括号平衡扫描（字符串/转义感知），
+   * 返回与之配对的 ']' 下标；未闭合或中途失衡返回 -1
+   */
+  function findJsonEnd(s, start) {
+    var depth = 0;
+    var inStr = false;
+    var esc = false;
+    for (var i = start; i < s.length; i++) {
+      var c = s.charAt(i);
+      if (inStr) {
+        if (esc) esc = false;
+        else if (c === '\\') esc = true;
+        else if (c === '"') inStr = false;
+        continue;
+      }
+      if (c === '"') { inStr = true; continue; }
+      if (c === '[' || c === '{') depth++;
+      else if (c === ']' || c === '}') {
+        depth--;
+        if (depth === 0) return i;
+        if (depth < 0) return -1;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * ```json 围栏内容：非空对象数组 → 表格；其余（解析失败/非对象数组/单对象）→ 代码块展示
+   */
+  function tryTableOrCode(jsonText) {
+    var trimmed = jsonText.trim();
+    try {
+      var data = JSON.parse(trimmed);
+      if (isObjectArray(data)) return renderTableHTML(data);
+    } catch (e) { /* 解析失败 → 代码块 */ }
+    return '<pre><code>' + Utils.escapeHtml(trimmed) + '</code></pre>';
+  }
+
+  /**
+   * 扫描文本中的裸 JSON 数组（行首 '[' 开头、无任何围栏标记）并渲染为表格。
+   * 防误伤：代码围栏内不转换；解析失败 / 非对象数组 / 单对象 → 原样走 Markdown
+   */
+  function bareJsonScan(text) {
+    var html = '';
+    var inFence = false;
+    var segStart = 0;
+    var i = 0;
+    while (i < text.length) {
+      // 仅当 i 位于行首时才做行级判断（围栏切换 / 裸 JSON 起点）
+      if (i === 0 || text.charAt(i - 1) === '\n') {
+        var lineEnd = text.indexOf('\n', i);
+        if (lineEnd === -1) lineEnd = text.length;
+        var rawLine = text.substring(i, lineEnd);
+        var trimmed = rawLine.replace(/^\s+/, '');
+        // ``` 开头（任意语言）→ 切换围栏态
+        if (trimmed.indexOf('```') === 0) {
+          var langMatch = trimmed.match(/^```(\w*)\s*$/);
+          var fenceLang = langMatch ? langMatch[1].toLowerCase() : '';
+          // 未闭合的 ```table/```json 围栏（闭合的早已在前面被消费）：
+          // 不进入跳过态、围栏行丢弃，下方 JSON 由裸 JSON 规则转换
+          if (!inFence && (fenceLang === 'table' || fenceLang === 'json')) {
+            html += renderMarkdown(text.substring(segStart, i));
+            i = lineEnd + 1;
+            segStart = i;
+            continue;
+          }
+          inFence = !inFence;
+          i = lineEnd + 1;
+          continue;
+        }
+        // 围栏外且行首是 '[' → 尝试提取完整 JSON
+        if (!inFence && trimmed.charAt(0) === '[') {
+          var start = i + (rawLine.length - trimmed.length); // 跳过行首缩进
+          var end = findJsonEnd(text, start);
+          if (end !== -1) {
+            try {
+              var data = JSON.parse(text.substring(start, end + 1));
+              if (isObjectArray(data)) {
+                html += renderMarkdown(text.substring(segStart, start));
+                html += renderTableHTML(data);
+                i = end + 1;
+                segStart = i;
+                continue;
+              }
+            } catch (e) { /* 解析失败 → 原样走 Markdown */ }
+          }
+        }
+      }
+      i++;
+    }
+    html += renderMarkdown(text.substring(segStart));
+    return html;
+  }
+
+  /**
+   * 渲染剩余文本：先处理 ```json 围栏（对象数组 → 表格），围栏外再扫描裸 JSON 数组
+   */
+  function renderJsonTables(text) {
+    var html = '';
+    var jsonFenceRe = /```json\s*\n([\s\S]*?)```/g;
+    var m;
+    var last = 0;
+    while ((m = jsonFenceRe.exec(text)) !== null) {
+      html += bareJsonScan(text.substring(last, m.index));
+      html += tryTableOrCode(m[1]);
+      last = m.index + m[0].length;
+    }
+    html += bareJsonScan(text.substring(last));
     return html;
   }
 

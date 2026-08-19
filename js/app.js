@@ -372,6 +372,9 @@ var App = (function() {
       var o = document.createElement('option');
       o.value = s.RPT_NO;
       o.textContent = s.RPT_NO + ' · ' + s.NAME;
+      // 样式所属科目表代号随选项走（readFilters 读取）：
+      // 转入数据源走独立全量请求（不经过 doQuery 注入），TYPE_NO 必须能从下拉读出
+      if (s.TYPE_NO !== null && s.TYPE_NO !== undefined) { o.dataset.typeNo = String(s.TYPE_NO); }
       sel.appendChild(o);
     });
     sel.selectedIndex = 0;   // 预选匹配类型的第一个样式

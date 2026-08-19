@@ -2438,8 +2438,19 @@ var ReportEngine = (function() {
       // v4 总分类账（长连接）
       filterBookNo:    _val('filterBookNo'),
       // v6 三财务报表（长连接）：报表样式（RPT_NO）
-      filterRptNo:     _val('filterRptNo')
+      filterRptNo:     _val('filterRptNo'),
+      // 所选样式所属科目表代号：从下拉选中 option 的 data-type-no 读（populateRptStyleSelect 写入）。
+      // 转入数据源等路径不走 doQuery 注入，TYPE_NO 必须在此处拿到，否则 ERP 报「科目表代号不能为空」
+      styleTypeNo:     _selData('filterRptNo', 'typeNo')
     };
+  }
+
+  /** 读取指定下拉选中 option 的 dataset 字段（无选中/无该字段 → 空字符串） */
+  function _selData(id, key) {
+    var sel = document.getElementById(id);
+    if (!sel || sel.selectedIndex < 0) return '';
+    var o = sel.options[sel.selectedIndex];
+    return (o && o.dataset && o.dataset[key]) ? o.dataset[key] : '';
   }
 
   /**
