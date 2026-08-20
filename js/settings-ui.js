@@ -231,6 +231,9 @@ var SettingsUI = (function() {
     var modal = document.getElementById('settingsModal');
 
     if (settingsBtn) settingsBtn.addEventListener('click', openSettingsModal);
+    // 登录页右上角齿轮（与主界面齿轮共用同一个设置面板）
+    var loginSettingsBtn = document.getElementById('loginSettingsBtn');
+    if (loginSettingsBtn) loginSettingsBtn.addEventListener('click', openSettingsModal);
     if (btnModalClose) btnModalClose.addEventListener('click', closeSettingsModal);
     if (btnCancelSettings) btnCancelSettings.addEventListener('click', closeSettingsModal);
 

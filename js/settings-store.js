@@ -110,6 +110,21 @@ var SettingsStore = (function() {
     return raw.replace(/\/+$/, '') + API_PATH;
   }
 
+  // ── 配置校验（登录前置检查） ─────────────────────────
+
+  /**
+   * 判断系统设置是否已正确配置（登录前调用）
+   * 判定标准：设置已保存 且 服务器地址非空、格式合法（http:// 或 https:// 开头）
+   * 其他机器浏览器 localStorage 为空 → false → 登录页拦截并引导去系统设置
+   * @returns {boolean}
+   */
+  function isConfigured() {
+    var s = getSettings();
+    var url = String(s.serverUrl || '').trim();
+    if (!url) return false;
+    return /^https?:\/\//i.test(url);
+  }
+
   // ── Legacy (kept for backward compat) ───────────────
 
   /**
@@ -133,6 +148,8 @@ var SettingsStore = (function() {
     clearAllAIKeys: clearAllAIKeys,
     // Server
     getServerUrl: getServerUrl,
+    // 配置校验（登录前置检查）
+    isConfigured: isConfigured,
     // Legacy
     getApiKey: getApiKey
   };

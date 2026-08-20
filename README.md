@@ -95,7 +95,7 @@ SEARCH_INFO 10 元素数组按索引 [0]~[9] 固定顺序组装，displayFields 
 
 ### 04 — 认证流程
 
-登录 → Token 存储（localStorage） → 后续请求自动注入 Authorization Header → 过期拦截（code 20001/20004） → 自动恢复会话。
+登录 → Token 存储（localStorage） → 后续请求自动注入 Authorization Header → 过期拦截（code 20001/20004） → 自动恢复会话。登录卡片右上角有系统设置齿轮（其他机器浏览器 localStorage 为空时先配置服务器地址）；按下登录时若系统设置未正确配置 → 不发请求，提醒并自动打开设置面板。
 
 ![认证流程](流程图/流程图_04_认证流程.png)
 
@@ -182,10 +182,10 @@ AsCoding/
 ├── js/（25 个，index.html 加载清单）
 │   ├── i18n.js                 ← 多语言核心（gettext 风格 t() / applyStatic / 语言解析链）
 │   ├── i18n-data.js            ← 三语静态字典（zh-tw / en，简体原文即 key，末尾同步 boot）
-│   ├── utils.js                ← 通用工具（Toast / 转义 / 格式化 / deepClone）
+│   ├── utils.js                ← 通用工具（Toast / 转义 / 格式化 / deepClone / LZString 压缩降级安全）
 │   ├── dialog.js               ← 应用内 confirm/prompt 弹窗
-│   ├── settings-store.js       ← 设置持久化（API Key / 服务器地址）
-│   ├── datasource-store.js     ← 数据源 CRUD（localStorage，上限 20）
+│   ├── settings-store.js       ← 设置持久化（API Key / 服务器地址 / isConfigured 登录前置检查）
+│   ├── datasource-store.js     ← 数据源 CRUD（localStorage，上限 20；超大拆分多卡片 + LZString 透明压缩 + 配额友好报错）
 │   ├── book-store.js           ← 账簿清单缓存（AccBook/GetList，登录/会话恢复预热，登出世代计数重置）
 │   ├── rpt-style-store.js      ← 报表样式缓存（accRptStyle/getlist，按账簿 BOOK_NO 隔离，TYPE_NO 来自账簿行；财务报表 RPT_NO/TYPE_NO 动态化）
 │   │
@@ -206,10 +206,10 @@ AsCoding/
 │   ├── ai-chart.js             ← Chart.js 图表渲染
 │   ├── export.js               ← Excel / HTML / PDF / PPTX 导出（标题文件名随语言）
 │   │
-│   ├── notepad-store.js        ← 记事本 CRUD（localStorage，上限 50，多数据源快照）
+│   ├── notepad-store.js        ← 记事本 CRUD（localStorage，上限 50，多数据源快照；全容器压缩信封）
 │   ├── notepad-ui.js           ← 记事本卡片渲染 + 保存/加载/删除/清空
-│   ├── settings-ui.js          ← 设置面板弹窗/验证
-│   └── app.js                  ← 主入口（AppState/查询/分页/初始化/表头渲染唯一入口）
+│   ├── settings-ui.js          ← 设置面板弹窗/验证（入口：主界面齿轮 + 登录卡片右上角齿轮 + 拦截自动打开）
+│   └── app.js                  ← 主入口（AppState/查询/分页/初始化/表头渲染唯一入口/登录前置检查）
 │
 ├── 流程图/                      ← 10 张 Draw.io 业务流程图
 ├── scripts/
@@ -217,8 +217,8 @@ AsCoding/
 │
 ├── screenshots/                ← 应用截图（界面预览）
 │
-├── deploy.ps1                  ← 部署包生成脚本（v1.7，31 文件）
-├── sunlike-erp-report-v1.7.zip ← 部署包（解压到 Web 服务器目录）
+├── deploy.ps1                  ← 部署包生成脚本（v1.8，31 文件）
+├── sunlike-erp-report-v1.8.zip ← 部署包（解压到 Web 服务器目录）
 │
 └── 文档（项目根目录）
     ├── 需求架构文档.md          ← 项目需求 & 技术架构

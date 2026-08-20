@@ -11,8 +11,8 @@ var App = (function() {
      App State（全局共享状态）
      ================================================================ */
   window.AppState = {
-    currentReport: 'invSO',
-    currentReportName: '受订报表',
+    currentReport: '',          // 入口待机态为 ''：登录/会话恢复不预选报表，等用户从搜索/菜单选择
+    currentReportName: '',
     lastQueryData: null,       // { pgm, reportKey, filters, data, columnInfo, columnProp, displayFields }
     chatHistory: [],           // { role, content }
     activeDSId: null
@@ -33,6 +33,11 @@ var App = (function() {
       return;
     }
     if (ReportEngine.isLoading) return;
+    // 入口待机态：未选报表不发请求（按钮已禁用时的键盘/其他路径兜底）
+    if (_entryIdle) {
+      Utils.showToast(I18n.t('请先选择报表'), 'error');
+      return;
+    }
     // 0 账簿拦截兜底：按钮已禁用时查询也不该跑（键盘/其他路径）
     if (_ledgerBlocked) return;
 
@@ -61,6 +66,14 @@ var App = (function() {
         return;
       }
       filters.styleTypeNo = style.TYPE_NO;
+    }
+
+    // MRPCU 铁律（物料分析明细表）：母件代号为空 → 服务端 SQL Server 8623
+    // 「查询处理器用尽了内部资源」（Round 54 实测 AT04 复现：MO_NO/BOM_NO/MRP_NO 全空触发；
+    // 母件代号非空 → 正常返回 3 行；仅工单号 → 0 行无数据）。前端先拦，不发请求。
+    if (isStream && reportKey === 'mrpcu' && !filters.filterMrpNo) {
+      Utils.showToast(I18n.t('请输入母件代号'), 'error');
+      return;
     }
 
     var viewPage = ReportEngine.currentPage || 1;
@@ -270,12 +283,26 @@ var App = (function() {
    */
   function refreshDynamicI18n() {
     if (typeof ReportEngine === 'undefined') return;
+
+    // 待机态：标题/空状态的 data-i18n 已被摘除，applyStatic 不再覆盖，这里按新语言重写
+    if (_entryIdle) {
+      var idleTitle = document.getElementById('reportTitle');
+      if (idleTitle) idleTitle.textContent = I18n.t('请选择报表');
+      setEmptyStateText(I18n.t('请选择报表'), I18n.t('在左侧搜索并选择一张报表开始查询'));
+      return;
+    }
+
     renderCurrentTableHead();
 
     // 报表标题（AppState.currentReportName 保持简体规范值，渲染点翻译）
     var reportTitle = document.getElementById('reportTitle');
     var cfg = ReportEngine.getConfig(AppState.currentReport);
     if (reportTitle && cfg) reportTitle.textContent = I18n.t(cfg.name);
+
+    // 0 笔时空状态文案（data-i18n 已在待机态摘除，语言切换后需手动重写）
+    if (_allData.length === 0) {
+      setEmptyStateText(I18n.t('暂无数据'), I18n.t('请调整查询条件后重试'));
+    }
 
     // 已有数据时用当前语言重刷当前页切片（审核徽章等动态文字）+ 分页控件 title
     if (_allData.length > 0) {
@@ -328,6 +355,65 @@ var App = (function() {
   function unblockLedgerReport() {
     _ledgerBlocked = false;
     setLedgerButtonsDisabled(false);
+  }
+
+  /* ================================================================
+     入口待机态（未选报表）
+     登录/会话恢复后进入：不预选报表、不自动查询，焦点停【搜索报表】，
+     避免一进来画面未看清就发起查询（浪费资源 + 首屏卡顿）。
+     用户从搜索框/侧边栏选中报表 → openReport → _openReportCore 退出待机态。
+     ================================================================ */
+  var _entryIdle = true;
+
+  function setEntryButtonsDisabled(disabled) {
+    ['queryBtn', 'transferBtn', 'resetBtn', 'refreshBtn'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.disabled = disabled;
+    });
+  }
+
+  /** 空状态文案统一入口（待机态摘除 data-i18n 后由 JS 驱动，语言切换也走这里） */
+  function setEmptyStateText(title, hint) {
+    var emptyState = document.getElementById('emptyState');
+    if (!emptyState) return;
+    var ps = emptyState.querySelectorAll('p');
+    if (ps[0]) ps[0].textContent = title;
+    if (ps[1]) ps[1].textContent = hint;
+  }
+
+  function enterEntryIdle() {
+    _entryIdle = true;
+    setEntryButtonsDisabled(true);
+
+    var reportTitle = document.getElementById('reportTitle');
+    if (reportTitle) {
+      reportTitle.textContent = I18n.t('请选择报表');
+      // 摘除 data-i18n：语言切换的 applyStatic 重扫会把它覆盖回静态默认报表名
+      reportTitle.removeAttribute('data-i18n');
+    }
+
+    var filterPanel = document.querySelector('.filter-panel');
+    if (filterPanel) filterPanel.style.display = 'none';
+
+    var tableWrapper = document.getElementById('tableWrapper');
+    if (tableWrapper) tableWrapper.style.display = 'none';
+
+    var pagination = document.querySelector('.pagination');
+    if (pagination) pagination.style.display = 'none';
+
+    setEmptyStateText(I18n.t('请选择报表'), I18n.t('在左侧搜索并选择一张报表开始查询'));
+    var emptyState = document.getElementById('emptyState');
+    if (emptyState) {
+      emptyState.style.display = '';
+      emptyState.querySelectorAll('p').forEach(function(p) { p.removeAttribute('data-i18n'); });
+    }
+
+    AppState.currentReport = '';
+    AppState.currentReportName = '';
+    if (typeof ReportMenu !== 'undefined') {
+      ReportMenu.render();     // 菜单高亮清零（currentReport 为空天然无 active）
+      ReportMenu.focusSearch();
+    }
   }
 
   /** 账簿下拉填充：BOOK_NO · NAME；保持已选值，无效/未选则预选第一个
@@ -464,6 +550,17 @@ var App = (function() {
     var cfg = ReportEngine.getConfig(reportKey);
     if (!cfg) return;
     if (_ledgerBlocked) unblockLedgerReport();   // 切换到其他报表 → 按钮恢复
+    if (_entryIdle) {                            // 退出待机态 → 按钮/面板/表格恢复
+      _entryIdle = false;
+      setEntryButtonsDisabled(false);
+      var idleFilterPanel = document.querySelector('.filter-panel');
+      if (idleFilterPanel) idleFilterPanel.style.display = '';
+      var idleTableWrapper = document.getElementById('tableWrapper');
+      if (idleTableWrapper) idleTableWrapper.style.display = '';
+      var idleEmptyState = document.getElementById('emptyState');
+      if (idleEmptyState) idleEmptyState.style.display = 'none';
+      setEmptyStateText(I18n.t('暂无数据'), I18n.t('请调整查询条件后重试'));
+    }
 
     AppState.currentReport = reportKey;
     AppState.currentReportName = cfg.name;   // 从配置取名，不依赖 DOM 文本
@@ -558,14 +655,47 @@ var App = (function() {
             copy.REM_TYPE = ReportEngine.formatCellValue(row.REM_TYPE, 'REM_TYPE');
             return copy;
           });
-          DataSourceStore.update(pendingDS.id, {
-            status: 'ready',
-            data: rows,
-            columnInfo: result.columnInfo || {},
-            recordCount: rows.length
-          });
-          DatasourceList.renderDataSourceList();
-          Utils.showToast(I18n.t('数据源已就绪：{0} 条', result.data ? result.data.length.toLocaleString() : '0'), 'success');
+          // Round 56 超大拆分（用户 2026-08-20 指定）：行数超过 MAX_DS_ROWS 拆多张卡片，
+          // 卡片名称加后缀 _1/_2/_3…（localStorage 配额 ~5MB，mrpcx 26996 行整卡 10MB 必爆；
+          // 存储层另有透明压缩，26996 行拆 6 卡后共 ~1.3MB）
+          var MAX_DS_ROWS = 5000;
+          if (rows.length > MAX_DS_ROWS) {
+            DataSourceStore.remove(pendingDS.id);
+            var chunkCount = Math.ceil(rows.length / MAX_DS_ROWS);
+            var existingSources = DataSourceStore.getAll();
+            // 手工构造卡片 + 一次性 saveAll（避免循环 add 每步重复压缩全量；id 加序号保唯一）
+            // 升序构造 → 存储顺序即 _1/_2/… 在前
+            var newCards = [];
+            for (var ci = 0; ci < chunkCount; ci++) {
+              newCards.push({
+                id: 'ds_' + Date.now() + '_' + ci,
+                createdAt: new Date().toISOString(),
+                status: 'ready',
+                reportName: AppState.currentReportName + '_' + (ci + 1),
+                pgm: cfg.pgm || '',
+                filterSummary: DatasourceList.buildFilterSummary(),
+                columnInfo: result.columnInfo || {},
+                displayFields: cfg.displayFields ? cfg.displayFields.join(',') : '',
+                data: rows.slice(ci * MAX_DS_ROWS, (ci + 1) * MAX_DS_ROWS),
+                recordCount: Math.min(MAX_DS_ROWS, rows.length - ci * MAX_DS_ROWS)
+              });
+            }
+            var merged = newCards.concat(existingSources);
+            if (merged.length > 20) merged = merged.slice(0, 20);   // 与 add() 同款 20 卡上限
+            DataSourceStore.saveAll(merged);
+            if (window.AppState) window.AppState.activeDSId = null;
+            DatasourceList.renderDataSourceList();
+            Utils.showToast(I18n.t('数据共 {0} 行，已拆分为 {1} 张卡片转入', rows.length.toLocaleString(), chunkCount), 'success');
+          } else {
+            DataSourceStore.update(pendingDS.id, {
+              status: 'ready',
+              data: rows,
+              columnInfo: result.columnInfo || {},
+              recordCount: rows.length
+            });
+            DatasourceList.renderDataSourceList();
+            Utils.showToast(I18n.t('数据源已就绪：{0} 条', result.data ? result.data.length.toLocaleString() : '0'), 'success');
+          }
         })
         .catch(function(err) {
           DataSourceStore.update(pendingDS.id, {
@@ -650,21 +780,17 @@ var App = (function() {
 
         var filterDateFrom = document.getElementById('filterDateFrom');
         var filterDateTo = document.getElementById('filterDateTo');
-        if (filterDateFrom) filterDateFrom.value = '2026-01-01';
-        if (filterDateTo) filterDateTo.value = '2026-12-31';
+        // Round 54：写死 2026/2025-07 会让老账套（如 AT04 2022）重置后必查空；
+        // 改为动态当前年/月（日期区间按当前年，成本年月按当前月 YYYY-MM）
+        var nowReset = new Date();
+        var curYear = nowReset.getFullYear();
+        if (filterDateFrom) filterDateFrom.value = curYear + '-01-01';
+        if (filterDateTo) filterDateTo.value = curYear + '-12-31';
         var filterDateCst = document.getElementById('filterDateCst');
         if (filterDateCst) {
-          // 总账系列报表（总分类账/科目余额表/三财务报表，accgl/accglStyle 布局）：
-          // 会计期间重置回当前月（YYYY-MM）；其余报表保持默认成本年月
-          var resetCfg = ReportEngine.getConfig(AppState.currentReport);
-          if (resetCfg && (resetCfg.filterLayout === 'accgl' || resetCfg.filterLayout === 'accglStyle')) {
-            var now = new Date();
-            var mm = String(now.getMonth() + 1);
-            if (mm.length === 1) mm = '0' + mm;
-            filterDateCst.value = now.getFullYear() + '-' + mm;
-          } else {
-            filterDateCst.value = '2025-07';
-          }
+          var mm = String(nowReset.getMonth() + 1);
+          if (mm.length === 1) mm = '0' + mm;
+          filterDateCst.value = nowReset.getFullYear() + '-' + mm;
         }
         // 账簿下拉：重置回第一个账簿（若有选项；0 账簿时保持空）
         var filterBookNo = document.getElementById('filterBookNo');
@@ -775,6 +901,18 @@ var App = (function() {
           return;
         }
 
+        // 系统设置前置检查（别的机器浏览器 localStorage 为空时拦截）：
+        // 服务器地址未保存/格式非法 → 不发起登录请求（避免必然失败的错误请求），
+        // 提示原因并自动打开系统设置面板引导配置
+        if (typeof SettingsStore !== 'undefined' && !SettingsStore.isConfigured()) {
+          if (loginError) {
+            loginError.textContent = I18n.t('请先进行系统设置，配置服务器地址后再登录');
+            loginError.classList.add('visible');
+          }
+          if (typeof SettingsUI !== 'undefined') SettingsUI.open();
+          return;
+        }
+
         var loginBtn = document.getElementById('loginBtn');
         var origHTML = loginBtn ? loginBtn.innerHTML : '';
         if (loginBtn) {
@@ -795,9 +933,9 @@ var App = (function() {
             if (userAvatarEl) userAvatarEl.textContent = usr.substring(0, 2).toUpperCase();
             if (userCompanyEl) userCompanyEl.textContent = compno;
 
-            // 登录后走 openReport 全链路（重登场景：账簿下拉重填/筛选面板重置/按钮解除阻断），
-            // 不再裸 doQuery——否则下拉还挂着上一次登录的账簿
-            openReport(AppState.currentReport);
+            // 入口待机态：不自动打开/查询任何报表，焦点停【搜索报表】，
+            // 用户从搜索/菜单选中后才走 openReport 全链路
+            enterEntryIdle();
             DatasourceList.renderDataSourceList();
             Utils.showToast(I18n.t('登录成功'), 'success');
             SettingsUI.checkFirstRun();
@@ -923,11 +1061,23 @@ var App = (function() {
     updateClock();
     setInterval(updateClock, 1000);
 
-    // 初始化默认报表的表头和筛选面板
-    if (typeof ReportEngine !== 'undefined') {
-      renderCurrentTableHead();
-      ReportEngine.updateFilterPanel(AppState.currentReport);
+    // Round 54：日期输入初始值动态化（index.html 写死 2026/2025-07 会逐年过期；
+    // 老账套用户按需自行改日期，报表日期条件已全部支持用户输入）
+    var nowInit = new Date();
+    var initYear = nowInit.getFullYear();
+    var dateFromEl = document.getElementById('filterDateFrom');
+    var dateToEl = document.getElementById('filterDateTo');
+    if (dateFromEl) dateFromEl.value = initYear + '-01-01';
+    if (dateToEl) dateToEl.value = initYear + '-12-31';
+    var dateCstEl = document.getElementById('filterDateCst');
+    if (dateCstEl) {
+      var im = String(nowInit.getMonth() + 1);
+      if (im.length === 1) im = '0' + im;
+      dateCstEl.value = initYear + '-' + im;
     }
+
+    // 入口不再预渲染默认报表：登录/会话恢复后进入待机态（enterEntryIdle），
+    // 报表表头与筛选面板在用户选中报表后由 openReport 渲染
 
     // 语言切换：重刷动态渲染内容（表头/表体切片/标题/分页），静态文字由 applyStatic 覆盖
     window.addEventListener('i18n:changed', refreshDynamicI18n);
@@ -948,9 +1098,8 @@ var App = (function() {
           if (userCompanyEl) userCompanyEl.textContent = user.compno;
           if (dashboardPage) dashboardPage.classList.add('active');
           if (loginPage) loginPage.classList.add('hidden');
-          // 会话恢复后按当前语言重渲染表头（init 渲染的语言即 boot 语言，此处双保险）
-          renderCurrentTableHead();
-          doQuery();
+          // 入口待机态：不自动查询任何报表，焦点停【搜索报表】
+          enterEntryIdle();
           DatasourceList.renderDataSourceList();
           SettingsUI.checkFirstRun();
           // 后台预拉账簿清单（总分类账下拉），失败静默，不阻塞登录

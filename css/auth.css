@@ -15,11 +15,23 @@
 
 /* Login Card */
 .login-card {
+  position: relative;   /* 承载卡片右上角系统设置齿轮的绝对定位 */
   width: 380px;
   background: var(--color-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   padding: var(--space-3xl);
+}
+
+/* ============================================================
+   登录卡片右上角系统设置齿轮（与主界面齿轮同款图标/按钮样式）
+   其他机器浏览器首次访问 localStorage 为空，登录前需先配置服务器地址；
+   按钮随登录页一起隐藏（.page-login.hidden），不会出现在主界面
+   ============================================================ */
+.login-settings-btn {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
 }
 
 .login-card h1 {

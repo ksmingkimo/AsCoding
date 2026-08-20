@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
-<link rel="stylesheet" href="css/auth.css?v=20260814a">
+<link rel="stylesheet" href="css/auth.css?v=20260820d">
 <link rel="stylesheet" href="css/dashboard.css?v=20260819b">
 <link rel="stylesheet" href="css/ai-analysis.css?v=20260814a">
 <link rel="stylesheet" href="css/notepad.css?v=20260814a">
@@ -21,6 +21,13 @@
      ========================================================= -->
 <div id="loginPage" class="page-login">
   <div class="login-card">
+    <!-- 系统设置入口（与主界面齿轮同款）：其他机器浏览器首次访问 localStorage 为空，
+         需要先配置服务器地址；登录未配置时按下登录会被拦截并引导到这里。
+         锚点在白色登录卡片右上角（.login-card 相对定位） -->
+    <button class="btn btn-secondary btn-sm login-settings-btn" id="loginSettingsBtn"
+            data-i18n-title="系统设置" data-i18n-aria-label="系统设置" title="系统设置">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    </button>
     <h1>Sunlike ERP</h1>
     <p class="subtitle" data-i18n="报表查询系统">报表查询系统</p>
     <!-- 语言选择器：简 / 繁 / 英（语言自称不翻译；启动时按 OS 预判，点击才持久化） -->
@@ -90,7 +97,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           <span data-i18n="刷新">刷新</span>
         </button>
-        <button class="btn btn-secondary btn-sm" id="settingsBtn" data-i18n-title="系统设置" title="系统设置">
+        <button class="btn btn-secondary btn-sm" id="settingsBtn" data-i18n-title="系统设置" data-i18n-aria-label="系统设置" title="系统设置">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         </button>
       </div>
@@ -118,9 +125,9 @@
           <div class="form-group filter-date-group">
             <label data-i18n="日期范围">日期范围</label>
             <div class="date-range-row">
-              <input type="date" id="filterDateFrom" class="form-input" value="2026-01-01">
+              <input type="date" id="filterDateFrom" class="form-input" value="">
               <span data-i18n="至">至</span>
-              <input type="date" id="filterDateTo" class="form-input" value="2026-12-31">
+              <input type="date" id="filterDateTo" class="form-input" value="">
             </div>
           </div>
           <div class="form-group filter-group-cust">
@@ -383,18 +390,20 @@
      ========================================================= -->
 <!-- I18n Foundation -->
 <script src="js/i18n.js?v=20260814a"></script>
-<script src="js/i18n-data.js?v=20260819c"></script>
+<script src="js/i18n-data.js?v=20260820c"></script>
 <!-- Foundation -->
-<script src="js/utils.js?v=20260814a"></script>
+<script src="js/utils.js?v=20260820a"></script>
+<!-- Round 56：LZString 压缩（数据源/记事本大 payload 透明压缩，必须在两个 store 之前加载） -->
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 <script src="js/dialog.js?v=20260818a"></script>
-<script src="js/settings-store.js?v=20260813a"></script>
-<script src="js/datasource-store.js?v=20260813a"></script>
+<script src="js/settings-store.js?v=20260820c"></script>
+<script src="js/datasource-store.js?v=20260820a"></script>
 <script src="js/book-store.js?v=20260818b"></script>
 <script src="js/rpt-style-store.js?v=20260819c"></script>
 <!-- Auth & API -->
 <script src="js/auth.js?v=20260814a"></script>
 <script src="js/api.js?v=20260818a"></script>
-<script src="js/reports.js?v=20260819e"></script>
+<script src="js/reports.js?v=20260820a"></script>
 <!-- 报表菜单（搜索/折叠/收藏） -->
 <script src="js/report-menu-store.js?v=20260813b"></script>
 <script src="js/report-menu.js?v=20260819b"></script>
@@ -409,13 +418,13 @@
 <!-- Export -->
 <script src="js/export.js?v=20260814a"></script>
 <!-- Notepad -->
-<script src="js/notepad-store.js?v=20260814b"></script>
+<script src="js/notepad-store.js?v=20260820a"></script>
 <script src="js/notepad-ui.js?v=20260814b"></script>
 <!-- Controllers -->
 <script src="js/chat-core.js?v=20260814a"></script>
 <script src="js/ai-suggestions.js?v=20260814a"></script>
-<script src="js/settings-ui.js?v=20260814a"></script>
+<script src="js/settings-ui.js?v=20260820c"></script>
 <!-- App Entry（DOMContentLoaded 自动初始化） -->
-<script src="js/app.js?v=20260819e"></script>
+<script src="js/app.js?v=20260820c"></script>
 </body>
 </html>

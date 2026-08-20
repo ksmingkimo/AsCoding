@@ -1,32 +1,95 @@
 /**
  * datasource-store.js — 数据源存储模块
  * 负责：报表数据源的 localStorage CRUD 操作（上限 20 个）
- * 依赖：无外部依赖，仅浏览器 localStorage
+ * Round 56：大 payload 透明压缩（LZString UTF16，Utils.compressText/decompressText）。
+ *   存储层：ready 数据源 data 数组 JSON > 50KB 时压缩存串 + _z:1 标志；
+ *   读取层：getAll 解压还原为数组，调用方无感知。旧格式（无 _z）完全兼容。
+ *   实测：mrpcx 26996 行原始 10.19MB → 压缩后 6 卡片共 1.3MB（配额富余）。
+ *   内存缓存：同一会话 getAll 零解析开销；'storage' 事件（跨页签）失效缓存。
+ * 依赖：Utils（compressText/decompressText）
  */
 
 var DataSourceStore = (function() {
   'use strict';
 
   var LS_KEY = 'sunlike_data_sources';
+  var COMPRESS_THRESHOLD = 50000;   // data JSON 超过 50KB 才压缩（小数据源不压缩，兼容旧格式）
 
-  /**
-   * 获取所有数据源
-   * @returns {Array<object>}
-   */
-  function getAll() {
-    try {
-      return JSON.parse(localStorage.getItem(LS_KEY)) || [];
-    } catch (e) {
-      return [];
+  // 内存缓存：{ raw: localStorage 原始串, list: 解压后的数据源数组 }
+  var _cache = null;
+
+  /** 压缩序列化单个数据源（不改原对象，返回可存储副本） */
+  function _serializeSource(s) {
+    if (s && s.status === 'ready' && Array.isArray(s.data) && s.data.length > 0) {
+      var json = JSON.stringify(s.data);
+      if (json.length > COMPRESS_THRESHOLD) {
+        var z = Utils.compressText(json);
+        if (z !== json) {   // 确实压缩了（LZString 可用且成功）
+          var copy = {};
+          for (var k in s) {
+            if (Object.prototype.hasOwnProperty.call(s, k)) copy[k] = s[k];
+          }
+          copy.data = z;
+          copy._z = 1;
+          return copy;
+        }
+      }
     }
+    return s;
+  }
+
+  /** 反序列化：_z 标志 → 解压还原 data 数组（就地还原，之后同一对象不再重复解压） */
+  function _deserializeSource(s) {
+    if (s && s._z === 1 && typeof s.data === 'string') {
+      try {
+        s.data = JSON.parse(Utils.decompressText(s.data));
+      } catch (e) {
+        s.data = [];
+      }
+      delete s._z;
+    }
+    return s;
   }
 
   /**
-   * 保存数据源列表
+   * 获取所有数据源（会话内走内存缓存；跨页签 storage 事件自动失效）
+   * @returns {Array<object>}
+   */
+  function getAll() {
+    var raw;
+    try {
+      raw = localStorage.getItem(LS_KEY) || '[]';
+    } catch (e) {
+      return [];
+    }
+    if (_cache && _cache.raw === raw) return _cache.list;
+
+    var list;
+    try {
+      var parsed = JSON.parse(raw);
+      list = Array.isArray(parsed) ? parsed.map(_deserializeSource) : [];
+    } catch (e) {
+      list = [];
+    }
+    _cache = { raw: raw, list: list };
+    return list;
+  }
+
+  /**
+   * 保存数据源列表（大 data 透明压缩；配额不足抛友好错误）
    * @param {Array<object>} sources
    */
   function saveAll(sources) {
-    localStorage.setItem(LS_KEY, JSON.stringify(sources));
+    var out = sources.map(_serializeSource);
+    var raw;
+    try {
+      raw = JSON.stringify(out);
+      localStorage.setItem(LS_KEY, raw);
+    } catch (e) {
+      // QuotaExceededError 等 → 友好文案（原样抛给调用方显示）
+      throw new Error(I18n.t('本地存储空间不足，数据源保存失败，请清理旧数据源'));
+    }
+    _cache = { raw: raw, list: sources };
   }
 
   /**
@@ -106,6 +169,13 @@ var DataSourceStore = (function() {
    */
   function getById(id) {
     return getAll().find(function(s) { return s.id === id; });
+  }
+
+  // 跨页签同步：其他页签写入 → 失效本页缓存（下次 getAll 重读）
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('storage', function(e) {
+      if (e.key === LS_KEY) _cache = null;
+    });
   }
 
   /* ================================================================

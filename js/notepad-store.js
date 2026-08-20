@@ -1,7 +1,9 @@
 /**
  * notepad-store.js — 记事本 localStorage CRUD 模块
  * 负责：事件存储、读取、删除（类似 DataSourceStore 的 IIFE 模式）
- * 依赖：无（纯浏览器 localStorage API）
+ * Round 56：全容器透明压缩（记事本快照含数据源全量数据，同一条配额路径）——
+ *   JSON > 50KB 时以信封 {_z:1, d:压缩串} 存储；旧格式（裸数组）完全兼容。
+ * 依赖：Utils（compressText/decompressText）
  * localStorage key: sunlike_notepad
  */
 
@@ -10,6 +12,7 @@ var NotepadStore = (function() {
 
   var LS_KEY = 'sunlike_notepad';
   var MAX_EVENTS = 50;
+  var COMPRESS_THRESHOLD = 50000;
 
   /**
    * 读取全部事件
@@ -20,6 +23,10 @@ var NotepadStore = (function() {
       var raw = localStorage.getItem(LS_KEY);
       if (!raw) return [];
       var parsed = JSON.parse(raw);
+      // Round 56 压缩信封：{_z:1, d:压缩串} → 解压还原
+      if (parsed && parsed._z === 1 && typeof parsed.d === 'string') {
+        parsed = JSON.parse(Utils.decompressText(parsed.d));
+      }
       return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
       return [];
@@ -32,7 +39,15 @@ var NotepadStore = (function() {
    */
   function saveAll(events) {
     try {
-      localStorage.setItem(LS_KEY, JSON.stringify(events));
+      var json = JSON.stringify(events);
+      var stored;
+      if (json.length > COMPRESS_THRESHOLD) {
+        var z = Utils.compressText(json);
+        stored = (z !== json) ? JSON.stringify({ _z: 1, d: z }) : json;
+      } else {
+        stored = json;
+      }
+      localStorage.setItem(LS_KEY, stored);
     } catch (e) {
       Utils.showToast(I18n.t('记事本存储空间不足，请清理旧事件'), 'error');
     }

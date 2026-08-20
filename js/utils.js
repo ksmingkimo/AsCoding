@@ -125,6 +125,37 @@ var Utils = (function() {
     }
   }
 
+  /**
+   * 文本压缩（LZString UTF16，localStorage 大 payload 用；Round 56 实测
+   * mrpcx 26996 行 10.19MB → 1.3MB）。LZString 未加载/失败 → 原样返回。
+   * 注意：compressToUTF16 输出字符范围 0x20-0x7FFF（无控制符/代理区），JSON 安全。
+   * @param {string} text
+   * @returns {string} 压缩串（或原串——调用方以 _z 标志区分）
+   */
+  function compressText(text) {
+    if (!text || typeof window === 'undefined' || !window.LZString || !window.LZString.compressToUTF16) return text;
+    try {
+      return window.LZString.compressToUTF16(text);
+    } catch (e) {
+      return text;
+    }
+  }
+
+  /**
+   * 文本解压（compressText 的逆操作；非压缩串/失败 → 原样返回）
+   * @param {string} text
+   * @returns {string}
+   */
+  function decompressText(text) {
+    if (!text || typeof window === 'undefined' || !window.LZString || !window.LZString.decompressFromUTF16) return text;
+    try {
+      var out = window.LZString.decompressFromUTF16(text);
+      return out === null || out === undefined ? text : out;
+    } catch (e) {
+      return text;
+    }
+  }
+
   /* ================================================================
      Public API
      ================================================================ */
@@ -134,7 +165,9 @@ var Utils = (function() {
     formatTime: formatTime,
     copyToClipboard: copyToClipboard,
     fallbackCopy: fallbackCopy,
-    deepClone: deepClone
+    deepClone: deepClone,
+    compressText: compressText,
+    decompressText: decompressText
   };
 
 })();

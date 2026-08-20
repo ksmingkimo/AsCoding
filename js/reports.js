@@ -725,7 +725,9 @@ var ReportEngine = (function() {
           REPORT_DD_FIELD: 'BIL_DD'
         },
         elements: [
-          { field: 'BIL_DD', operator: 'this_month', fieldType: 'date', need: true, fieldDisabled: true,
+          // Round 54 实测 AT04 2022：operator=this_month 时服务端忽略传入日期、自取服务器当月 → 老账套必 0 行；
+          // 改 range 后用户日期生效（2022 全年 → 26996 行）
+          { field: 'BIL_DD', operator: 'range', fieldType: 'date', need: true, fieldDisabled: true,
             presetFrom: 'dateRange', preset0: '@MONTH_FIRST', preset1: '@MONTH_LAST' },
           { field: 'PRD_NO', operator: 'in', filterId: 'filterPrd' }   // 材料代号
         ],
@@ -1077,7 +1079,8 @@ var ReportEngine = (function() {
       pgm: 'REP_MLLIST',
       dateField: 'ML_DD',
       filterLayout: 'mrpag',
-      dateFilter: { operator: 'last_year', fieldDisabled: true },
+      // Round 54 实测 AT04 2022：last_year 锁死上年（2025）→ 老账套必 0 行；range 走用户日期（2022 → 5000 行）
+      dateFilter: { operator: 'range' },
       fixCondition: { REPORT_DD_FIELD: 'ML_DD' },
       displayFields: ['CUS_NO','CUS_NAME','ML_DD','ML_NO','PRD_NO','PRD_NAME','BAT_NO','QTY','UNIT','CST','CST_STD','WH_NAME','CHUW_NAME','TZ_NO','MO_NO','QL_NO','REM'],
       filters: [
@@ -1096,7 +1099,8 @@ var ReportEngine = (function() {
       pgm: 'MRPCF',
       dateField: 'BIL_DD',
       filterLayout: 'price',
-      dateFilter: { operator: 'this_year', fieldDisabled: true },
+      // Round 54 实测 AT04 2022：this_year 锁死今年（2026）→ 老账套必 0 行；range 走用户日期（2022 → 5000 行）
+      dateFilter: { operator: 'range' },
       fixCondition: { REPORT_DD_FIELD: 'BIL_DD', COMBOFCP: '1', COMBOUNIT: '1', CHKPRDT_CST: 'F', WASTERCHANGE: '', COMBODATE: '1' },
       displayFields: ['BIL_NO','PRD_NO','PRD_NAME','SPC','UNIT_NAME','QTY','CST_PRD1','CST_PRD1_RT','CST_MAN','CST_MAN_RT','CST_MAKE','CST_MK_RT','CST_OUT','CST_OUT_RT','CST_PRD2','CST_PRD2_RT','CST','UP'],
       filters: [
