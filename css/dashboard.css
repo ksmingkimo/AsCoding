@@ -406,6 +406,13 @@ body {
 .date-range-row .form-input { width: 130px; }
 .date-range-row span { color: var(--color-text-muted); font-size: var(--text-sm); }
 
+/* Online 降级（Round 59）：报表公式输入行——总账未启用时资产负债/利润表条件面板 */
+.filter-group-onlinerepno3 { grid-column: span 2; }
+.online-repno-row { display: flex; gap: var(--space-md); align-items: flex-end; flex-wrap: wrap; }
+.online-repno-row .repno-field { display: flex; flex-direction: column; gap: 2px; }
+.online-repno-row .repno-field span { font-size: var(--text-xs); color: var(--color-text-secondary); }
+.online-repno-row .repno-field .form-input { width: 110px; height: 34px; }
+
 /* ============================================================
    FORM ELEMENTS (shared)
    ============================================================ */

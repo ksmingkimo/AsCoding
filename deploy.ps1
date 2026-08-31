@@ -4,7 +4,7 @@
 .DESCRIPTION
     Extracts deployment-required files from the project, excludes dev docs and tools,
     and generates a ZIP deployment package.
-    Output: sunlike-erp-report-v1.8.zip
+    Output: sunlike-erp-report-v1.9.zip
 .NOTES
     Run from project root: .\deploy.ps1
 #>
@@ -14,7 +14,7 @@ $ErrorActionPreference = "Stop"
 # ============================================================
 # Config
 # ============================================================
-$Version   = "1.8"
+$Version   = "1.9"
 $OutputZip = "sunlike-erp-report-v$Version.zip"
 $TempDir   = Join-Path $PSScriptRoot "deploy-package"
 

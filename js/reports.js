@@ -387,6 +387,17 @@ var ReportEngine = (function() {
           DATE_E: '@DATE_E'
         },
         orderBy: { SYS_DATE: 'asc' }
+      },
+      // Round 59 Online 降级（账簿 0 条）：RPTACCBlank 空白纸打印版，扁平请求体（照抄总账报表调用方法.md 6.2）
+      online: {
+        apiPath: 'RPTACCBlank/GetReportStream',
+        responseDataKey: 'RPT',
+        filterLayout: 'accglOnline',
+        inputs: [],   // 无公式参数 → 面板仅「会计期间」
+        body: {
+          dateB: '@DATE_B', dateE: '@DATE_E', AccNoB: '', AccNoE: '', DEPT: '', DEPTSHOW: '',
+          ACCLEVEL: '0', YE: '', POSSTYLE: '', ACCA: '', CUR_SEL: '', CHKCUR_ID: ''
+        }
       }
     },
 
@@ -444,6 +455,17 @@ var ReportEngine = (function() {
           TYPE_NO: '01'
         },
         orderBy: { SYS_DATE: 'asc' }
+      },
+      // Round 59 Online 降级：RPTACCDetail（无公式参数；AccNo 空 = 全部科目）
+      online: {
+        apiPath: 'RPTACCDetail/GetReportStream',
+        responseDataKey: 'RPT',
+        filterLayout: 'accglOnline',
+        inputs: [],
+        body: {
+          dateB: '@DATE_B', dateE: '@DATE_E', AccNo: '', DEPT: '', DEPTSHOW: '', ACCLEVEL: '',
+          YE: '', POSSTYLE: '', ACCA: '', CUR_SEL: '', CHKCUR_ID: '', ACCNOBJLEVEL: ''
+        }
       }
     },
 
@@ -496,6 +518,21 @@ var ReportEngine = (function() {
         },
         orderBy: { SYS_DATE: 'asc' },
         topFields: { RPT_NO: '@RPT_NO', TYPE_NO: '@TYPE_NO' }
+      },
+      // Round 59 Online 降级：RPTZFListA（只传 dtE=月末；3 公式框：REPNO1/2/3 资产/负债/业主）
+      online: {
+        apiPath: 'RPTZFListA/GetReportStream',
+        responseDataKey: 'MyTable',
+        filterLayout: 'accglOnline',
+        inputs: [
+          { id: 'filterRepno1', ctxKey: 'REPNO1', defaultValue: '10' },
+          { id: 'filterRepno2', ctxKey: 'REPNO2', defaultValue: '20' },
+          { id: 'filterRepno3', ctxKey: 'REPNO3', defaultValue: '30' }
+        ],
+        body: {
+          txtDep: '', dtE: '@DATE_E', REPNO1: '@REPNO1', REPNO2: '@REPNO2', REPNO3: '@REPNO3',
+          ZHANGID: '', SHOW_LST: '1', ZERO_SHOW: ''
+        }
       }
     },
 
@@ -549,6 +586,19 @@ var ReportEngine = (function() {
         requestFields: ['ITEM_NO_1', 'ITEM_NAME_1', 'ROW_ID_1', 'STD003_1', 'STD004_1'],
         disFieldsPrefix: ',',
         topFields: { RPT_NO: '@RPT_NO', TYPE_NO: '@TYPE_NO' }
+      },
+      // Round 59 Online 降级：RPTSYListA（dtB/dtE=月初/月末；1 公式框：REPNO 利润表公式）
+      online: {
+        apiPath: 'RPTSYListA/GetReportStream',
+        responseDataKey: 'MyTable',
+        filterLayout: 'accglOnline',
+        inputs: [
+          { id: 'filterRepno', ctxKey: 'REPNO', defaultValue: '40' }
+        ],
+        body: {
+          dtB: '@DATE_B', dtE: '@DATE_E', REPNO: '@REPNO', DEPNO: '', DEP_LST: '1',
+          OBJ_ID: '0', OBJ: '', ADDUP: '', RATEMODE: '1', ZHANGID: '', ZERO_SHOW: ''
+        }
       }
     },
 
@@ -598,6 +648,17 @@ var ReportEngine = (function() {
         },
         orderBy: { SYS_DATE: 'asc' },
         topFields: { RPT_NO: '@RPT_NO', TYPE_NO: '@TYPE_NO' }
+      },
+      // Round 59 Online 降级：RPTCshFroList（凭证日期区间；无公式参数）
+      online: {
+        apiPath: 'RPTCshFroList/GetReportStream',
+        responseDataKey: 'RPT_CSHFROLIST',
+        filterLayout: 'accglOnline',
+        inputs: [],
+        body: {
+          dtDateB: '@DATE_B', dtDateE: '@DATE_E', txtCshFroB: '', txtCshFroE: '',
+          ACCN_SEL: '', DEPT_SEL: '', DEPT_LST: '1', DATE_TYPE: '', BILL_TYPE: '', CHK_CASH: ''
+        }
       }
     },
 
@@ -1667,6 +1728,45 @@ var ReportEngine = (function() {
     'CST_AVE':       '平均成本'
   };
 
+  // Round 59 Online 空白纸打印版列名（按 reportKey 分表）。
+  // 不能并入全局 COLUMN_LABELS：NAME=姓名/REM=备注 等与 Online 语义冲突（科目名称/摘要），
+  // 且 AMTN 等字段含义随报表不同（本期金额 vs 本位币金额）。
+  // 只收 AT02 实测锁定的高/中置信度字段，未收录者自动回退英文原名（总账报表调用方法.md 6.4）。
+  var ONLINE_COLUMN_LABELS = {
+    accgl: {
+      'ACC_NO': '科目代号', 'NAME': '科目名称', 'ACC_NOTE': '科目说明',
+      'YEARMONTH': '会计期间', 'REM': '摘要',
+      'AMTND': '本期借方', 'AMTNC': '本期贷方', 'AMTNYE': '期末余额', 'SHOWDC': '借贷方向'
+    },
+    accBalTable: {
+      'ACC_NO': '科目代号', 'NAME': '科目名称', 'AMTNQC': '期初余额',
+      'AMTND': '本期借方', 'AMTNC': '本期贷方', 'AMTNYE': '期末余额', 'SHOWDC': '借贷方向',
+      'AMTNQC_D': '期初借方', 'AMTNQC_C': '期初贷方', 'AMTNYE_D': '期末借方', 'AMTNYE_C': '期末贷方',
+      'DC': '借贷', 'D_NUM': '借方笔数', 'C_NUM': '贷方笔数'
+    },
+    accZcfzb: {
+      'ACC_NOL': '科目代号(左)', 'ACC_NAMEL': '科目名称(左)', 'AMTN_SUML': '金额(左)', 'RATE1L': '比率(左)',
+      'ACC_NOR': '科目代号(右)', 'ACC_NAMER': '科目名称(右)', 'AMTN_SUMR': '金额(右)', 'RATE1R': '比率(右)',
+      'ITM': '项目编号'
+    },
+    accLrb: {
+      'ACC_NO': '科目代号', 'ACC_NAME': '科目名称', 'AMTN': '本期金额', 'AMTN_SUB': '子公司金额',
+      'AMTN_SUM': '合计金额', 'RATE1': '比率', 'AMTN_BUDGET': '预算金额', 'AMTN_DIFF': '差异', 'CAS_NAME': '现金流量项目'
+    },
+    accXjllb: {
+      'MAK_DAT': '制单日期', 'MAK_NO': '制单编号', 'VOH_NO': '凭证号',
+      'ACC_NO': '科目代号', 'ACC_NAME': '科目名称', 'EXC_RTO': '汇率',
+      'BIL_ID': '单据类别', 'BIL_NO': '单据编号', 'DEP': '部门代号', 'DEP_NAME': '部门名称',
+      'DC': '借贷方向', 'ACC_REM': '科目摘要', 'REM': '摘要', 'AMT': '原币金额', 'AMTN': '本位币金额'
+    }
+  };
+
+  /** Round 59：Online 报表列名（按 reportKey 分表，覆盖全局 COLUMN_LABELS 冲突字段；无则 null） */
+  function getOnlineColumnLabel(reportKey, fieldName) {
+    var t = ONLINE_COLUMN_LABELS[reportKey];
+    return (t && t[fieldName]) || null;
+  }
+
   // Decimal-type fields (right-aligned, numeric formatting)
   var DECIMAL_FIELDS = [
     'UP','QTY','DIS_CNT','AMT_DIS_CNT','AMTN','AMTN_NET','TAX','AMTN_WITHTAX',
@@ -1711,7 +1811,14 @@ var ReportEngine = (function() {
     'QTY_QC','QTY_TR','QTY_WG','QTY_LOST_WG','QTY_DQ','QTY_QM','QTY_HY',
     'QTY1_QC','QTY1_TR','QTY1_HY','QTY1_DQ','QTY1_QM',
     // MRPCE 直接原料明细表
-    'QTY_PRD','QTY_AVE','CST_AVE'
+    'QTY_PRD','QTY_AVE','CST_AVE',
+    // Round 59 Online 空白纸打印版数值列（总分类账/科目余额表/资产负债表/利润表/现金流量表）
+    'AMTND','AMTNC','AMTNYE','AMTD','AMTC','AMTYE','YEARS','MONTHS',
+    'AMTNQC','AMTQC','AMTCUR','AMTDCCE','AMTNQC_D','AMTNQC_C','AMTQC_D','AMTQC_C',
+    'AMTNYE_D','AMTNYE_C','AMTYE_D','AMTYE_C','D_NUM','C_NUM',
+    'AMTNL','AMTN_SUBL','AMTN_SUML','RATE1L','AMTNR','AMTN_SUBR','AMTN_SUMR','RATE1R',
+    'AMTNA','AMTN_SUBA','AMTN_SUMA','RATE1A','AMTNB','AMTN_SUBB','AMTN_SUMB','RATE1B','ITM',
+    'AMTN_SUB','AMTN_SUM','RATE1','AMTN_BUDGET','AMTN_DIFF','RATE2','ID'
   ];
 
   // Currency fields (prefix with ¥)
@@ -1737,7 +1844,14 @@ var ReportEngine = (function() {
     'CST_WG','CST_MAN_WG','CST_MAK_WG','CST_PRD_WG','CST_OUT_WG',
     'CST_DQ','CST_MAN_DQ','CST_MAK_DQ','CST_PRD_DQ','CST_OUT_DQ',
     'CST_QM','CST_MAN_QM','CST_MAK_QM','CST_PRD_QM','CST_OUT_QM',
-    'CST_HY','CST_STD_QC','CST_STD_TR','CST_STD_HY','CST_STD_DQ','CST_STD_QM','CST_AVE'
+    'CST_HY','CST_STD_QC','CST_STD_TR','CST_STD_HY','CST_STD_DQ','CST_STD_QM','CST_AVE',
+    // Round 59 Online 空白纸打印版金额列（比率 RATE*/笔数 D_NUM/C_NUM 不加 ¥）
+    'AMTND','AMTNC','AMTNYE','AMTD','AMTC','AMTYE',
+    'AMTNQC','AMTQC','AMTCUR','AMTDCCE','AMTNQC_D','AMTNQC_C','AMTQC_D','AMTQC_C',
+    'AMTNYE_D','AMTNYE_C','AMTYE_D','AMTYE_C',
+    'AMTNL','AMTN_SUBL','AMTN_SUML','AMTNR','AMTN_SUBR','AMTN_SUMR',
+    'AMTNA','AMTN_SUBA','AMTN_SUMA','AMTNB','AMTN_SUBB','AMTN_SUMB',
+    'AMTN_SUB','AMTN_SUM','AMTN_BUDGET','AMTN_DIFF'
   ];
 
   /* ================================================================
@@ -1751,6 +1865,8 @@ var ReportEngine = (function() {
   var _currentColumnInfo = [];      // from API COLUMN_INFO.REPORT__TAB
   var _currentFilters = {};
   var _isLoading = false;
+  // Round 59：账簿清单 0 条 → 总账 5 只静默降级 Online 空白纸打印版端点（app.js openReport 置位）
+  var _ledgerOnline = false;
 
   /* ================================================================
      PUBLIC API
@@ -2210,6 +2326,31 @@ var ReportEngine = (function() {
   }
 
   /**
+   * Round 59：Online 空白纸打印版降级请求体（扁平结构，无 PGM/SEARCH_INFO）
+   * cfg.online.body 模板 @占位符：DATE_B/DATE_E 等 buildStreamCtx 派生值 +
+   * 公式框（inputs.ctxKey，值来自条件面板，未填 → defaultValue 文档示例值）
+   */
+  function buildOnlineBody(cfg, filters) {
+    filters = filters || {};
+    var online = cfg.online;
+    var ctx = buildStreamCtx(filters);
+
+    (online.inputs || []).forEach(function(inp) {
+      var v = filters[inp.id];
+      ctx[inp.ctxKey] = (v !== undefined && v !== '') ? v : inp.defaultValue;
+    });
+
+    var body = {};
+    Object.keys(online.body || {}).forEach(function(k) {
+      var v = online.body[k];
+      body[k] = (typeof v === 'string' && v.charAt(0) === '@')
+        ? ((v.slice(1) in ctx) ? ctx[v.slice(1)] : '')
+        : v;
+    });
+    return body;
+  }
+
+  /**
    * 流式报表 @占位符上下文（BOOK_NO/会计期间/当前日期派生值）
    * 会计期间非法/空 → 默认当前月（YYYY-MM，与 v4 总分类账行为一致）
    */
@@ -2260,15 +2401,25 @@ var ReportEngine = (function() {
     var cfg = REPORT_CONFIG[reportKey];
     if (!cfg) { return Promise.reject(new Error('Unknown report: ' + reportKey)); }
 
-    // ── 长连接流式报表（v4/v5）：独立请求体 + fetchStreamReport ──
+    // ── 长连接流式报表（v4/v5 + Round 59 Online 降级）：独立请求体 + fetchStreamReport ──
     if (cfg.apiMethod === 'getReportStream') {
-      var streamBody = buildRequestStream(cfg, filters);
+      // Online 降级（账簿 0 条，readFilters 携带 onlineMode）：扁平请求体 + 专属表键 + 嵌套 COLUMN_INFO
+      var isOnline = !!(filters.onlineMode && cfg.online);
+      var streamBody = isOnline ? buildOnlineBody(cfg, filters) : buildRequestStream(cfg, filters);
       var colInfo = [];
-      return Api.fetchStreamReport(cfg.apiPath, streamBody, {
+      return Api.fetchStreamReport(isOnline ? cfg.online.apiPath : cfg.apiPath, streamBody, {
+        dataKey: isOnline ? cfg.online.responseDataKey : undefined,
         onProgress: onProgress,
         onData: function(d) {
-          // COLUMN_INFO：财务报表是数组（动态列）；制造报表空数据时是 {} 对象（实测）→ 数组防护
-          if (d && Array.isArray(d.COLUMN_INFO)) { colInfo = d.COLUMN_INFO; }
+          // COLUMN_INFO：标准版扁平数组；Online 嵌套 {表键:[...]}；空数据为 {} 对象（实测）→ 数组防护
+          if (d && d.COLUMN_INFO) {
+            if (isOnline) {
+              var k = cfg.online.responseDataKey;
+              if (Array.isArray(d.COLUMN_INFO[k])) { colInfo = d.COLUMN_INFO[k]; }
+            } else if (Array.isArray(d.COLUMN_INFO)) {
+              colInfo = d.COLUMN_INFO;
+            }
+          }
         }
       }).then(function(rows) {
         _currentColumnInfo = colInfo;   // renderColumns:'columnInfo' 的动态列表头读取
@@ -2329,21 +2480,25 @@ var ReportEngine = (function() {
 
     // 财务报表动态列（renderColumns:'columnInfo'）：前导列 + COLUMN_INFO 映射
     // COLUMN_INFO [{NAME, TITLE}] 异步到达（PERCENT 100 消息），TITLE 走 I18n.t，未知回退原文
-    if (cfg.renderColumns === 'columnInfo') {
+    // Round 59 Online 降级：5 只总账报表强制动态列、丢弃前导列（Online 无 ITEM_NO/ITEM_NAME 前导语义）
+    var dynamicOnline = !!(_ledgerOnline && cfg.online);
+    if (cfg.renderColumns === 'columnInfo' || dynamicOnline) {
       var cols = [];
-      (cfg.leadingColumns || []).forEach(function(f) {
-        cols.push({
-          field: f,
-          label: getColumnLabel(f),
-          isDecimal: false,
-          isCurrency: false
+      if (!dynamicOnline) {
+        (cfg.leadingColumns || []).forEach(function(f) {
+          cols.push({
+            field: f,
+            label: getColumnLabel(f),
+            isDecimal: false,
+            isCurrency: false
+          });
         });
-      });
+      }
       (_currentColumnInfo || []).forEach(function(c) {
         if (!c || !c.NAME) return;
         cols.push({
           field: c.NAME,
-          label: I18n.t(COLUMN_LABELS[c.NAME] || c.TITLE || c.NAME),
+          label: I18n.t(getOnlineColumnLabel(reportKey, c.NAME) || COLUMN_LABELS[c.NAME] || c.TITLE || c.NAME),
           isDecimal: isDecimalField(c.NAME),
           isCurrency: isCurrencyField(c.NAME)
         });
@@ -2445,7 +2600,14 @@ var ReportEngine = (function() {
       filterRptNo:     _val('filterRptNo'),
       // 所选样式所属科目表代号：从下拉选中 option 的 data-type-no 读（populateRptStyleSelect 写入）。
       // 转入数据源等路径不走 doQuery 注入，TYPE_NO 必须在此处拿到，否则 ERP 报「科目表代号不能为空」
-      styleTypeNo:     _selData('filterRptNo', 'typeNo')
+      styleTypeNo:     _selData('filterRptNo', 'typeNo'),
+      // Round 59 Online 降级（账簿 0 条）：onlineMode 标志驱动 query() 走 Online 端点 +
+      // 报表公式框（资产负债表 REPNO1/2/3、利润表 REPNO；未填由 buildOnlineBody 兜底默认值）
+      onlineMode:      _ledgerOnline,
+      filterRepno1:    _val('filterRepno1'),
+      filterRepno2:    _val('filterRepno2'),
+      filterRepno3:    _val('filterRepno3'),
+      filterRepno:     _val('filterRepno')
     };
   }
 
@@ -2465,7 +2627,12 @@ var ReportEngine = (function() {
     var cfg = REPORT_CONFIG[reportKey];
     if (!cfg) return;
 
+    // 切报表清空旧动态列头（Round 59 修：报表间切换时 getVisibleColumns 读到上一只的 COLUMN_INFO）
+    _currentColumnInfo = [];
+
     var layout = cfg.filterLayout;
+    // Round 59 Online 降级：账簿 0 条 → 用 online 布局（会计期间 + 自动推导公式栏位）
+    if (_ledgerOnline && cfg.online) { layout = cfg.online.filterLayout; }
     // Fallback to heuristic for backward compatibility
     if (!layout) {
       layout = (reportKey === 'monAA' || reportKey === 'monBA') ? 'payment' : 'inv';
@@ -2489,6 +2656,8 @@ var ReportEngine = (function() {
       fxKnd:   document.querySelector('.filter-group-fxknd'),
       bookNo:  document.querySelector('.filter-group-bookno'),
       rptStyle: document.querySelector('.filter-group-rptstyle'),
+      onlinerepno3: document.querySelector('.filter-group-onlinerepno3'),   // Round 59 资产负债 3 公式框
+      onlinerepno1: document.querySelector('.filter-group-onlinerepno1'),   // Round 59 利润表 1 公式框
       dateRange: document.querySelector('.filter-date-group')
     };
 
@@ -2530,7 +2699,9 @@ var ReportEngine = (function() {
       'mrpcu':       ['mrpNo','docNo'],       // 母件代号 + 工单号（无日期）
       'mrpct':       ['mrpNo','dateRange'],   // 生产货品 + 日期区间
       'mrpcx':       ['prd','dateRange'],     // 材料代号 + 日期区间
-      'mrpce':       ['mrpNo','dateRange']    // 生产货品 + 日期区间
+      'mrpce':       ['mrpNo','dateRange'],   // 生产货品 + 日期区间
+      // Round 59 Online 降级：会计期间（公式栏位由下方 inputs.length 自动推导，不进 layoutMap）
+      'accglOnline': ['dateCst']
     };
 
     // Remove dateRange if hideDateUI is true (SYS_DATE reports)
@@ -2543,6 +2714,14 @@ var ReportEngine = (function() {
     if (cfg.hideDateUI && visible.indexOf('dateRange') >= 0) {
       visible = visible.filter(function(v) { return v !== 'dateRange'; });
     }
+    // Round 59 Online 降级：公式栏位自动判断（同 ui-template ONLINE_DEMO 推导逻辑：
+    // online.inputs.length 3 → 资产负债表 3 公式框；1 → 利润表 1 公式框；0 → 仅会计期间）
+    if (_ledgerOnline && cfg.online) {
+      var nInputs = (cfg.online.inputs || []).length;
+      if (nInputs === 3) { visible.push('onlinerepno3'); }
+      else if (nInputs === 1) { visible.push('onlinerepno1'); }
+    }
+
     visible.forEach(function(key) {
       if (allGroups[key]) allGroups[key].style.display = '';
     });
@@ -2628,10 +2807,10 @@ var ReportEngine = (function() {
       prdMarkLabel.textContent = I18n.t('货品特征');
     }
 
-    // Update label for filterDateCst（总账 4 只复用为「会计期间」）
+    // Update label for filterDateCst（总账 4 只 + Round 59 Online 5 只复用为「会计期间」）
     var dateCstLabel = document.querySelector('label[for="filterDateCst"]');
     if (dateCstLabel) {
-      if (cfg.filterLayout === 'accgl' || cfg.filterLayout === 'accglStyle') {
+      if (layout === 'accgl' || layout === 'accglStyle' || layout === 'accglOnline') {
         dateCstLabel.textContent = I18n.t('会计期间');
         // 打开总账报表即默认当前月（HTML 硬编码 2025-07 是旧演示值，不能用）
         var cstEl = document.getElementById('filterDateCst');
@@ -2699,7 +2878,9 @@ var ReportEngine = (function() {
     get currentData()       { return _currentData; },
     set currentData(v)      { _currentData = v; },
     get isLoading()         { return _isLoading; },
-    set isLoading(v)        { _isLoading = v; }
+    set isLoading(v)        { _isLoading = v; },
+    get ledgerOnline()      { return _ledgerOnline; },
+    set ledgerOnline(v)     { _ledgerOnline = v; }
   };
 
 })();

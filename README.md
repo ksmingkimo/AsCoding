@@ -45,7 +45,7 @@
 │  └────┬─────┘  └────┬─────┘  └──────────┬───────────┘  │
 │       │              │                    │              │
 │  ┌────┴──────────────┴────────────────────┴──────────┐  │
-│  │              25 模块化 JS 引擎                      │  │
+│  │              26 模块化 JS 引擎                      │  │
 │  │  i18n / utils / auth / api / reports / menu /      │  │
 │  │  datasource / chat / ai / parser / chart /         │  │
 │  │  export / notepad / dialog / app                   │  │
@@ -179,7 +179,7 @@ AsCoding/
 │   ├── ai-analysis.css         ← AI Chat、数据源面板、设置弹窗、表格增强
 │   └── notepad.css             ← 记事本页签样式
 │
-├── js/（25 个，index.html 加载清单）
+├── js/（26 个，index.html 加载清单）
 │   ├── i18n.js                 ← 多语言核心（gettext 风格 t() / applyStatic / 语言解析链）
 │   ├── i18n-data.js            ← 三语静态字典（zh-tw / en，简体原文即 key，末尾同步 boot）
 │   ├── utils.js                ← 通用工具（Toast / 转义 / 格式化 / deepClone / LZString 压缩降级安全）
@@ -191,7 +191,7 @@ AsCoding/
 │   │
 │   ├── auth.js                 ← 认证模块（登录/登出/Token/会话恢复，LANG_ID 随语言）
 │   ├── api.js                  ← API 客户端（fetch 封装/认证注入/错误拦截）
-│   ├── reports.js              ← 报表引擎（40 报表配置/SEARCH_INFO 构造/动态表格/28 布局筛选/REM_TYPE 摘要类型 badge/流式请求构造）
+│   ├── reports.js              ← 报表引擎（40 报表配置/SEARCH_INFO 构造/动态表格/28 布局筛选/REM_TYPE 摘要类型 badge/流式请求构造/0 账簿静默降级 Online buildOnlineBody + ONLINE_COLUMN_LABELS）
 │   ├── report-menu-store.js    ← 报表菜单持久化（收藏列表）
 │   ├── report-menu.js          ← 动态菜单渲染（搜索/折叠分组/收藏置顶）
 │   │
@@ -217,8 +217,8 @@ AsCoding/
 │
 ├── screenshots/                ← 应用截图（界面预览）
 │
-├── deploy.ps1                  ← 部署包生成脚本（v1.8，31 文件）
-├── sunlike-erp-report-v1.8.zip ← 部署包（解压到 Web 服务器目录）
+├── deploy.ps1                  ← 部署包生成脚本（v1.9，31 文件）
+├── sunlike-erp-report-v1.9.zip ← 部署包（解压到 Web 服务器目录）
 │
 └── 文档（项目根目录）
     ├── 需求架构文档.md          ← 项目需求 & 技术架构
@@ -282,7 +282,7 @@ Authorization: Bearer {TOKEN}
 
 | 分组 | 报表数 | 包含报表 |
 |------|--------|---------|
-| 总账报表 | 5 | 总分类账、科目余额表、资产负债表、利润表、现金流量表（⚠️全部长连接 SSE，账簿必选；财务报表样式 STD001/2/3 需 ERP 侧授权） |
+| 总账报表 | 5 | 总分类账、科目余额表、资产负债表、利润表、现金流量表（⚠️全部长连接 SSE，账簿必选；**账簿 0 条时静默降级 Online 空白纸打印版**；财务报表样式下拉 STD001~STD004 已建立） |
 | 进销存 | 4 | 采购、进货、受订、销货 |
 | 财务管理 | 8 | 收款、付款、科目预算、信用额度、报销、员工借款、应收票据、应付票据 |
 | 库存管理 | 5 | 过期货品预警、安全存量预警、负库存预警、库存调拨、库存调整 |
@@ -300,7 +300,8 @@ Authorization: Bearer {TOKEN}
 
 - **流式查询**：`POST /{module}/GetReportStream` → `text/event-stream`，每条消息 `data: {CODE, PERCENT, TITLE, ERR, DATA}`；EventSource 不支持 POST，用 fetch + ReadableStream 行缓冲手动解析；三步判别（HTTP 状态 → Content-Type → 流解析）+ AbortController 120s 超时；请求构造由 `cfg.stream` 配置驱动（fixCondition @占位符 + elements + topFields + statGroup）
 - **进度条**：PERCENT 实时驱动，白卡片 `position:fixed` 悬浮视口正中央（序列因报表而异、可能回退，UI 只取最新值）
-- **账簿下拉**：登录/会话恢复即后台拉取 `AccBook/GetList`（BookStore 缓存 + 登出世代计数重置）；>1 预选第一个；0 账簿弹「未启用总账」警告并禁用查询/转入按钮；BOOK_NO 空值前端拦截（⚠️ API4 总分类账 → HTTP 406；API5 总账 4 只 → HTTP 200 + SSE ERR「账簿不能为空」）
+- **账簿下拉**：登录/会话恢复即后台拉取 `AccBook/GetList`（BookStore 缓存 + 登出世代计数重置）；>1 预选第一个；BOOK_NO 空值前端拦截（⚠️ API4 总分类账 → HTTP 406；API5 总账 4 只 → HTTP 200 + SSE ERR「账簿不能为空」）
+- **0 账簿静默降级 Online（Round 59）**：账簿清单 0 条 → 5 只总账报表**不弹窗、不 toast**，自动切换「Online 空白纸打印版」端点（RPTACCBlank / RPTACCDetail / RPTZFListA / RPTSYListA / RPTCshFroList 的 GetReportStream，无账簿概念）；日期由「会计期间(月)」映射月初/月末；公式框按端点输入参数自动显示（资产负债表 REPNO1/2/3 预填 10/20/30、利润表 REPNO 预填 40、其余无）；5 只全部按响应嵌套 COLUMN_INFO 动态列渲染；切换报表/登出即复位
 - **报表样式下拉**（财务报表 3 只）：数据链路 `AccBook/GetList 账簿行 TYPE_NO → accRptStyle/getlist 样式清单 → 按 RPT_TYPE 过滤（2=资产负债表/3=利润表/4=现金流量表）→ 预选第一个匹配样式`；查询传所选 RPT_NO + 该样式 TYPE_NO（不能写死——实测写死 "3" 报「报表样式不存在」，动态后出 67 行完整数据）；**账簿一改变样式清单即重取**（缓存按账簿隔离）
 - **摘要类型映射**（总分类账/科目余额表）：数据行 `REM_TYPE` —— `1`=期初余额 / `2`=本期合计 / `3`=本年合计；表格彩色徽章展示，转入 AI 数据源时替换为语义文字
 - **动态列**（财务报表 3 只）：消息携带 `COLUMN_INFO [{NAME,TITLE}]` 动态生成数值列（年初数/期末数/本期发生数/本年累计数），前导列项目编号+项目名称；行 SPACES 层级缩进 16px/级 + 一级行加粗
@@ -420,6 +421,10 @@ AI 被训练为 ERP 数据分析专家，会：
 | API5 — 8 只长连接报表（总账 4 需账簿 + 生产制造 4，SSE + 动态列 + 汇总行） | 🟡 待浏览器验证 |
 | 记事本（多数据源快照） | 🟡 待浏览器 E2E |
 | 多语言支持（简 / 繁 / 英） | 🟡 待浏览器三语走查 |
+| 生产制造 9 只逐一实测（AT04 2022 数据）+ 4 处修复 | ✅ 已完成 |
+| 转入数据源配额溢出修复（多卡片拆分 + LZString 压缩） | ✅ 已完成 |
+| 登录页系统设置齿轮 + 登录前置检查 | ✅ 已完成 |
+| 总账 0 账簿静默降级 Online（空白纸打印版 5 端点） | 🟡 待浏览器验证（AT03 科目余额表 SQL 错为 API 侧问题，已搁置待新 API） |
 | AI 流式响应 | ⬜ 待开发 |
 | IndexedDB 迁移 | ⬜ 待开发 |
 | 正式 .pptx 导出 | ✅ 已完成 |

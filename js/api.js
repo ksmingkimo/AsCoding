@@ -88,16 +88,19 @@ var Api = (function() {
    *   2) Content-Type 含 application/json → 错误信封 JSON（20001/20004 认证失效）
    *   3) text/event-stream → 逐行解析 `data: {JSON}` 消息（跨 chunk 行缓冲）
    * 每条消息 { CODE, PERCENT, TITLE, ERR, DATA }：ERR 非空即抛错；
-   * PERCENT 驱动进度回调（100.0 结束消息实测存在）；DATA.REPORT__TAB 累积数据行。
+   * PERCENT 驱动进度回调（100.0 结束消息实测存在）；DATA[dataKey] 累积数据行（默认 REPORT__TAB）。
    * @param {string} path 相对 /SUNFUSION/API 的路径（如 "accGeneralLedger/GetReportStream"。
    *                      ⚠️ 原文档 URL 里的 /api/ 段就是 /SUNFUSION/API 本身，不要再带 api/ 前缀，
    *                      否则拼成 /API/api/... → 404。同 getReport 的历史教训）
    * @param {object} body 请求体
-   * @param {object} callbacks { onProgress(percent, title), onData(data) }
-   * @returns {Promise<Array>} 累积的 REPORT__TAB 行数组
+   * @param {object} callbacks { onProgress(percent, title), onData(data), dataKey }
+   *          dataKey：DATA 内的数据表键名（标准版 REPORT__TAB；
+   *          Online 空白纸打印版为 RPT/MyTable/RPT_CSHFROLIST，Round 59）
+   * @returns {Promise<Array>} 累积的 dataKey 行数组
    */
   function fetchStreamReport(path, body, callbacks) {
     callbacks = callbacks || {};
+    var dataKey = callbacks.dataKey || 'REPORT__TAB';
     var ctrl = new AbortController();
     var timer = setTimeout(function() { ctrl.abort(); }, 120000);
     var url = getBaseUrl() + '/' + path.replace(/^\/+/, '');
@@ -141,8 +144,8 @@ var Api = (function() {
         if (typeof callbacks.onProgress === 'function') {
           callbacks.onProgress(msg.PERCENT || 0, msg.TITLE || '');
         }
-        if (msg.DATA && Array.isArray(msg.DATA.REPORT__TAB)) {
-          rows = rows.concat(msg.DATA.REPORT__TAB);
+        if (msg.DATA && Array.isArray(msg.DATA[dataKey])) {
+          rows = rows.concat(msg.DATA[dataKey]);
           if (typeof callbacks.onData === 'function') callbacks.onData(msg.DATA);
         }
       }

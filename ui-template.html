@@ -10,7 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <link rel="stylesheet" href="css/auth.css?v=20260820d">
-<link rel="stylesheet" href="css/dashboard.css?v=20260819b">
+<link rel="stylesheet" href="css/dashboard.css?v=20260831a">
 <link rel="stylesheet" href="css/ai-analysis.css?v=20260813b">
 <link rel="stylesheet" href="css/notepad.css?v=20260814a">
 <style>
@@ -273,6 +273,27 @@
             <label for="filterDateCst" data-i18n="成本年月">成本年月</label>
             <input type="month" id="filterDateCst" class="form-input" value="2025-07">
           </div>
+          <div class="form-group filter-group-onlinerepno3" style="display:none;">
+            <label data-i18n="报表公式">报表公式</label>
+            <div class="online-repno-row">
+              <div class="repno-field">
+                <span data-i18n="资产公式">资产公式</span>
+                <input type="text" id="filterRepno1" class="form-input" value="10">
+              </div>
+              <div class="repno-field">
+                <span data-i18n="负债公式">负债公式</span>
+                <input type="text" id="filterRepno2" class="form-input" value="20">
+              </div>
+              <div class="repno-field">
+                <span data-i18n="业主公式">业主公式</span>
+                <input type="text" id="filterRepno3" class="form-input" value="30">
+              </div>
+            </div>
+          </div>
+          <div class="form-group filter-group-onlinerepno1" style="display:none;">
+            <label for="filterRepno" data-i18n="利润表公式">利润表公式</label>
+            <input type="text" id="filterRepno" class="form-input" value="40">
+          </div>
         </div>
         <div class="filter-actions">
           <div class="btn-group-main">
@@ -510,6 +531,11 @@
       <button id="demoStream" data-i18n="预览：流式进度条">预览：流式进度条</button>
       <button id="demoFinRpt" data-i18n="预览：财务报表层级">预览：财务报表层级</button>
       <button id="demoMrpce" data-i18n="预览：MRPCE 汇总行">预览：MRPCE 汇总行</button>
+      <button id="demoOnlineGl" data-i18n="预览：Online 总分类账">预览：Online 总分类账</button>
+      <button id="demoOnlineAbt" data-i18n="预览：Online 科目余额表">预览：Online 科目余额表</button>
+      <button id="demoOnlineZcfzb" data-i18n="预览：Online 资产负债表">预览：Online 资产负债表</button>
+      <button id="demoOnlineLrb" data-i18n="预览：Online 利润表">预览：Online 利润表</button>
+      <button id="demoOnlineXjll" data-i18n="预览：Online 现金流量表">预览：Online 现金流量表</button>
       <button id="demoSettingsBlock" data-i18n="演示：未配置系统设置时点登录">演示：未配置系统设置时点登录</button>
     </div>
   </div>
@@ -960,11 +986,219 @@
     if (info) info.textContent = I18n.t('共 {0} 条记录', 2) + ' · ' + I18n.t('汇总行转入时剔除');
   }
 
+  /* ============================================================
+     DEMO ONLY — Online 降级原型（Round 59，确认后进生产）
+     演示内容（公式栏位自动判断，逐项对照 Online总账报表-查询制表.md）：
+     ① 账簿清单 0 条（账套未启用总账）→ 打开总账类报表时静默降级
+        Online 空白纸打印端点（不弹窗、不 toast）
+     ② 公式栏位由端点入参自动判断（生产同源：reports.js online.inputs）：
+        - RPTACCBlank / RPTACCDetail / RPTCshFroList：无公式参数 → 仅「会计期间」
+        - RPTZFListA：REPNO1/REPNO2/REPNO3 → 会计期间 + 3 公式框（预填 10/20/30）
+        - RPTSYListA：REPNO → 会计期间 + 1 公式框（预填 40）
+     ③ 表头按响应 COLUMN_INFO 动态渲染（标签走 ONLINE_COLUMN_LABELS 映射，未映射回退字段名）
+     ============================================================ */
+
+  /* 5 只端点演示配置（镜像生产 REPORT_CONFIG.online 块；公式栏位由 formulaInputs 驱动） */
+  var ONLINE_DEMO = {
+    accgl:       { title: '总分类账',   endpoint: 'RPTACCBlank',   formulaInputs: [] },
+    accBalTable: { title: '科目余额表', endpoint: 'RPTACCDetail',  formulaInputs: [] },
+    accZcfzb:    { title: '资产负债表', endpoint: 'RPTZFListA',    formulaInputs: ['repno1', 'repno2', 'repno3'] },
+    accLrb:      { title: '利润表',     endpoint: 'RPTSYListA',    formulaInputs: ['repno'] },
+    accXjllb:    { title: '现金流量表', endpoint: 'RPTCshFroList', formulaInputs: [] }
+  };
+
+  /* 各报表演示列定义与标签（AT02 实测 COLUMN_INFO，生产照此动态生成） */
+  var ONLINE_GL_COLUMNS = [
+    { NAME: 'NAME' }, { NAME: 'ENG_NAME' }, { NAME: 'ACC_NO' }, { NAME: 'ACC_NOTE' },
+    { NAME: 'YEARMONTH' }, { NAME: 'YEARS' }, { NAME: 'MONTHS' }, { NAME: 'REM' },
+    { NAME: 'AMTND' }, { NAME: 'AMTNC' }, { NAME: 'AMTNYE' }, { NAME: 'SHOWDC' },
+    { NAME: 'ACCNDC' }, { NAME: 'AMTD' }, { NAME: 'AMTC' }, { NAME: 'AMTYE' },
+    { NAME: 'ENG_NOTE' }, { NAME: 'CUR_ID' }, { NAME: 'CUR_NAME' }
+  ];
+  var ONLINE_GL_LABELS = {
+    'ACC_NO': '科目代号', 'NAME': '科目名称', 'ACC_NOTE': '科目说明',
+    'YEARMONTH': '会计期间', 'REM': '摘要',
+    'AMTND': '本期借方', 'AMTNC': '本期贷方', 'AMTNYE': '期末余额', 'SHOWDC': '借贷方向'
+  };
+  var ONLINE_GL_ROWS = [
+    { NAME: '原材料', ACC_NO: '1403', ACC_NOTE: '1403/原材料', REM: '承上期' },
+    { ACC_NO: '1403', YEARMONTH: '2026年4月', REM: '2026年4月份凭证总金额', AMTND: 95.24, AMTNYE: 95.24, SHOWDC: '借' },
+    { ACC_NO: '1403', ACC_NOTE: '小计', AMTND: 95.24, AMTNYE: 95.24, SHOWDC: '借' }
+  ];
+
+  var ONLINE_ABT_COLUMNS = [
+    { NAME: 'ACC_NO' }, { NAME: 'NAME' }, { NAME: 'ENG_NAME' }, { NAME: 'AMTNQC' },
+    { NAME: 'AMTND' }, { NAME: 'AMTNC' }, { NAME: 'SHOWDC' }, { NAME: 'AMTNYE' },
+    { NAME: 'AMTQC' }, { NAME: 'AMTD' }, { NAME: 'AMTC' }, { NAME: 'AMTCUR' },
+    { NAME: 'AMTYE' }, { NAME: 'AMTDCCE' }, { NAME: 'AMTNSHOWQC' }, { NAME: 'AMTSHOWQC' },
+    { NAME: 'AMTNQC_D' }, { NAME: 'AMTNQC_C' }, { NAME: 'AMTQC_D' }, { NAME: 'AMTQC_C' },
+    { NAME: 'AMTNYE_D' }, { NAME: 'AMTNYE_C' }, { NAME: 'AMTYE_D' }, { NAME: 'AMTYE_C' },
+    { NAME: 'DC' }, { NAME: 'CLS' }, { NAME: 'TOP' }, { NAME: 'D_NUM' }, { NAME: 'C_NUM' },
+    { NAME: 'CUR_ID' }, { NAME: 'OBJ' }, { NAME: 'OBJ_NAME' }, { NAME: 'OBJ_NAME_F' }, { NAME: 'SW_OBJ' }
+  ];
+  var ONLINE_ABT_LABELS = {
+    'ACC_NO': '科目代号', 'NAME': '科目名称', 'AMTNQC': '期初余额',
+    'AMTND': '本期借方', 'AMTNC': '本期贷方', 'AMTNYE': '期末余额', 'SHOWDC': '借贷方向',
+    'AMTNQC_D': '期初借方', 'AMTNQC_C': '期初贷方', 'AMTNYE_D': '期末借方', 'AMTNYE_C': '期末贷方',
+    'DC': '借贷', 'D_NUM': '借方笔数', 'C_NUM': '贷方笔数'
+  };
+  var ONLINE_ABT_ROWS = [
+    { ACC_NO: '1403', NAME: '原材料', AMTND: 95.24, AMTNYE: 95.24, SHOWDC: '借', AMTDCCE: 95.24, AMTNYE_D: 95.24, DC: 'D', D_NUM: 1, C_NUM: 0 },
+    { ACC_NO: '2202', NAME: '应付账款', AMTNC: 100.0, AMTNYE: 100.0, SHOWDC: '贷', AMTDCCE: -100.0, AMTNYE_C: 100.0, DC: 'C', D_NUM: 0, C_NUM: 1 }
+  ];
+
+  var ONLINE_ZCFZB_COLUMNS = [
+    { NAME: 'ID' }, { NAME: 'ACC_NOL' }, { NAME: 'ACC_NAMEL' }, { NAME: 'LL' },
+    { NAME: 'AMTNL' }, { NAME: 'AMTN_SUBL' }, { NAME: 'AMTN_SUML' }, { NAME: 'RATE1L' },
+    { NAME: 'ACC_NOR' }, { NAME: 'ACC_NAMER' }, { NAME: 'RR' }, { NAME: 'AMTNR' },
+    { NAME: 'AMTN_SUBR' }, { NAME: 'AMTN_SUMR' }, { NAME: 'RATE1R' },
+    { NAME: 'LA' }, { NAME: 'AMTNA' }, { NAME: 'AMTN_SUBA' }, { NAME: 'AMTN_SUMA' }, { NAME: 'RATE1A' },
+    { NAME: 'RB' }, { NAME: 'AMTNB' }, { NAME: 'AMTN_SUBB' }, { NAME: 'AMTN_SUMB' }, { NAME: 'RATE1B' },
+    { NAME: 'ITM' }
+  ];
+  var ONLINE_ZCFZB_LABELS = {
+    'ACC_NOL': '科目代号(左)', 'ACC_NAMEL': '科目名称(左)', 'AMTN_SUML': '金额(左)', 'RATE1L': '比率(左)',
+    'ACC_NOR': '科目代号(右)', 'ACC_NAMER': '科目名称(右)', 'AMTN_SUMR': '金额(右)', 'RATE1R': '比率(右)',
+    'ITM': '项目编号'
+  };
+  var ONLINE_ZCFZB_ROWS = [
+    { ID: 1, ACC_NAMER: '负债合计', RATE1R: 0.0, ITM: '52' },
+    { ID: 2, ACC_NAMER: '减：库存股', RATE1R: 0.0, ITM: '58' },
+    { ID: 3, ACC_NAMEL: '资产合计', RATE1L: 0.0, ACC_NAMER: '负债及业主权益合计', RATE1R: 0.0, ITM: '62' }
+  ];
+
+  var ONLINE_LRB_COLUMNS = [
+    { NAME: 'ITM' }, { NAME: 'KEY_ITM' }, { NAME: 'CLS' }, { NAME: 'REL_CLS' },
+    { NAME: 'ACC_NO' }, { NAME: 'ACC_NAME' }, { NAME: 'AMTN' }, { NAME: 'AMTN_SUB' },
+    { NAME: 'AMTN_SUM' }, { NAME: 'RATE1' }, { NAME: 'AMTN_BUDGET' }, { NAME: 'AMTN_DIFF' },
+    { NAME: 'RATE2' }, { NAME: 'CAS_NO' }, { NAME: 'CAS_NAME' }, { NAME: 'CAS_ITM' },
+    { NAME: 'UP' }, { NAME: 'SEG3' }, { NAME: 'SEG2' }, { NAME: 'AMT' }, { NAME: 'FUN' }
+  ];
+  var ONLINE_LRB_LABELS = {
+    'ACC_NO': '科目代号', 'ACC_NAME': '科目名称', 'AMTN': '本期金额', 'AMTN_SUB': '子公司金额',
+    'AMTN_SUM': '合计金额', 'RATE1': '比率', 'AMTN_BUDGET': '预算金额', 'AMTN_DIFF': '差异', 'CAS_NAME': '现金流量项目'
+  };
+  var ONLINE_LRB_ROWS = [
+    { ACC_NO: '6401', ACC_NAME: '主营业务成本', AMTN: 95.24, AMTN_SUM: 95.24, RATE1: 100.0 },
+    { ACC_NO: '6602', ACC_NAME: '管理费用', AMTN: 4.76, AMTN_SUM: 4.76, RATE1: 5.0 },
+    { ACC_NAME: '净利润', AMTN_SUM: 0.0, RATE1: 0.0 }
+  ];
+
+  var ONLINE_XJLL_COLUMNS = [
+    { NAME: 'CSH_FRO' }, { NAME: 'CSH_NAME' }, { NAME: 'CSH_ENG_NAME' }, { NAME: 'MAK_DAT' },
+    { NAME: 'MAK_NO' }, { NAME: 'VOH_NO' }, { NAME: 'ACC_NO' }, { NAME: 'ACC_NAME' },
+    { NAME: 'ACC_ENG_NAME' }, { NAME: 'CUR_ID' }, { NAME: 'EXC_RTO' }, { NAME: 'BIL_ID' },
+    { NAME: 'BIL_NO' }, { NAME: 'DEP' }, { NAME: 'DEP_NAME' }, { NAME: 'DC' },
+    { NAME: 'ACC_REM' }, { NAME: 'REM' }, { NAME: 'OBJ' }, { NAME: 'ARP_DAT' },
+    { NAME: 'CLS_ID1' }, { NAME: 'CLS_ID2' }, { NAME: 'CLS_ID3' }, { NAME: 'CLS_ID4' },
+    { NAME: 'VOH_ID' }, { NAME: 'CANCEL_ID' }, { NAME: 'AMT' }, { NAME: 'AMTN' }
+  ];
+  var ONLINE_XJLL_LABELS = {
+    'MAK_DAT': '制单日期', 'MAK_NO': '制单编号', 'VOH_NO': '凭证号',
+    'ACC_NO': '科目代号', 'ACC_NAME': '科目名称', 'EXC_RTO': '汇率',
+    'BIL_ID': '单据类别', 'BIL_NO': '单据编号', 'DEP': '部门代号', 'DEP_NAME': '部门名称',
+    'DC': '借贷方向', 'ACC_REM': '科目摘要', 'REM': '摘要', 'AMT': '原币金额', 'AMTN': '本位币金额'
+  };
+  var ONLINE_XJLL_ROWS = [
+    { MAK_DAT: '2026-04-01', MAK_NO: 'MK2604010001', ACC_NO: '1403', ACC_NAME: '原材料', EXC_RTO: 1.0, BIL_ID: 'LP', BIL_NO: 'LP2604010001', DEP: 'JA', DEP_NAME: '广东天心天思软件有限公司', DC: 'D', ACC_REM: '打印机', REM: '单张切制:LP&LP2604010001', AMT: 0.0, AMTN: 95.24 },
+    { MAK_DAT: '2026-04-01', MAK_NO: 'MK2604010001', ACC_NO: '2221', ACC_NAME: '应交税费', EXC_RTO: 1.0, BIL_ID: 'LP', BIL_NO: 'LP2604010001', DEP: 'JA', DEP_NAME: '广东天心天思软件有限公司', DC: 'D', ACC_REM: '发票:20260121099', REM: '单张切制:LP&LP2604010001', AMT: 0.0, AMTN: 4.76 }
+  ];
+
+  /* 报表 key → 演示列/标签/行 */
+  var ONLINE_DATA = {
+    accgl:       { columns: ONLINE_GL_COLUMNS,    labels: ONLINE_GL_LABELS,    rows: ONLINE_GL_ROWS },
+    accBalTable: { columns: ONLINE_ABT_COLUMNS,   labels: ONLINE_ABT_LABELS,   rows: ONLINE_ABT_ROWS },
+    accZcfzb:    { columns: ONLINE_ZCFZB_COLUMNS, labels: ONLINE_ZCFZB_LABELS, rows: ONLINE_ZCFZB_ROWS },
+    accLrb:      { columns: ONLINE_LRB_COLUMNS,   labels: ONLINE_LRB_LABELS,   rows: ONLINE_LRB_ROWS },
+    accXjllb:    { columns: ONLINE_XJLL_COLUMNS,  labels: ONLINE_XJLL_LABELS,  rows: ONLINE_XJLL_ROWS }
+  };
+
+  /** 预览：Online 降级（reportKey ∈ 5 只总账类报表）——公式栏位自动判断 */
+  function showOnlinePreview(reportKey) {
+    var def = ONLINE_DEMO[reportKey];
+    var data = ONLINE_DATA[reportKey];
+    if (!def || !data) return;
+
+    // ── 自动判断公式栏位（生产同源：reports.js online.inputs → updateFilterPanel 布局）──
+    var groups = [];
+    if (def.formulaInputs.length === 3) groups.push('onlinerepno3');
+    else if (def.formulaInputs.length === 1) groups.push('onlinerepno1');
+    // 0 个公式参数 → groups 为空，仅显示「会计期间」
+
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('dashboardPage').classList.add('active');
+    document.getElementById('reportTitle').textContent = I18n.t(def.title);
+
+    // 筛选面板：会计期间 + 自动推导的公式栏位（其余全部隐藏）
+    var grid = document.querySelector('.filter-grid');
+    if (grid) {
+      grid.querySelectorAll(':scope > .form-group').forEach(function(g) { g.style.display = 'none'; });
+      var cstEl = grid.querySelector('.filter-group-datecst');
+      if (cstEl) cstEl.style.display = '';
+      groups.forEach(function(grp) {
+        var el = grid.querySelector('.filter-group-' + grp);
+        if (el) el.style.display = '';
+      });
+    }
+    var cstLabel = document.querySelector('label[for="filterDateCst"]');
+    if (cstLabel) cstLabel.textContent = I18n.t('会计期间');
+    var cstInput = document.getElementById('filterDateCst');
+    if (cstInput) {
+      var now = new Date();
+      var mm = String(now.getMonth() + 1);
+      if (mm.length === 1) mm = '0' + mm;
+      cstInput.value = now.getFullYear() + '-' + mm;
+    }
+
+    document.getElementById('tableLoading').style.display = 'none';
+    document.getElementById('streamProgress').style.display = 'none';
+
+    // 表头/表体：按 COLUMN_INFO 动态渲染（金额列右对齐，未映射标签回退字段名）
+    function isNumCol(name) {
+      return name.indexOf('AMT') === 0 || name.indexOf('RATE') === 0 ||
+             name === 'ID' || name === 'ITM' || name === 'YEARS' || name === 'MONTHS' ||
+             name === 'D_NUM' || name === 'C_NUM' || name === 'EXC_RTO';
+    }
+    var theadRow = document.getElementById('tableHeadRow');
+    var tbody = document.getElementById('tableBody');
+    if (theadRow) {
+      theadRow.innerHTML = data.columns.map(function(c) {
+        var label = data.labels[c.NAME] || c.NAME;
+        return '<th class="' + (isNumCol(c.NAME) ? 'num' : '') + '">' + Utils.escapeHtml(label) + '</th>';
+      }).join('');
+    }
+    if (tbody) {
+      tbody.innerHTML = data.rows.map(function(row) {
+        return '<tr>' + data.columns.map(function(c) {
+          var v = row[c.NAME];
+          var text = (v === undefined || v === null) ? '' : String(v);
+          return '<td class="' + (isNumCol(c.NAME) ? 'num' : '') + '">' + Utils.escapeHtml(text) + '</td>';
+        }).join('') + '</tr>';
+      }).join('');
+    }
+    // 信息行：展示自动判断结论（生产不显示此行，仅演示用）
+    var formulaNote;
+    if (def.formulaInputs.length === 0) {
+      formulaNote = '自动判断：' + def.endpoint + ' 无公式参数 → 公式栏位隐藏';
+    } else {
+      formulaNote = '自动判断：' + def.endpoint + ' 需 ' +
+        def.formulaInputs.map(function(f) { return f.toUpperCase(); }).join('/') +
+        ' → 显示 ' + def.formulaInputs.length + ' 公式框';
+    }
+    var info = document.getElementById('tableInfoText');
+    if (info) info.textContent = I18n.t('共 {0} 条记录', data.rows.length) + ' · ' + formulaNote + '，列头按 COLUMN_INFO 动态生成';
+  }
+
   document.getElementById('demoLedger').addEventListener('click', showLedgerPreview);
   document.getElementById('demoFinStyle').addEventListener('click', showFinStylePreview);
   document.getElementById('demoStream').addEventListener('click', demoStreamProgress);
   document.getElementById('demoFinRpt').addEventListener('click', showFinRptPreview);
   document.getElementById('demoMrpce').addEventListener('click', showMrpcePreview);
+  document.getElementById('demoOnlineGl').addEventListener('click', function() { showOnlinePreview('accgl'); });
+  document.getElementById('demoOnlineAbt').addEventListener('click', function() { showOnlinePreview('accBalTable'); });
+  document.getElementById('demoOnlineZcfzb').addEventListener('click', function() { showOnlinePreview('accZcfzb'); });
+  document.getElementById('demoOnlineLrb').addEventListener('click', function() { showOnlinePreview('accLrb'); });
+  document.getElementById('demoOnlineXjll').addEventListener('click', function() { showOnlinePreview('accXjllb'); });
 
   /* ============================================================
      DEMO ONLY — 登录拦截演示：系统设置未配置时按登录

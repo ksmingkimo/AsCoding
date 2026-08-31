@@ -10,7 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <link rel="stylesheet" href="css/auth.css?v=20260820d">
-<link rel="stylesheet" href="css/dashboard.css?v=20260819b">
+<link rel="stylesheet" href="css/dashboard.css?v=20260831a">
 <link rel="stylesheet" href="css/ai-analysis.css?v=20260814a">
 <link rel="stylesheet" href="css/notepad.css?v=20260814a">
 </head>
@@ -197,6 +197,30 @@
           <div class="form-group filter-group-datecst" style="display:none;">
             <label for="filterDateCst" data-i18n="成本年月">成本年月</label>
             <input type="month" id="filterDateCst" class="form-input" value="2025-07">
+          </div>
+          <!-- Round 59 Online 降级（账簿 0 条）：报表公式输入框，与 ui-template.html 完全一致。
+               公式栏位由 reports.js updateFilterPanel 按 online.inputs 自动推导显示，
+               预填值 10/20/30/40 = Online 文档示例公式代号 -->
+          <div class="form-group filter-group-onlinerepno3" style="display:none;">
+            <label data-i18n="报表公式">报表公式</label>
+            <div class="online-repno-row">
+              <div class="repno-field">
+                <span data-i18n="资产公式">资产公式</span>
+                <input type="text" id="filterRepno1" class="form-input" value="10">
+              </div>
+              <div class="repno-field">
+                <span data-i18n="负债公式">负债公式</span>
+                <input type="text" id="filterRepno2" class="form-input" value="20">
+              </div>
+              <div class="repno-field">
+                <span data-i18n="业主公式">业主公式</span>
+                <input type="text" id="filterRepno3" class="form-input" value="30">
+              </div>
+            </div>
+          </div>
+          <div class="form-group filter-group-onlinerepno1" style="display:none;">
+            <label for="filterRepno" data-i18n="利润表公式">利润表公式</label>
+            <input type="text" id="filterRepno" class="form-input" value="40">
           </div>
           <div class="form-group filter-group-batno" style="display:none;">
             <label for="filterBatNo" data-i18n="批号">批号</label>
@@ -390,7 +414,7 @@
      ========================================================= -->
 <!-- I18n Foundation -->
 <script src="js/i18n.js?v=20260814a"></script>
-<script src="js/i18n-data.js?v=20260820c"></script>
+<script src="js/i18n-data.js?v=20260831a"></script>
 <!-- Foundation -->
 <script src="js/utils.js?v=20260820a"></script>
 <!-- Round 56：LZString 压缩（数据源/记事本大 payload 透明压缩，必须在两个 store 之前加载） -->
@@ -402,8 +426,8 @@
 <script src="js/rpt-style-store.js?v=20260819c"></script>
 <!-- Auth & API -->
 <script src="js/auth.js?v=20260814a"></script>
-<script src="js/api.js?v=20260818a"></script>
-<script src="js/reports.js?v=20260820a"></script>
+<script src="js/api.js?v=20260831a"></script>
+<script src="js/reports.js?v=20260831a"></script>
 <!-- 报表菜单（搜索/折叠/收藏） -->
 <script src="js/report-menu-store.js?v=20260813b"></script>
 <script src="js/report-menu.js?v=20260819b"></script>
@@ -425,6 +449,6 @@
 <script src="js/ai-suggestions.js?v=20260814a"></script>
 <script src="js/settings-ui.js?v=20260820c"></script>
 <!-- App Entry（DOMContentLoaded 自动初始化） -->
-<script src="js/app.js?v=20260820c"></script>
+<script src="js/app.js?v=20260831a"></script>
 </body>
 </html>

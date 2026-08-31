@@ -38,28 +38,27 @@ var App = (function() {
       Utils.showToast(I18n.t('请先选择报表'), 'error');
       return;
     }
-    // 0 账簿拦截兜底：按钮已禁用时查询也不该跑（键盘/其他路径）
-    if (_ledgerBlocked) return;
-
     var reportKey = AppState.currentReport;
     var cfg = ReportEngine.getConfig(reportKey);
     var filters = ReportEngine.readFilters();
     var isStream = !!(cfg && cfg.apiMethod === 'getReportStream');
+    // Round 59：账簿 0 条 → 总账 5 只静默降级 Online 端点（无账簿/样式链路，下面拦截全跳过）
+    var isOnline = !!filters.onlineMode;
 
     // BOOK_NO 铁律（仅 needsBook 的流式报表；实测 API5：空值 → 200 + SSE ERR「账簿不能为空」，
     // API4 总分类账：空值 → HTTP 406；前端先拦，不发请求）
-    if (isStream && cfg.needsBook && !filters.filterBookNo) {
+    if (isStream && cfg.needsBook && !isOnline && !filters.filterBookNo) {
       Utils.showToast(I18n.t('请选择账簿'), 'error');
       return;
     }
 
     // RPT_NO 铁律（三财务报表）：未选样式不发请求（样式加载失败/该类型无样式都会拦住）
-    if (isStream && cfg.needsRptStyle && !filters.filterRptNo) {
+    if (isStream && cfg.needsRptStyle && !isOnline && !filters.filterRptNo) {
       Utils.showToast(I18n.t('请选择报表样式'), 'error');
       return;
     }
     // TYPE_NO 注入：所选样式所属科目表代号（按账簿+样式查样式行，账簿切换后必为新清单）
-    if (isStream && cfg.needsRptStyle) {
+    if (isStream && cfg.needsRptStyle && !isOnline) {
       var style = (typeof RptStyleStore !== 'undefined') ? RptStyleStore.getStyle(filters.filterBookNo, filters.filterRptNo) : null;
       if (!style) {
         Utils.showToast(I18n.t('请选择报表样式'), 'error');
@@ -332,32 +331,6 @@ var App = (function() {
   }
 
   /* ================================================================
-     账簿依赖报表（总分类账）— 0 账簿拦截 + 按钮禁用
-     设计规则（API服务调用说明文档 10.3）：
-       · 打开前 ensureLoaded（失败重试一次；失败 ≠ 0 账簿，toast 报错不切换）
-       · code===0 且 0 账簿 → 弹警告 + 【查询】【转入】禁用，不调流不切换
-       · 切换到其他报表时按钮恢复
-     ================================================================ */
-  var _ledgerBlocked = false;   // 0 账簿警告后为 true，直到切换报表
-
-  function setLedgerButtonsDisabled(disabled) {
-    var queryBtn = document.getElementById('queryBtn');
-    var transferBtn = document.getElementById('transferBtn');
-    if (queryBtn) queryBtn.disabled = disabled;
-    if (transferBtn) transferBtn.disabled = disabled;
-  }
-
-  function blockLedgerReport() {
-    _ledgerBlocked = true;
-    setLedgerButtonsDisabled(true);
-  }
-
-  function unblockLedgerReport() {
-    _ledgerBlocked = false;
-    setLedgerButtonsDisabled(false);
-  }
-
-  /* ================================================================
      入口待机态（未选报表）
      登录/会话恢复后进入：不预选报表、不自动查询，焦点停【搜索报表】，
      避免一进来画面未看清就发起查询（浪费资源 + 首屏卡顿）。
@@ -504,6 +477,9 @@ var App = (function() {
     var cfg = ReportEngine.getConfig(reportKey);
     if (!cfg) return;
 
+    // 每次打开报表先复位 Online 降级标志（切报表/重开覆盖上一次状态；0 账簿分支下会重新置位）
+    if (typeof ReportEngine !== 'undefined') ReportEngine.ledgerOnline = false;
+
     // 账簿依赖报表：先确保账簿清单已加载
     if (cfg.needsBook && typeof BookStore !== 'undefined') {
       BookStore.ensureLoaded().then(function(res) {
@@ -513,9 +489,10 @@ var App = (function() {
           return;
         }
         if (res.books.length === 0) {
-          // 0 账簿：警告 + 禁用【查询】【转入】，不调流、不切换
-          blockLedgerReport();
-          Dialog.alert(I18n.t('你的账套没有启用总账，所以你不能操作这个查询'));
+          // Round 59：0 账簿 → 总账 5 只静默降级 Online 空白纸打印版端点
+          // （完全静默：不弹窗不 toast，用户决策；面板由 updateFilterPanel 按 online 布局呈现）
+          ReportEngine.ledgerOnline = true;
+          _openReportCore(reportKey);
           return;
         }
         populateBookSelect(res.books);
@@ -544,12 +521,11 @@ var App = (function() {
     _openReportCore(reportKey);
   }
 
-  /** openReport 主体（无账簿检查；进入即恢复被禁用的按钮）
+  /** openReport 主体（无账簿检查）
    *  @param {boolean} [skipAutoQuery] 跳过末尾自动查询（报表样式等异步就绪后再查时用） */
   function _openReportCore(reportKey, skipAutoQuery) {
     var cfg = ReportEngine.getConfig(reportKey);
     if (!cfg) return;
-    if (_ledgerBlocked) unblockLedgerReport();   // 切换到其他报表 → 按钮恢复
     if (_entryIdle) {                            // 退出待机态 → 按钮/面板/表格恢复
       _entryIdle = false;
       setEntryButtonsDisabled(false);
@@ -792,13 +768,20 @@ var App = (function() {
           if (mm.length === 1) mm = '0' + mm;
           filterDateCst.value = nowReset.getFullYear() + '-' + mm;
         }
+        // Round 59 Online 降级公式框：重置回文档示例默认值（10/20/30/40，不是清空）
+        var repnoDefaults = { filterRepno1: '10', filterRepno2: '20', filterRepno3: '30', filterRepno: '40' };
+        Object.keys(repnoDefaults).forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) el.value = repnoDefaults[id];
+        });
         // 账簿下拉：重置回第一个账簿（若有选项；0 账簿时保持空）
         var filterBookNo = document.getElementById('filterBookNo');
         if (filterBookNo && filterBookNo.options.length > 0) filterBookNo.selectedIndex = 0;
         ReportEngine.currentPage = 1;
         // 财务报表：账簿可能已变 → 样式清单须按账簿重取；就绪/失败后再 doQuery
+        // （Round 59 Online 降级模式无样式链路，跳过）
         var resetRcfg = ReportEngine.getConfig(AppState.currentReport);
-        if (resetRcfg && resetRcfg.needsRptStyle && typeof RptStyleStore !== 'undefined') {
+        if (resetRcfg && resetRcfg.needsRptStyle && !ReportEngine.ledgerOnline && typeof RptStyleStore !== 'undefined') {
           var styleSel = document.getElementById('filterRptNo');
           if (styleSel) { styleSel.innerHTML = '<option value="">' + I18n.t('加载中...') + '</option>'; }
           loadRptStylesForBook(AppState.currentReport, filterBookNo ? filterBookNo.value : '', doQuery, doQuery);
@@ -864,8 +847,8 @@ var App = (function() {
   /* ================================================================
      Login / Logout
      ================================================================ */
-  /** 登出/过期时清账簿+报表样式状态：内存缓存作废 + 下拉回占位 + 解除按钮阻断
-      （否则重登后下拉还挂上一次登录的账簿/样式） */
+  /** 登出/过期时清账簿+报表样式状态：内存缓存作废 + 下拉回占位 + Online 降级标志复位
+      （否则重登后下拉还挂上一次登录的账簿/样式，降级标志串到新账套） */
   function resetLedgerBooksState() {
     if (typeof BookStore !== 'undefined') BookStore.reset();
     var bookSel = document.getElementById('filterBookNo');
@@ -877,7 +860,13 @@ var App = (function() {
     if (styleSel) {
       styleSel.innerHTML = '<option value="">' + I18n.t('加载中...') + '</option>';
     }
-    unblockLedgerReport();
+    if (typeof ReportEngine !== 'undefined') ReportEngine.ledgerOnline = false;
+    // Round 59 Online 公式框回文档示例默认值（登出不清空用户正在看的条件语义，统一走默认）
+    var repnoDefaults = { filterRepno1: '10', filterRepno2: '20', filterRepno3: '30', filterRepno: '40' };
+    Object.keys(repnoDefaults).forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.value = repnoDefaults[id];
+    });
   }
 
   function initAuth() {
