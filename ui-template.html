@@ -10,7 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <link rel="stylesheet" href="css/auth.css?v=20260820d">
-<link rel="stylesheet" href="css/dashboard.css?v=20260831a">
+<link rel="stylesheet" href="css/dashboard.css?v=20260901b">
 <link rel="stylesheet" href="css/ai-analysis.css?v=20260813b">
 <link rel="stylesheet" href="css/notepad.css?v=20260814a">
 <style>
@@ -536,6 +536,7 @@
       <button id="demoOnlineZcfzb" data-i18n="预览：Online 资产负债表">预览：Online 资产负债表</button>
       <button id="demoOnlineLrb" data-i18n="预览：Online 利润表">预览：Online 利润表</button>
       <button id="demoOnlineXjll" data-i18n="预览：Online 现金流量表">预览：Online 现金流量表</button>
+      <button id="demoRepnoFail" data-i18n="预览：公式清单拉取失败">预览：公式清单拉取失败</button>
       <button id="demoSettingsBlock" data-i18n="演示：未配置系统设置时点登录">演示：未配置系统设置时点登录</button>
     </div>
   </div>
@@ -547,7 +548,7 @@
      ========================================================= -->
 <!-- I18n Foundation -->
 <script src="js/i18n.js?v=20260814a"></script>
-<script src="js/i18n-data.js?v=20260820c"></script>
+<script src="js/i18n-data.js?v=20260901c"></script>
 <!-- Foundation -->
 <script src="js/utils.js?v=20260820a"></script>
 <!-- Round 56：LZString 压缩（数据源/记事本大 payload 透明压缩，必须在两个 store 之前加载） -->
@@ -560,7 +561,7 @@
 <!-- Auth & API -->
 <script src="js/auth.js?v=20260814a"></script>
 <script src="js/api.js?v=20260818a"></script>
-<script src="js/reports.js?v=20260819e"></script>
+<script src="js/reports.js?v=20260901c"></script>
 <!-- 报表菜单（搜索/折叠/收藏） -->
 <script src="js/report-menu-store.js?v=20260813b"></script>
 <script src="js/report-menu.js?v=20260819b"></script>
@@ -582,7 +583,7 @@
 <script src="js/ai-suggestions.js?v=20260814a"></script>
 <script src="js/settings-ui.js?v=20260820c"></script>
 <!-- App Entry（DOMContentLoaded 自动初始化） -->
-<script src="js/app.js?v=20260820c"></script>
+<script src="js/app.js?v=20260901c"></script>
 
 <script>
 /* ============================================================
@@ -1113,6 +1114,51 @@
     accXjllb:    { columns: ONLINE_XJLL_COLUMNS,  labels: ONLINE_XJLL_LABELS,  rows: ONLINE_XJLL_ROWS }
   };
 
+  /* Round 60：公式下拉演示（mock 14 条实测清单 + input→select 换装，
+     生产同源逻辑见 reports.js renderOnlineRepnoSelects / acc-repno-store.js） */
+  var DEMO_REPNO_LIST = [
+    { REP_NO: '10', NAME: '资产(一般企业)' }, { REP_NO: '11', NAME: '资产' },
+    { REP_NO: '20', NAME: '负债(一般企业)' }, { REP_NO: '21', NAME: '负债' },
+    { REP_NO: '30', NAME: '股东权益(一般企业)' }, { REP_NO: '31', NAME: '股东权益' },
+    { REP_NO: '40', NAME: '损益表(一般企业)' }, { REP_NO: '41', NAME: '损益表' },
+    { REP_NO: '42', NAME: '金融业损益表' }, { REP_NO: '43', NAME: '保险业损益表' },
+    { REP_NO: '44', NAME: '证券业损益表' },
+    { REP_NO: '50', NAME: '费用明细表' }, { REP_NO: '51', NAME: '营业成本表' },
+    { REP_NO: '61', NAME: '管销费用明细表' }
+  ];
+  var DEMO_REPNO_DEFAULTS = { filterRepno1: '10', filterRepno2: '20', filterRepno3: '30', filterRepno: '40' };
+
+  /** 公式框 input → select 换装 + 全量清单 + 预选默认值（幂等：已是 select 则只重填）。
+      Round 60 i18n：选项名走 I18n.t 本地字典随语言切换（生产同源 reports.js _repnoOptionLabel），
+      重渲染时保留当前选中（生产同源：cur || defaultValue，不重置用户已选值） */
+  function fillDemoRepnos() {
+    Object.keys(DEMO_REPNO_DEFAULTS).forEach(function(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var sel;
+      if (el.tagName === 'SELECT') {
+        sel = el;
+      } else {
+        sel = document.createElement('select');
+        sel.id = id;
+        sel.className = el.className;
+        el.parentNode.replaceChild(sel, el);
+      }
+      var cur = sel.value;
+      sel.innerHTML = '';
+      var def = DEMO_REPNO_DEFAULTS[id];
+      DEMO_REPNO_LIST.forEach(function(row) {
+        var o = document.createElement('option');
+        o.value = row.REP_NO;
+        o.textContent = row.REP_NO + ' · ' + I18n.t(row.NAME);
+        if (row.REP_NO === (cur || def)) o.selected = true;
+        sel.appendChild(o);
+      });
+    });
+  }
+  // 语言切换时重渲染公式下拉选项名（选中保留）
+  window.addEventListener('i18n:changed', fillDemoRepnos);
+
   /** 预览：Online 降级（reportKey ∈ 5 只总账类报表）——公式栏位自动判断 */
   function showOnlinePreview(reportKey) {
     var def = ONLINE_DEMO[reportKey];
@@ -1124,6 +1170,9 @@
     if (def.formulaInputs.length === 3) groups.push('onlinerepno3');
     else if (def.formulaInputs.length === 1) groups.push('onlinerepno1');
     // 0 个公式参数 → groups 为空，仅显示「会计期间」
+
+    // Round 60：公式框换装下拉（GetAccRepNoList 全量清单 14 条 + 预选默认值）
+    if (def.formulaInputs.length > 0) fillDemoRepnos();
 
     document.getElementById('loginPage').classList.add('hidden');
     document.getElementById('dashboardPage').classList.add('active');
@@ -1183,7 +1232,7 @@
     } else {
       formulaNote = '自动判断：' + def.endpoint + ' 需 ' +
         def.formulaInputs.map(function(f) { return f.toUpperCase(); }).join('/') +
-        ' → 显示 ' + def.formulaInputs.length + ' 公式框';
+        ' → 显示 ' + def.formulaInputs.length + ' 公式下拉（GetAccRepNoList 清单换装，预选默认值）';
     }
     var info = document.getElementById('tableInfoText');
     if (info) info.textContent = I18n.t('共 {0} 条记录', data.rows.length) + ' · ' + formulaNote + '，列头按 COLUMN_INFO 动态生成';
@@ -1199,6 +1248,10 @@
   document.getElementById('demoOnlineZcfzb').addEventListener('click', function() { showOnlinePreview('accZcfzb'); });
   document.getElementById('demoOnlineLrb').addEventListener('click', function() { showOnlinePreview('accLrb'); });
   document.getElementById('demoOnlineXjll').addEventListener('click', function() { showOnlinePreview('accXjllb'); });
+  document.getElementById('demoRepnoFail').addEventListener('click', function() {
+    // Round 60 失败路径演示：清单拉取失败 → 警告并中止打开（生产：不渲染面板、屏幕保持原状）
+    Dialog.alert(I18n.t('没有报表公式，无法进行查询'));
+  });
 
   /* ============================================================
      DEMO ONLY — 登录拦截演示：系统设置未配置时按登录

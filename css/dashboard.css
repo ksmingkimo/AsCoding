@@ -408,10 +408,14 @@ body {
 
 /* Online 降级（Round 59）：报表公式输入行——总账未启用时资产负债/利润表条件面板 */
 .filter-group-onlinerepno3 { grid-column: span 2; }
-.online-repno-row { display: flex; gap: var(--space-md); align-items: flex-end; flex-wrap: wrap; }
-.online-repno-row .repno-field { display: flex; flex-direction: column; gap: 2px; }
+/* Round 60 用户要求：3 个公式选单摆得下就同一行，不换行（nowrap + 空间不足时等比例收缩） */
+.online-repno-row { display: flex; gap: var(--space-md); align-items: flex-end; flex-wrap: nowrap; }
+.online-repno-row .repno-field { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .online-repno-row .repno-field span { font-size: var(--text-xs); color: var(--color-text-secondary); }
 .online-repno-row .repno-field .form-input { width: 110px; height: 34px; }
+/* Round 60：公式下拉换装后加宽（"40 · 损益表(一般企业)" 不截断），文本框保持 110px */
+.online-repno-row .repno-field select.form-input { width: 190px; max-width: 100%; }
+.filter-group-onlinerepno1 select.form-input { width: 190px; }
 
 /* ============================================================
    FORM ELEMENTS (shared)

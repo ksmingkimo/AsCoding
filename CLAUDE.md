@@ -122,6 +122,7 @@
 | 账簿列表查询.md | 账簿清单 API 原始文档（AccBook/GetList） |
 | 科目表 列表查询.md | 科目表清单 API 原始文档（AccType/getlist — 需要 TYPE_NAME 时才查，不在报表样式链路内） |
 | 报表样式 列表查询.md | 报表样式清单 API 原始文档（accRptStyle/getlist — 三财务报表 RPT_NO 来源） |
+| 制表公式-列表查询.md | 制表公式清单 API 原始文档（billcommon/GetAccRepNoList — Online 资产负债表/利润表公式下拉数据源，Round 60） |
 | 标准报表制表API5.md | 8 个报表 API 原始文档（科目余额表/资产负债表/利润表/现金流量表/物料分析明细/在制成本明细/在制原料明细/直接原料明细 — 全部 GetReportStream 长连接） |
 | 报表明细清单.md | 40 只报表明细清单（名称/Key/PGM/端点/方式/分组/来源文档，2026-08-19 生成） |
 | 总账报表调用方法.md | 总账 5 只报表即拿即用 API 速查（标准版+Online 版双路径整并：端点/参数/依赖清单/SSE 解析/陷阱/降级实现映射，2026-08-28 生成、2026-08-31 整并 Online 文档） |

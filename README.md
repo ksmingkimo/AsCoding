@@ -179,7 +179,7 @@ AsCoding/
 │   ├── ai-analysis.css         ← AI Chat、数据源面板、设置弹窗、表格增强
 │   └── notepad.css             ← 记事本页签样式
 │
-├── js/（26 个，index.html 加载清单）
+├── js/（27 个，index.html 加载清单）
 │   ├── i18n.js                 ← 多语言核心（gettext 风格 t() / applyStatic / 语言解析链）
 │   ├── i18n-data.js            ← 三语静态字典（zh-tw / en，简体原文即 key，末尾同步 boot）
 │   ├── utils.js                ← 通用工具（Toast / 转义 / 格式化 / deepClone / LZString 压缩降级安全）
@@ -188,10 +188,11 @@ AsCoding/
 │   ├── datasource-store.js     ← 数据源 CRUD（localStorage，上限 20；超大拆分多卡片 + LZString 透明压缩 + 配额友好报错）
 │   ├── book-store.js           ← 账簿清单缓存（AccBook/GetList，登录/会话恢复预热，登出世代计数重置）
 │   ├── rpt-style-store.js      ← 报表样式缓存（accRptStyle/getlist，按账簿 BOOK_NO 隔离，TYPE_NO 来自账簿行；财务报表 RPT_NO/TYPE_NO 动态化）
+│   ├── acc-repno-store.js      ← 制表公式清单缓存（billcommon/GetAccRepNoList；Online 资产负债/利润表公式下拉数据源，Round 60）
 │   │
 │   ├── auth.js                 ← 认证模块（登录/登出/Token/会话恢复，LANG_ID 随语言）
 │   ├── api.js                  ← API 客户端（fetch 封装/认证注入/错误拦截）
-│   ├── reports.js              ← 报表引擎（40 报表配置/SEARCH_INFO 构造/动态表格/28 布局筛选/REM_TYPE 摘要类型 badge/流式请求构造/0 账簿静默降级 Online buildOnlineBody + ONLINE_COLUMN_LABELS）
+│   ├── reports.js              ← 报表引擎（40 报表配置/SEARCH_INFO 构造/动态表格/28 布局筛选/REM_TYPE 摘要类型 badge/流式请求构造/0 账簿静默降级 Online buildOnlineBody + ONLINE_COLUMN_LABELS + Round 60 公式框下拉换装 renderOnlineRepnoSelects/restoreOnlineRepnoInputs/getOnlineRepnoDefaults + Round 61 简繁英补丁 translateOnlineCell 固定文案白名单翻译）
 │   ├── report-menu-store.js    ← 报表菜单持久化（收藏列表）
 │   ├── report-menu.js          ← 动态菜单渲染（搜索/折叠分组/收藏置顶）
 │   │
@@ -209,7 +210,7 @@ AsCoding/
 │   ├── notepad-store.js        ← 记事本 CRUD（localStorage，上限 50，多数据源快照；全容器压缩信封）
 │   ├── notepad-ui.js           ← 记事本卡片渲染 + 保存/加载/删除/清空
 │   ├── settings-ui.js          ← 设置面板弹窗/验证（入口：主界面齿轮 + 登录卡片右上角齿轮 + 拦截自动打开）
-│   └── app.js                  ← 主入口（AppState/查询/分页/初始化/表头渲染唯一入口/登录前置检查）
+│   └── app.js                  ← 主入口（AppState/查询/分页/初始化/表头渲染唯一入口/登录前置检查/Round 60 公式清单加载前置时序 + _openSeq 竞态守卫/Round 61 语言切换重渲染公式下拉）
 │
 ├── 流程图/                      ← 10 张 Draw.io 业务流程图
 ├── scripts/
@@ -217,8 +218,8 @@ AsCoding/
 │
 ├── screenshots/                ← 应用截图（界面预览）
 │
-├── deploy.ps1                  ← 部署包生成脚本（v1.9，31 文件）
-├── sunlike-erp-report-v1.9.zip ← 部署包（解压到 Web 服务器目录）
+├── deploy.ps1                  ← 部署包生成脚本（v1.11，32 文件）
+├── sunlike-erp-report-v1.11.zip ← 部署包（解压到 Web 服务器目录）
 │
 └── 文档（项目根目录）
     ├── 需求架构文档.md          ← 项目需求 & 技术架构
@@ -232,6 +233,7 @@ AsCoding/
     ├── 账簿列表查询.md           ← AccBook/GetList 账簿清单 API 原始文档
     ├── 科目表 列表查询.md         ← AccType/getlist 科目表清单 API 原始文档（仅需 TYPE_NAME 时才查，不在报表样式链路内）
     ├── 报表样式 列表查询.md       ← accRptStyle/getlist 报表样式清单 API 原始文档（财务报表 RPT_NO 来源）
+    ├── 制表公式-列表查询.md       ← billcommon/GetAccRepNoList 制表公式清单 API 原始文档（Online 资产负债/利润表公式下拉数据源）
     ├── 标准报表制表API5.md       ← v5 八报表长连接（8 个 GetReportStream：科目余额/资产负债/利润/现金流量/物料分析明细/在制成本明细/在制原料明细/直接原料明细）原始文档
     ├── 流程图.md                ← 16 节业务流程图文字参考
     ├── 部署指南.md              ← Web 服务器部署说明
@@ -302,6 +304,8 @@ Authorization: Bearer {TOKEN}
 - **进度条**：PERCENT 实时驱动，白卡片 `position:fixed` 悬浮视口正中央（序列因报表而异、可能回退，UI 只取最新值）
 - **账簿下拉**：登录/会话恢复即后台拉取 `AccBook/GetList`（BookStore 缓存 + 登出世代计数重置）；>1 预选第一个；BOOK_NO 空值前端拦截（⚠️ API4 总分类账 → HTTP 406；API5 总账 4 只 → HTTP 200 + SSE ERR「账簿不能为空」）
 - **0 账簿静默降级 Online（Round 59）**：账簿清单 0 条 → 5 只总账报表**不弹窗、不 toast**，自动切换「Online 空白纸打印版」端点（RPTACCBlank / RPTACCDetail / RPTZFListA / RPTSYListA / RPTCshFroList 的 GetReportStream，无账簿概念）；日期由「会计期间(月)」映射月初/月末；公式框按端点输入参数自动显示（资产负债表 REPNO1/2/3 预填 10/20/30、利润表 REPNO 预填 40、其余无）；5 只全部按响应嵌套 COLUMN_INFO 动态列渲染；切换报表/登出即复位
+- **公式下拉（Round 60）**：打开 Online 资产负债/利润表前拉 `billcommon/GetAccRepNoList`（实测 14 条公式清单）→ 公式框换装下拉（「代号 · 名称」、预选默认值 10/20/30/40，免手输防输错）；**拉取失败 → 弹「没有报表公式，无法进行查询」并中止打开**（拉不到即该账套无公式资料，手填必错）
+- **简繁英补丁（Round 61）**：Online 5 只报表切繁/英后下拉选项名与资料格固定文案（借/贷/承上期/小计/合计(:)）随语言翻译（14 条公式目录名入字典；资料格按字段白名单翻译，自由文字不误翻）；语言切换重渲染下拉且保留已选公式
 - **报表样式下拉**（财务报表 3 只）：数据链路 `AccBook/GetList 账簿行 TYPE_NO → accRptStyle/getlist 样式清单 → 按 RPT_TYPE 过滤（2=资产负债表/3=利润表/4=现金流量表）→ 预选第一个匹配样式`；查询传所选 RPT_NO + 该样式 TYPE_NO（不能写死——实测写死 "3" 报「报表样式不存在」，动态后出 67 行完整数据）；**账簿一改变样式清单即重取**（缓存按账簿隔离）
 - **摘要类型映射**（总分类账/科目余额表）：数据行 `REM_TYPE` —— `1`=期初余额 / `2`=本期合计 / `3`=本年合计；表格彩色徽章展示，转入 AI 数据源时替换为语义文字
 - **动态列**（财务报表 3 只）：消息携带 `COLUMN_INFO [{NAME,TITLE}]` 动态生成数值列（年初数/期末数/本期发生数/本年累计数），前导列项目编号+项目名称；行 SPACES 层级缩进 16px/级 + 一级行加粗
@@ -425,6 +429,8 @@ AI 被训练为 ERP 数据分析专家，会：
 | 转入数据源配额溢出修复（多卡片拆分 + LZString 压缩） | ✅ 已完成 |
 | 登录页系统设置齿轮 + 登录前置检查 | ✅ 已完成 |
 | 总账 0 账簿静默降级 Online（空白纸打印版 5 端点） | 🟡 待浏览器验证（AT03 科目余额表 SQL 错为 API 侧问题，已搁置待新 API） |
+| 总账 Online 公式下拉（GetAccRepNoList，Round 60） | ✅ 已完成（浏览器验证 + 屏蔽 billcommon 失败路径哈啰 11 断言） |
+| 总账 Online 5 只简繁英补丁（Round 61） | ✅ 已完成（三语哈啰 16 断言 + 浏览器确认） |
 | AI 流式响应 | ⬜ 待开发 |
 | IndexedDB 迁移 | ⬜ 待开发 |
 | 正式 .pptx 导出 | ✅ 已完成 |

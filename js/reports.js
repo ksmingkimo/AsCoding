@@ -1767,6 +1767,51 @@ var ReportEngine = (function() {
     return (t && t[fieldName]) || null;
   }
 
+  // Round 60 i18n：制表公式清单 14 条实测目录（AT02/AT03 一致，与账套无关）REP_NO → 简体名。
+  // 服务端 NAME 是简体资料、随登录 LANG_ID 不随 UI 语言切换 → 下拉选项名走本地字典翻译，
+  // 字典外的客制公式回退服务端 NAME。
+  var ONLINE_REPNO_NAMES = {
+    '10': '资产(一般企业)', '11': '资产',
+    '20': '负债(一般企业)', '21': '负债',
+    '30': '股东权益(一般企业)', '31': '股东权益',
+    '40': '损益表(一般企业)', '41': '损益表',
+    '42': '金融业损益表', '43': '保险业损益表', '44': '证券业损益表',
+    '50': '费用明细表', '51': '营业成本表', '61': '管销费用明细表'
+  };
+
+  /** 公式选项显示名（"REP_NO · 名称"，名称走 I18n.t；未知 REP_NO 回退服务端 NAME） */
+  function _repnoOptionLabel(row) {
+    var key = ONLINE_REPNO_NAMES[String(row.REP_NO)];
+    var name = key ? I18n.t(key) : (row.NAME || '');
+    return row.REP_NO + ' · ' + name;
+  }
+
+  // Round 60 i18n：Online 报表资料格固定文案翻译——逐字段白名单（只收实测锁定的固定词组字段，
+  // NAME=科目名称/REM=任意摘要等自由文字不入白名单，防误翻 ERP 资料）
+  var ONLINE_VALUE_FIELDS = {
+    accgl:       { SHOWDC: 1, REM: 1, ACC_NOTE: 1, YEARMONTH: 1 },
+    accBalTable: { SHOWDC: 1, NAME: 1 }
+  };
+  var ONLINE_FIXED_VALUES = { '借': 1, '贷': 1, '承上期': 1, '小计': 1, '合计': 1, '合计:': 1 };
+
+  /**
+   * Round 60 i18n：Online 资料格文案翻译（仅固定词组/固定模式，无匹配原样返回）
+   * 模式：YEARMONTH "2024年1月"；REM "2024年1月份凭证总金额"（月补零，en 显示 2024-01）
+   */
+  function translateOnlineCell(reportKey, fieldName, value) {
+    var fs = ONLINE_VALUE_FIELDS[reportKey];
+    if (!fs || !fs[fieldName]) return value;
+    if (ONLINE_FIXED_VALUES[value]) return I18n.t(value);
+    if (fieldName === 'YEARMONTH') {
+      var ym = /^(\d{4})年(\d{1,2})月$/.exec(value);
+      if (ym) return I18n.t('{0}年{1}月', ym[1], String(ym[2]).padStart(2, '0'));
+    } else if (fieldName === 'REM') {
+      var vr = /^(\d{4})年(\d{1,2})月份凭证总金额$/.exec(value);
+      if (vr) return I18n.t('{0}年{1}月份凭证总金额', vr[1], String(vr[2]).padStart(2, '0'));
+    }
+    return value;
+  }
+
   // Decimal-type fields (right-aligned, numeric formatting)
   var DECIMAL_FIELDS = [
     'UP','QTY','DIS_CNT','AMT_DIS_CNT','AMTN','AMTN_NET','TAX','AMTN_WITHTAX',
@@ -2536,6 +2581,9 @@ var ReportEngine = (function() {
       return '<tr' + trClass + '>' + columns.map(function(col) {
         var raw = row ? row[col.field] : '';
         var display = formatCellValue(raw, col.field);
+        // Round 60 i18n：Online 降级报表资料格固定文案随语言翻译（借/贷/承上期/小计/合计等；
+        // 自由文字无匹配原样返回，标准版路径 _ledgerOnline=false 不经过这里）
+        if (_ledgerOnline) { display = translateOnlineCell(reportKey, col.field, display); }
         var cssClass = getCellClass(col.field);
 
         if (col.field === 'CHK_STATUS') {
@@ -2848,6 +2896,100 @@ var ReportEngine = (function() {
   }
 
   /* ================================================================
+     Round 60 Online 公式下拉（billcommon/GetAccRepNoList）
+     ================================================================ */
+
+  /** 公式框换装辅助：input → select（保留 id/class/父节点），返回新 select */
+  function _swapRepnoToSelect(el, inp) {
+    var sel = document.createElement('select');
+    sel.id = inp.id;
+    sel.className = el.className;
+    el.parentNode.replaceChild(sel, el);
+    return sel;
+  }
+
+  /** 公式框换装辅助：select → text input（保留 id/class/父节点，回填默认值），返回新 input */
+  function _swapRepnoToInput(el, inp) {
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.id = inp.id;
+    input.className = el.className;
+    input.value = inp.defaultValue;
+    el.parentNode.replaceChild(input, el);
+    return input;
+  }
+
+  /**
+   * Online 公式框换装成下拉选单（拉取制表公式清单成功后调用；语言切换重渲染也走这里）
+   * 选项 = 全量清单（"REP_NO · 名称"，名称本地翻译、未知回退服务端 NAME），各自预选 defaultValue；
+   * 已是 select 时保留当前选中（语言切换不重置回默认值）；清单缺目标值时插入兜底选项
+   * （仍预选默认值，查询语义与 buildOnlineBody 空值兜底一致）
+   * @param {object} cfg 目标报表配置（须有 cfg.online.inputs）
+   */
+  function renderOnlineRepnoSelects(cfg) {
+    var inputs = cfg && cfg.online && cfg.online.inputs;
+    if (!inputs || !inputs.length) return;
+    var list = (typeof AccRepNoStore !== 'undefined') ? AccRepNoStore.getList() : [];
+    inputs.forEach(function(inp) {
+      var el = document.getElementById(inp.id);
+      if (!el) return;
+      var sel = (el.tagName === 'SELECT') ? el : _swapRepnoToSelect(el, inp);
+      var cur = sel.value;   // 保留当前选中（Round 60 i18n：语言切换重渲染不重置回默认值）
+      sel.innerHTML = '';
+      var hasSel = false;
+      list.forEach(function(row) {
+        var o = document.createElement('option');
+        o.value = row.REP_NO;
+        o.textContent = _repnoOptionLabel(row);
+        if (row.REP_NO === (cur || inp.defaultValue)) { o.selected = true; hasSel = true; }
+        sel.appendChild(o);
+      });
+      if (!hasSel && inp.defaultValue) {
+        var fb = document.createElement('option');
+        fb.value = inp.defaultValue;
+        fb.textContent = inp.defaultValue;
+        fb.selected = true;
+        sel.insertBefore(fb, sel.firstChild);
+      }
+    });
+  }
+
+  /**
+   * Online 公式框换回文本框（登出/状态复位时调用；幂等：已是 input 则只回填默认值）
+   * 不依赖单只报表 cfg：遍历 REPORT_CONFIG 全部 online.inputs 的 id，防换账套残留旧清单 select
+   */
+  function restoreOnlineRepnoInputs() {
+    Object.keys(REPORT_CONFIG).forEach(function(key) {
+      var cfg = REPORT_CONFIG[key];
+      var inputs = cfg && cfg.online && cfg.online.inputs;
+      if (!inputs || !inputs.length) return;
+      inputs.forEach(function(inp) {
+        var el = document.getElementById(inp.id);
+        if (!el) return;
+        if (el.tagName === 'SELECT') _swapRepnoToInput(el, inp);
+        else el.value = inp.defaultValue;
+      });
+    });
+  }
+
+  /**
+   * Online 公式框默认值集中导出：{ filterRepno1: '10', ... }（自 cfg.online.inputs，唯一真源）
+   * 重置按钮与复位逻辑统一走这里，消除硬编码漂移
+   */
+  function getOnlineRepnoDefaults() {
+    var defaults = {};
+    Object.keys(REPORT_CONFIG).forEach(function(key) {
+      var cfg = REPORT_CONFIG[key];
+      var inputs = cfg && cfg.online && cfg.online.inputs;
+      if (!inputs || !inputs.length) return;
+      inputs.forEach(function(inp) {
+        defaults[inp.id] = inp.defaultValue;
+      });
+    });
+    return defaults;
+  }
+
+  /* ================================================================
      EXPORT
      ================================================================ */
 
@@ -2867,6 +3009,9 @@ var ReportEngine = (function() {
     renderTableHead:     renderTableHead,
     readFilters:         readFilters,
     updateFilterPanel:   updateFilterPanel,
+    renderOnlineRepnoSelects: renderOnlineRepnoSelects,
+    restoreOnlineRepnoInputs: restoreOnlineRepnoInputs,
+    getOnlineRepnoDefaults:   getOnlineRepnoDefaults,
 
     // State accessors
     get currentReportKey()  { return _currentReportKey; },

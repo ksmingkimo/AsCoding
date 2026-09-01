@@ -19,6 +19,7 @@ var App = (function() {
   };
 
   var _allData = [];           // 客户端分页：缓存全量数据（API 不认 offset start）
+  var _openSeq = 0;            // Round 60 打开报表序号：后打开者作废先打开者的在途异步回调（公式下拉竞态守卫）
 
   /* ================================================================
      Report Query
@@ -298,6 +299,11 @@ var App = (function() {
     var cfg = ReportEngine.getConfig(AppState.currentReport);
     if (reportTitle && cfg) reportTitle.textContent = I18n.t(cfg.name);
 
+    // Round 60 i18n：Online 公式下拉选项名随语言重渲染（保留当前选中，不重置默认值）
+    if (ReportEngine.ledgerOnline && cfg && cfg.online && (cfg.online.inputs || []).length > 0) {
+      ReportEngine.renderOnlineRepnoSelects(cfg);
+    }
+
     // 0 笔时空状态文案（data-i18n 已在待机态摘除，语言切换后需手动重写）
     if (_allData.length === 0) {
       setEmptyStateText(I18n.t('暂无数据'), I18n.t('请调整查询条件后重试'));
@@ -476,6 +482,7 @@ var App = (function() {
   function openReport(reportKey) {
     var cfg = ReportEngine.getConfig(reportKey);
     if (!cfg) return;
+    var mySeq = ++_openSeq;   // 本轮打开序号：异步回调完成时若序号已过期（用户切走）则放弃
 
     // 每次打开报表先复位 Online 降级标志（切报表/重开覆盖上一次状态；0 账簿分支下会重新置位）
     if (typeof ReportEngine !== 'undefined') ReportEngine.ledgerOnline = false;
@@ -492,7 +499,21 @@ var App = (function() {
           // Round 59：0 账簿 → 总账 5 只静默降级 Online 空白纸打印版端点
           // （完全静默：不弹窗不 toast，用户决策；面板由 updateFilterPanel 按 online 布局呈现）
           ReportEngine.ledgerOnline = true;
-          _openReportCore(reportKey);
+          // Round 60：公式框下拉化——先拉制表公式清单（GetAccRepNoList），就绪才渲染：
+          // 清单拉不到 = 该账套无公式资料，警告并中止打开（不渲染、屏幕保持原状，用户 2026-09-01 决策）
+          if (cfg.online && (cfg.online.inputs || []).length > 0 && typeof AccRepNoStore !== 'undefined') {
+            loadAccRepNos(cfg, mySeq, function() {
+              _openReportCore(reportKey, true);            // 渲染面板（跳过自动查询）
+              ReportEngine.renderOnlineRepnoSelects(cfg);  // 公式框换装下拉 + 预选默认值
+              ReportEngine.currentPage = 1;
+              doQuery();                                   // 用下拉预选值查询
+            }, function() {
+              ReportEngine.ledgerOnline = false;           // 撤销本分支预置（面板未渲染）
+              Dialog.alert(I18n.t('没有报表公式，无法进行查询'));
+            });
+            return;
+          }
+          _openReportCore(reportKey);   // 其余 3 只 inputs:[] 照旧
           return;
         }
         populateBookSelect(res.books);
@@ -519,6 +540,22 @@ var App = (function() {
       return;
     }
     _openReportCore(reportKey);
+  }
+
+  /** Round 60 制表公式清单加载（Online 资产负债/利润表打开前置）
+   *  成功：onOk（换装下拉+渲染+查询）；失败：onFail（警告+中止打开，Dialog.alert 已弹）
+   *  竞态守卫：mySeq 过期（用户已打开另一报表）→ 放弃，不渲染不弹窗（Round 52 纪律：
+   *  异步完成时绝不读 currentReport 派生数据，用序号判等） */
+  function loadAccRepNos(cfg, mySeq, onOk, onFail) {
+    AccRepNoStore.ensureLoaded().then(function(res) {
+      if (mySeq !== _openSeq) return;
+      if (!res.ok) {
+        console.warn('[Round 60] GetAccRepNoList 拉取失败:', res.error);
+        if (onFail) onFail();
+        return;
+      }
+      if (onOk) onOk();
+    });
   }
 
   /** openReport 主体（无账簿检查）
@@ -769,7 +806,9 @@ var App = (function() {
           filterDateCst.value = nowReset.getFullYear() + '-' + mm;
         }
         // Round 59 Online 降级公式框：重置回文档示例默认值（10/20/30/40，不是清空）
-        var repnoDefaults = { filterRepno1: '10', filterRepno2: '20', filterRepno3: '30', filterRepno: '40' };
+        // Round 60：默认值统一取自 ReportEngine.getOnlineRepnoDefaults()（cfg.online.inputs 唯一真源，
+        // 消除硬编码漂移；input/select 均走 el.value=，两种形态通用）
+        var repnoDefaults = ReportEngine.getOnlineRepnoDefaults();
         Object.keys(repnoDefaults).forEach(function(id) {
           var el = document.getElementById(id);
           if (el) el.value = repnoDefaults[id];
@@ -861,12 +900,11 @@ var App = (function() {
       styleSel.innerHTML = '<option value="">' + I18n.t('加载中...') + '</option>';
     }
     if (typeof ReportEngine !== 'undefined') ReportEngine.ledgerOnline = false;
-    // Round 59 Online 公式框回文档示例默认值（登出不清空用户正在看的条件语义，统一走默认）
-    var repnoDefaults = { filterRepno1: '10', filterRepno2: '20', filterRepno3: '30', filterRepno: '40' };
-    Object.keys(repnoDefaults).forEach(function(id) {
-      var el = document.getElementById(id);
-      if (el) el.value = repnoDefaults[id];
-    });
+    // Round 60：制表公式清单缓存作废（防旧账套清单串入新登录；localStorage 按 compno 隔离保留）
+    if (typeof AccRepNoStore !== 'undefined') AccRepNoStore.reset();
+    // Round 59 Online 公式框回文档示例默认值；Round 60：换回文本框（幂等）——
+    // 换账套后旧清单下拉不能残留，统一由 restoreOnlineRepnoInputs 走 cfg.online.inputs 真源
+    if (typeof ReportEngine !== 'undefined') ReportEngine.restoreOnlineRepnoInputs();
   }
 
   function initAuth() {
