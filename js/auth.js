@@ -11,19 +11,21 @@ var Auth = (function() {
 
   // ── Private ──────────────────────────────────────
 
-  var API_PATH = '/SUNFUSION/API';
+  var AUTH_PATH = '/ERPAPI/auth/login';
 
-  function getBaseUrl() {
-    // 从同级模块获取（或降级读 localStorage）
-    if (typeof Api !== 'undefined' && Api.getBaseUrl) {
-      return Api.getBaseUrl();
+  function getLoginUrl() {
+    // 从同级模块获取（或降级本地拼接）
+    if (typeof Api !== 'undefined' && Api.getLoginUrl) {
+      return Api.getLoginUrl();
     }
     try {
       var settings = JSON.parse(localStorage.getItem('sunlike_settings')) || {};
-      var raw = (settings.serverUrl || 'http://localhost').replace(/\/+$/, '').replace(/\/SUNFUSION\/API$/i, '');
-      return raw.replace(/\/+$/, '') + API_PATH;
+      var raw = (settings.serverUrl || 'http://localhost')
+        .replace(/\/(?:SUNFUSION(?:\/API)?|ERPAPI(?:\/api|\/auth\/login)?)\/?$/i, '')
+        .replace(/\/+$/, '');
+      return raw + AUTH_PATH;
     } catch(e) {
-      return 'http://localhost' + API_PATH;
+      return 'http://localhost' + AUTH_PATH;
     }
   }
 
@@ -42,7 +44,7 @@ var Auth = (function() {
    * @returns {Promise<{success: boolean, error?: string, data?: object}>}
    */
   function login(compno, usr, pwd) {
-    return fetch(getBaseUrl() + '/user/login', {
+    return fetch(getLoginUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -58,7 +60,7 @@ var Auth = (function() {
       if (data.code === 0) {
         save({
           TOKEN: data.data.TOKEN,
-          USR: data.data.USR,
+          USR: data.data.USR || usr,           // 新接口响应不含 USR，用输入值兜底
           USR_NAME: data.data.USR_NAME || usr,
           COMPNO: compno,
           PWD: pwd || ''
@@ -89,7 +91,7 @@ var Auth = (function() {
     if (!auth || !auth.TOKEN) {
       return Promise.resolve(false);
     }
-    return fetch(getBaseUrl() + '/user/login', {
+    return fetch(getLoginUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -106,7 +108,7 @@ var Auth = (function() {
         // 刷新 Token
         save({
           TOKEN: data.data.TOKEN,
-          USR: data.data.USR,
+          USR: data.data.USR || auth.USR,     // 新接口响应不含 USR，用已存值兜底
           USR_NAME: data.data.USR_NAME || auth.USR,
           COMPNO: auth.COMPNO
         });

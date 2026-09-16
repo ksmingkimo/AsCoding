@@ -17,7 +17,7 @@
         <mxCell id="5" value="登录页面" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontFamily=Courier New;" vertex="1" parent="1">
           <mxGeometry x="210" y="270" width="160" height="50" as="geometry"/>
         </mxCell>
-        <mxCell id="6" value="POST /user/login" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontFamily=Courier New;" vertex="1" parent="1">
+        <mxCell id="6" value="POST /ERPAPI/auth/login" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontFamily=Courier New;" vertex="1" parent="1">
           <mxGeometry x="210" y="350" width="160" height="50" as="geometry"/>
         </mxCell>
         <mxCell id="7" value="code === 0?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontFamily=Courier New;" vertex="1" parent="1">

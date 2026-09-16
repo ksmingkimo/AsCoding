@@ -1522,7 +1522,8 @@ json
                 "SHOW_LSIT": "1",
                 "INCLUDESON": "F",
                 "SHOW_LSIT_TF_MON3": "1",
-                "SHOW_LSIT_TF_MON4": "1"
+                "SHOW_LSIT_TF_MON4": "1",
+                "DEP_ORG_PAY_TYPE": "1"
             }
         },
         {
@@ -1756,7 +1757,8 @@ json
                 "INCLUDESON": "F",
                 "SHOW_LSIT_TF_MON3": "1",
                 "SHOW_LSIT_TF_MON4": "1",
-                "REPORT_DD_FIELD": "RP_DD"
+                "REPORT_DD_FIELD": "RP_DD",
+                "DEP_ORG_PAY_TYPE": "1"               
             }
         },
         {

@@ -1,7 +1,23 @@
 # API 服务调用说明文档
 
 > Sunlike ERP API 对接参考
-> 最后更新：2026-08-18（API4 长连接 SSE 实测 + 账簿列表 API + REM_TYPE 摘要类型语义）
+> 最后更新：2026-09-16（Round 62 ERPAPI 新站点切换实测：登录 /ERPAPI/auth/login、报表 /ERPAPI/api/...）
+
+---
+
+## ⚠️ 站点迁移说明（2026-09-16 起）
+
+API 服务方已将接口从 SunFusion 站点迁至 ERPAPI 站点（依据 `API调整说明文档.md`）：
+
+| 接口 | 旧地址 | 新地址 |
+|------|--------|--------|
+| 登录 | `http://localhost/SUNFUSION/API/user/login` | `http://localhost/ERPAPI/auth/login` |
+| 报表 | `http://localhost/SUNFUSION/API/{module}/...` | `http://localhost/ERPAPI/api/{module}/...` |
+
+- 报表接口仅前缀变化，**Header/Body/相对路径全部不变**
+- 登录请求体 COMPNO 不再带 `/########` 后缀（本项目代码从未拼接该后缀）
+- 旧站点过渡期仍存活（2026-09-16 实测），但新开发一律以新地址为准
+- 下文所有示例均以新地址为准；文中历史实测记录保留原 URL 作为溯源
 
 ---
 
@@ -9,7 +25,9 @@
 
 | 项目 | 值 |
 |------|-----|
-| Base URL | `http://localhost/SUNFUSION/API` |
+| API 站点 | `http://localhost/ERPAPI` |
+| 报表 Base URL | `http://localhost/ERPAPI/api`（相对路径不带 `api/` 前缀） |
+| 登录端点 | `POST /ERPAPI/auth/login` |
 | 请求格式 | JSON |
 | 编码 | UTF-8 |
 | 认证方式 | Bearer Token（`Authorization: Bearer {TOKEN}`） |
@@ -23,7 +41,7 @@
 ### 请求
 
 ```
-POST /user/login
+POST /ERPAPI/auth/login
 Content-Type: application/json
 ```
 
@@ -38,12 +56,31 @@ Content-Type: application/json
 ### curl 示例
 
 ```bash
-curl -s -X POST http://localhost/SUNFUSION/API/user/login \
+curl -s -X POST http://localhost/ERPAPI/auth/login \
   -H "Content-Type: application/json" \
   -d '{"COMPNO":"AT01","USR":"SAN","PWD":"","LANG_ID":"zh-cn","SYS_TYPE":"ERP"}'
 ```
 
-### 成功响应 (code: 0)
+### 成功响应 (code: 0，2026-09-16 新站点实测)
+
+```json
+{
+  "code": 0,
+  "message": "登录成功",
+  "data": {
+    "TOKEN": "6a0921a6-e0a3-4ba6-859c-1ee8edb88350",
+    "EXPIRES_IN": 60000,
+    "EXPIRES_TIMESTAMP": 1789588505
+  }
+}
+```
+
+**关键字段路径**：
+- Token：`response.data.TOKEN`
+- ⚠️ 新接口响应 data **只有** TOKEN / EXPIRES_IN / EXPIRES_TIMESTAMP 三个字段；旧接口的 `USR` / `USR_NAME` / `COMPNO` / `LANG_ID_DATA` 不再返回
+  - 代码对策（Round 62 已落地）：`USR` 用登录输入值兜底（auth.js `data.data.USR || usr`），`USR_NAME` 同理
+
+### 旧站点成功响应（历史溯源，SunFusion 站点）
 
 ```json
 {
@@ -63,11 +100,6 @@ curl -s -X POST http://localhost/SUNFUSION/API/user/login \
   }
 }
 ```
-
-**关键字段路径**：
-- Token：`response.data.TOKEN`
-- 用户名：`response.data.USR_NAME`
-- 语言列表：`response.data.LANG_ID_DATA`
 
 ### 错误响应
 
@@ -151,6 +183,7 @@ Authorization: Bearer {TOKEN}
 | 场景 | code | message |
 |------|------|---------|
 | PGM 不存在 | 10001 | SQL 语法错误（服务端拼接 SQL 失败） |
+| 收款/付款明细表缺 `DEP_ORG_PAY_TYPE` | 10001 | `The given key 'DEP_ORG_PAY_TYPE' was not present in the dictionary.`（2026-09-16 新站点必带 fixCondition `DEP_ORG_PAY_TYPE: "1"`，旧站点无此要求） |
 
 ---
 
@@ -165,7 +198,7 @@ POST /api/invso/getReport
 > ⚠️ 注意：Postman 实测端点是 `/invso`（全小写），不是 `/invSO`。
 
 ```bash
-curl -s -X POST 'http://localhost/SUNFUSION/API/invso/getReport' \
+curl -s -X POST 'http://localhost/ERPAPI/api/invso/getReport' \
   -H 'Authorization: Bearer {TOKEN}' \
   -H 'Content-Type: application/json' \
   -d '{
@@ -443,7 +476,7 @@ API3 文档中端点路径大小写不统一，**全部通过 `apiPath` 精确�
 
 | 项 | 值 |
 |----|-----|
-| 端点 | `POST /accGeneralLedger/GetReportStream`。Postman 实测 URL 用 `/SUNFUSION/api/`（小写）；实测 `/API/`（大写）、`getReportStream`（全小写）同样 200 可用（IIS 大小写不敏感）。⚠️ **前端相对路径就是 `accGeneralLedger/GetReportStream`，不要再带 `api/` 前缀**——URL 里的 `api` 段就是 `/SUNFUSION/API` 本身，带前缀拼成 `/SUNFUSION/API/api/...` → 404（2026-08-18 浏览器实测踩坑，与 getReport 历史教训同类） |
+| 端点 | `POST /ERPAPI/api/accGeneralLedger/GetReportStream`（2026-09-16 新站点实测 200 流式）。旧站点 Postman 实测 URL 用 `/SUNFUSION/api/`（小写）同样 200 可用（IIS 大小写不敏感）。⚠️ **前端相对路径就是 `accGeneralLedger/GetReportStream`，不要再带 `api/` 前缀**——URL 里的 `api` 段就是 `/ERPAPI/api` 本身，带前缀拼成 `/ERPAPI/api/api/...` → 404（2026-08-18 旧站点浏览器实测踩坑，与 getReport 历史教训同类） |
 | PGM | `ACCRPTGL`（⚠️ 实测该端点**不校验 PGM**，写错也正常返回） |
 | 响应 | **SSE**：`Content-Type: text/event-stream; charset=utf-8`，每条消息 = 单行 `data: {JSON}` + 空行分隔，**按行解析** |
 | 消息结构 | 每条消息固定 6 字段：`{ CODE, PERCENT, TITLE, ERR, DATA, IS_RES_ID }` |
@@ -705,7 +738,7 @@ async function fetchStreamReport(path, body, onProgress, onData) {
 
 ### 11.5 坑清单（八报表版）
 
-1. **别带 `api/` 前缀**——前端相对路径 `accBalanceTable/GetReportStream` 等，URL 中 `api` 段就是 `/SUNFUSION/API`（与 API4 同类坑，2026-08-18 已踩）
+1. **别带 `api/` 前缀**——前端相对路径 `accBalanceTable/GetReportStream` 等，URL 中 `api` 段就是 `/ERPAPI/api`（与 API4 同类坑，2026-08-18 已踩）
 2. **BOOK_NO 空 ≠ 406**——API5 端点返回 200 + SSE `ERR:"账簿不能为空"`；前端客户端拦截仍必要（UX），但错误文案来自服务端
 3. **REM_TYPE 不保证返回**——科目余额表渲染按 12 金额列直接展示；REM_TYPE 徽章逻辑保留（有值才显示）
 4. **COLUMN_INFO 可能是 `{}`**——所有消费点必须 `Array.isArray` 判断，否则 `.map` 崩
@@ -729,10 +762,10 @@ async function fetchStreamReport(path, body, onProgress, onData) {
 
 | 端点 | 用途 | 请求要点 | 响应数据 |
 |---|---|---|---|
-| `POST /SUNFUSION/API/AccBook/GetList` | 账簿清单（取账簿行 TYPE_NO） | displayFields 含 `TYPE_NO`/`TYPE_NAME`（BookStore 请求体已含，零变更）；SEARCH_INFO 4 元素 + PAGE_INFO | `code===0`，`data.ACC_BOOK_BS`（BOOK_NO/NAME/**TYPE_NO**/TYPE_NAME） |
-| `POST /SUNFUSION/API/accRptStyle/getlist` | 报表样式清单（取 RPT_NO） | 顶层 `PGM:"ACCRPTSTYLE"` + `TYPE_NO`（账簿行科目表代号）；SEARCH_INFO 5 元素（[0] 7 个 displayFields、[1] fixCondition:{}、[2] RPT_NO in 空值 **need:true**、[3] NAME contain 空值、[4] orderBy{RPT_NO:"asc"}）+ PAGE_INFO{200,1} | `code===0`，`data.MF_RPTSTYLE_BS`（RPT_NO/RPT_TYPE/NAME/TYPE_NO/TYPE_NAME） |
+| `POST /ERPAPI/api/AccBook/GetList` | 账簿清单（取账簿行 TYPE_NO） | displayFields 含 `TYPE_NO`/`TYPE_NAME`（BookStore 请求体已含，零变更）；SEARCH_INFO 4 元素 + PAGE_INFO | `code===0`，`data.ACC_BOOK_BS`（BOOK_NO/NAME/**TYPE_NO**/TYPE_NAME）；2026-09-16 新站点实测 200 |
+| `POST /ERPAPI/api/accRptStyle/getlist` | 报表样式清单（取 RPT_NO） | 顶层 `PGM:"ACCRPTSTYLE"` + `TYPE_NO`（账簿行科目表代号）；SEARCH_INFO 5 元素（[0] 7 个 displayFields、[1] fixCondition:{}、[2] RPT_NO in 空值 **need:true**、[3] NAME contain 空值、[4] orderBy{RPT_NO:"asc"}）+ PAGE_INFO{200,1} | `code===0`，`data.MF_RPTSTYLE_BS`（RPT_NO/RPT_TYPE/NAME/TYPE_NO/TYPE_NAME）；2026-09-16 新站点实测 200 |
 
-> 路径大小写按文档原文（AccBook/GetList、accRptStyle/getlist）；文档 `/api` 段即 `/SUNFUSION/API`。
+> 路径大小写按文档原文（AccBook/GetList、accRptStyle/getlist）；文档 `/api` 段即 `/ERPAPI/api`。
 > `AccType/getlist`（科目表清单）**不在链路内**——仅将来需要 TYPE_NAME 等科目表信息时才查。
 
 ### 12.2 实测结果

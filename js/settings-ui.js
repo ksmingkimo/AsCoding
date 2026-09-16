@@ -1,13 +1,11 @@
 /**
  * settings-ui.js — 设置面板 UI 模块
  * 负责：设置模态弹窗的打开/关闭、AI 模型选择、API Key 验证、服务器连接验证
- * 依赖：SettingsStore, AIClient, Utils
+ * 依赖：SettingsStore, AIClient, Utils, Api（运行时依赖，api.js 先加载）
  */
 
 var SettingsUI = (function() {
   'use strict';
-
-  var API_PATH = '/SUNFUSION/API';
 
   // ── Placeholder hints per provider ────────────────────
 
@@ -48,11 +46,9 @@ var SettingsUI = (function() {
     // 更新 placeholder / label
     updateKeyHint(provider);
 
-    // 服务器地址
+    // 服务器地址（回显裸 host，剥掉旧 /SUNFUSION/API 或新 /ERPAPI 后缀）
     if (serverUrlEl) {
-      var host = (settings.serverUrl || 'http://localhost')
-        .replace(/\/+$/, '')
-        .replace(/\/SUNFUSION\/API$/i, '');
+      var host = Api.normalizeHost(settings.serverUrl || 'http://localhost');
       serverUrlEl.value = host;
     }
 
@@ -159,7 +155,7 @@ var SettingsUI = (function() {
     resultEl.textContent = '⏳ ' + I18n.t('正在验证...');
     resultEl.className = 'validation-result';
 
-    var fullUrl = host.replace(/\/+$/, '') + API_PATH + '/user/login';
+    var fullUrl = Api.buildLoginUrl(host);
 
     fetch(fullUrl, {
       method: 'POST',
@@ -176,7 +172,7 @@ var SettingsUI = (function() {
     .then(function(data) {
       if (data.code === 0) {
         resultEl.textContent = '✅ ' + I18n.t('服务器连接正常 (用户: {0})',
-          ((data.data && data.data.USR_NAME) || 'OK'));
+          ((data.data && (data.data.USR_NAME || data.data.USR)) || 'OK'));
         resultEl.className = 'validation-result success';
       } else if (typeof data.code !== 'undefined') {
         resultEl.textContent = '✅ ' + I18n.t('服务器可达 (API 响应正常)');
@@ -205,7 +201,7 @@ var SettingsUI = (function() {
     var provider = providerEl ? providerEl.value : 'deepseek';
     var key = apiKeyEl ? apiKeyEl.value.trim() : '';
     var host = serverUrlEl ? serverUrlEl.value.trim() : 'http://localhost';
-    host = host.replace(/\/+$/, '').replace(/\/SUNFUSION\/API$/i, '');
+    host = Api.normalizeHost(host);
 
     // 保存 provider + key + server（先清除所有旧 Key，只保留当前模型的）
     SettingsStore.clearAllAIKeys();

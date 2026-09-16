@@ -56,8 +56,9 @@
               │                           │
     ┌─────────┴─────────┐    ┌───────────┴───────────┐
     │  Sunlike ERP API   │    │   Deepseek API        │
-    │  /SUNFUSION/API/   │    │   api.deepseek.com    │
-    │  • /user/login     │    │   /v1/chat/completions │
+    │  /ERPAPI/api/      │    │   api.deepseek.com    │
+    │  • /ERPAPI/auth/   │    │   /v1/chat/completions │
+    │    login           │    │                       │
     │  • /invso/getReport│    │   model: deepseek-chat │
     │  • /invpo/getReport│    └───────────────────────┘
     │  • /invpc/getReport│
@@ -160,7 +161,7 @@ python -m http.server 8080
 
 1. 打开应用 → 登录页选择语言（简/繁/英，默认按操作系统预判）→ 输入公司代码 + 用户名 + 密码
 2. 登录后自动弹出设置面板（或点击右上角 ⚙ 图标）
-3. 填写 **服务器地址**（仅需 IP:端口，系统自动追加 `/SUNFUSION/API`）
+3. 填写 **服务器地址**（仅需 IP:端口，系统自动追加 `/ERPAPI/api` 报表路径与 `/ERPAPI/auth/login` 登录路径）
 4. （可选）填写 **Deepseek API Key** 并点击验证
 5. 保存设置 → 完成！
 
@@ -190,9 +191,9 @@ AsCoding/
 │   ├── rpt-style-store.js      ← 报表样式缓存（accRptStyle/getlist，按账簿 BOOK_NO 隔离，TYPE_NO 来自账簿行；财务报表 RPT_NO/TYPE_NO 动态化）
 │   ├── acc-repno-store.js      ← 制表公式清单缓存（billcommon/GetAccRepNoList；Online 资产负债/利润表公式下拉数据源，Round 60）
 │   │
-│   ├── auth.js                 ← 认证模块（登录/登出/Token/会话恢复，LANG_ID 随语言）
-│   ├── api.js                  ← API 客户端（fetch 封装/认证注入/错误拦截）
-│   ├── reports.js              ← 报表引擎（40 报表配置/SEARCH_INFO 构造/动态表格/28 布局筛选/REM_TYPE 摘要类型 badge/流式请求构造/0 账簿静默降级 Online buildOnlineBody + ONLINE_COLUMN_LABELS + Round 60 公式框下拉换装 renderOnlineRepnoSelects/restoreOnlineRepnoInputs/getOnlineRepnoDefaults + Round 61 简繁英补丁 translateOnlineCell 固定文案白名单翻译）
+│   ├── auth.js                 ← 认证模块（登录/登出/Token/会话恢复，LANG_ID 随语言；Round 62 登录端点改 /ERPAPI/auth/login + 新响应无 USR 用输入值/已存值兜底）
+│   ├── api.js                  ← API 客户端（fetch 封装/认证注入/错误拦截；Round 62 报表 base /ERPAPI/api + normalizeHost 统一清洗旧 /SUNFUSION/API 存值）
+│   ├── reports.js              ← 报表引擎（40 报表配置/SEARCH_INFO 构造/动态表格/28 布局筛选/REM_TYPE 摘要类型 badge/流式请求构造/0 账簿静默降级 Online buildOnlineBody + ONLINE_COLUMN_LABELS + Round 60 公式框下拉换装 renderOnlineRepnoSelects/restoreOnlineRepnoInputs/getOnlineRepnoDefaults + Round 61 简繁英补丁 translateOnlineCell 固定文案白名单翻译 + Round 63 收款/付款明细表 fixCondition 补 DEP_ORG_PAY_TYPE）
 │   ├── report-menu-store.js    ← 报表菜单持久化（收藏列表）
 │   ├── report-menu.js          ← 动态菜单渲染（搜索/折叠分组/收藏置顶）
 │   │
@@ -218,8 +219,8 @@ AsCoding/
 │
 ├── screenshots/                ← 应用截图（界面预览）
 │
-├── deploy.ps1                  ← 部署包生成脚本（v1.11，32 文件）
-├── sunlike-erp-report-v1.11.zip ← 部署包（解压到 Web 服务器目录）
+├── deploy.ps1                  ← 部署包生成脚本（v1.13，32 文件）
+├── sunlike-erp-report-v1.13.zip ← 部署包（解压到 Web 服务器目录）
 │
 └── 文档（项目根目录）
     ├── 需求架构文档.md          ← 项目需求 & 技术架构
@@ -247,7 +248,7 @@ AsCoding/
 ### 认证
 
 ```http
-POST http://{host}/SUNFUSION/API/user/login
+POST http://{host}/ERPAPI/auth/login
 Content-Type: application/json
 
 {
@@ -265,7 +266,7 @@ Content-Type: application/json
 ### 报表查询（通用结构）
 
 ```http
-POST http://{host}/SUNFUSION/API/{module}/getReport
+POST http://{host}/ERPAPI/api/{module}/getReport
 Authorization: Bearer {TOKEN}
 
 {
@@ -306,6 +307,8 @@ Authorization: Bearer {TOKEN}
 - **0 账簿静默降级 Online（Round 59）**：账簿清单 0 条 → 5 只总账报表**不弹窗、不 toast**，自动切换「Online 空白纸打印版」端点（RPTACCBlank / RPTACCDetail / RPTZFListA / RPTSYListA / RPTCshFroList 的 GetReportStream，无账簿概念）；日期由「会计期间(月)」映射月初/月末；公式框按端点输入参数自动显示（资产负债表 REPNO1/2/3 预填 10/20/30、利润表 REPNO 预填 40、其余无）；5 只全部按响应嵌套 COLUMN_INFO 动态列渲染；切换报表/登出即复位
 - **公式下拉（Round 60）**：打开 Online 资产负债/利润表前拉 `billcommon/GetAccRepNoList`（实测 14 条公式清单）→ 公式框换装下拉（「代号 · 名称」、预选默认值 10/20/30/40，免手输防输错）；**拉取失败 → 弹「没有报表公式，无法进行查询」并中止打开**（拉不到即该账套无公式资料，手填必错）
 - **简繁英补丁（Round 61）**：Online 5 只报表切繁/英后下拉选项名与资料格固定文案（借/贷/承上期/小计/合计(:)）随语言翻译（14 条公式目录名入字典；资料格按字段白名单翻译，自由文字不误翻）；语言切换重渲染下拉且保留已选公式
+- **站点迁移（Round 62）**：API 服务方迁移 → 登录 `POST /ERPAPI/auth/login`（COMPNO 不带 `/########` 后缀）、报表 `/ERPAPI/api/{module}/...`；服务器地址仍只填 IP:端口，系统自动追加路径；旧存值 `/SUNFUSION/API` 被 normalizeHost 自动清洗，43 个报表配置零改动
+- **收款/付款明细表修复（Round 63）**：服务方要求 monAA/monBA 请求体 fixCondition 必带 `DEP_ORG_PAY_TYPE: "1"`（新站点缺省 → 10001 字典缺键）；客户端补字段后服务方再修复 `DEP_ORG` 列 → 新站点复测 code 0（本地测试库无收款流水故 rows=0，同库受订报表 9 行证明管道正常）
 - **报表样式下拉**（财务报表 3 只）：数据链路 `AccBook/GetList 账簿行 TYPE_NO → accRptStyle/getlist 样式清单 → 按 RPT_TYPE 过滤（2=资产负债表/3=利润表/4=现金流量表）→ 预选第一个匹配样式`；查询传所选 RPT_NO + 该样式 TYPE_NO（不能写死——实测写死 "3" 报「报表样式不存在」，动态后出 67 行完整数据）；**账簿一改变样式清单即重取**（缓存按账簿隔离）
 - **摘要类型映射**（总分类账/科目余额表）：数据行 `REM_TYPE` —— `1`=期初余额 / `2`=本期合计 / `3`=本年合计；表格彩色徽章展示，转入 AI 数据源时替换为语义文字
 - **动态列**（财务报表 3 只）：消息携带 `COLUMN_INFO [{NAME,TITLE}]` 动态生成数值列（年初数/期末数/本期发生数/本年累计数），前导列项目编号+项目名称；行 SPACES 层级缩进 16px/级 + 一级行加粗
@@ -431,6 +434,8 @@ AI 被训练为 ERP 数据分析专家，会：
 | 总账 0 账簿静默降级 Online（空白纸打印版 5 端点） | 🟡 待浏览器验证（AT03 科目余额表 SQL 错为 API 侧问题，已搁置待新 API） |
 | 总账 Online 公式下拉（GetAccRepNoList，Round 60） | ✅ 已完成（浏览器验证 + 屏蔽 billcommon 失败路径哈啰 11 断言） |
 | 总账 Online 5 只简繁英补丁（Round 61） | ✅ 已完成（三语哈啰 16 断言 + 浏览器确认） |
+| API 站点迁移 SUNFUSION → ERPAPI（Round 62） | ✅ 已完成（新端点实测 code 0 + 模块级冒烟 15 断言 + install.ps1 quick 实测 [OK]） |
+| 收款/付款明细表 DEP_ORG_PAY_TYPE 修复（Round 63） | ✅ 已完成（客户端补字段 + 服务方修 DEP_ORG 列后复测 code 0；IIS 部署目录同步） |
 | AI 流式响应 | ⬜ 待开发 |
 | IndexedDB 迁移 | ⬜ 待开发 |
 | 正式 .pptx 导出 | ✅ 已完成 |

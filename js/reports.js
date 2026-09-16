@@ -135,7 +135,8 @@ var ReportEngine = (function() {
         SHOW_LSIT: '1',
         INCLUDESON: 'F',
         SHOW_LSIT_TF_MON3: '1',
-        SHOW_LSIT_TF_MON4: '1'
+        SHOW_LSIT_TF_MON4: '1',
+        DEP_ORG_PAY_TYPE: '1'
       },
       displayFields: [
         'CUS_NO','CUS_NAME','RP_DD','RP_NO','YW_TYPE','KB',
@@ -167,7 +168,8 @@ var ReportEngine = (function() {
         INCLUDESON: 'F',
         SHOW_LSIT_TF_MON3: '1',
         SHOW_LSIT_TF_MON4: '1',
-        REPORT_DD_FIELD: 'RP_DD'
+        REPORT_DD_FIELD: 'RP_DD',
+        DEP_ORG_PAY_TYPE: '1'
       },
       displayFields: [
         'CUS_NO','CUS_NAME','RP_DD','RP_NO','YW_TYPE','KB',
@@ -338,7 +340,7 @@ var ReportEngine = (function() {
       group: '总账报表',
       icon: '📗',
       pinyin: 'zflz',
-      apiPath: 'accGeneralLedger/GetReportStream',   // 相对 /SUNFUSION/API（文档 298 行；URL 里的 api 段就是 API 本身）
+      apiPath: 'accGeneralLedger/GetReportStream',   // 相对 /ERPAPI/api（URL 里的 api 段就是 /ERPAPI/api 本身）
       apiMethod: 'getReportStream',
       pgm: 'ACCRPTGL',
       dateField: null,
@@ -408,7 +410,7 @@ var ReportEngine = (function() {
       group: '总账报表',
       icon: '📊',
       pinyin: 'kmyeb',
-      apiPath: 'accBalanceTable/GetReportStream',   // 相对 /SUNFUSION/API，勿带 api/ 前缀
+      apiPath: 'accBalanceTable/GetReportStream',   // 相对 /ERPAPI/api，勿带 api/ 前缀
       apiMethod: 'getReportStream',
       pgm: 'ACCRPTABT',
       dateField: null,

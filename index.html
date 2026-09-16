@@ -394,7 +394,7 @@
           <input type="text" id="settingServerUrl" class="form-input" data-i18n-placeholder="http://服务器IP:端口" placeholder="http://服务器IP:端口">
           <button class="btn btn-secondary btn-sm" id="btnValidateServer" data-i18n="验证">验证</button>
         </div>
-        <div class="form-hint" data-i18n="只需输入服务器 IP 或域名 + 端口，系统会自动追加 /SUNFUSION/API 路径。">只需输入服务器 IP 或域名 + 端口，系统会自动追加 /SUNFUSION/API 路径。</div>
+        <div class="form-hint" data-i18n="只需输入服务器 IP 或域名 + 端口，系统会自动追加 /ERPAPI/api 路径（登录接口为 /ERPAPI/auth/login）。">只需输入服务器 IP 或域名 + 端口，系统会自动追加 /ERPAPI/api 路径（登录接口为 /ERPAPI/auth/login）。</div>
         <div class="validation-result" id="serverValidateResult"></div>
       </div>
     </div>
@@ -414,22 +414,22 @@
      ========================================================= -->
 <!-- I18n Foundation -->
 <script src="js/i18n.js?v=20260814a"></script>
-<script src="js/i18n-data.js?v=20260901c"></script>
+<script src="js/i18n-data.js?v=20260915a"></script>
 <!-- Foundation -->
 <script src="js/utils.js?v=20260820a"></script>
 <!-- Round 56：LZString 压缩（数据源/记事本大 payload 透明压缩，必须在两个 store 之前加载） -->
 <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 <script src="js/dialog.js?v=20260818a"></script>
-<script src="js/settings-store.js?v=20260820c"></script>
+<script src="js/settings-store.js?v=20260915a"></script>
 <script src="js/datasource-store.js?v=20260820a"></script>
 <script src="js/book-store.js?v=20260818b"></script>
 <script src="js/rpt-style-store.js?v=20260819c"></script>
 <!-- Round 60：制表公式清单（billcommon/GetAccRepNoList，公式下拉数据源） -->
 <script src="js/acc-repno-store.js?v=20260901a"></script>
 <!-- Auth & API -->
-<script src="js/auth.js?v=20260814a"></script>
-<script src="js/api.js?v=20260831a"></script>
-<script src="js/reports.js?v=20260901c"></script>
+<script src="js/auth.js?v=20260915a"></script>
+<script src="js/api.js?v=20260915a"></script>
+<script src="js/reports.js?v=20260916a"></script>
 <!-- 报表菜单（搜索/折叠/收藏） -->
 <script src="js/report-menu-store.js?v=20260813b"></script>
 <script src="js/report-menu.js?v=20260819b"></script>
@@ -449,7 +449,7 @@
 <!-- Controllers -->
 <script src="js/chat-core.js?v=20260814a"></script>
 <script src="js/ai-suggestions.js?v=20260814a"></script>
-<script src="js/settings-ui.js?v=20260820c"></script>
+<script src="js/settings-ui.js?v=20260915a"></script>
 <!-- App Entry（DOMContentLoaded 自动初始化） -->
 <script src="js/app.js?v=20260901c"></script>
 </body>

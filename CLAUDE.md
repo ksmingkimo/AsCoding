@@ -25,7 +25,7 @@
 3. **Step 3**：逐字段对照文档定义与代码实现
 
 具体验证项：
-- [ ] API 完整路径（含所有路径前缀，本项目为 `/SUNFUSION/API/`）
+- [ ] API 完整路径（含所有路径前缀，本项目为 `/ERPAPI/api/` 报表前缀 + `/ERPAPI/auth/login` 登录端点）
 - [ ] 请求参数的**确切字段名**（大小写、缩写），绝不凭"常识"猜测
 - [ ] 请求体结构（扁平/嵌套？数组按索引解析？）
 - [ ] 成功判断条件（本项目是 `response.code === 0`，❌ 不是 `response.ok`）
@@ -34,17 +34,20 @@
 
 ---
 
-## 三、本项目 API 基础信息（已 PoC 验证）
+## 三、本项目 API 基础信息（已 PoC 验证，Round 62 切换 ERPAPI 新站点）
 
 | 项 | 值 |
 |----|-----|
-| Base URL | `http://localhost/SUNFUSION/API` |
-| 登录端点 | `POST /user/login` |
-| 登录必填字段 | `COMPNO`, `USR`, `PWD`, `LANG_ID`, `SYS_TYPE` |
-| Token 路径 | `response.data.TOKEN` |
+| API 站点（ERPAPI） | `http://localhost/ERPAPI` |
+| 报表 Base URL | `http://localhost/ERPAPI/api`（getBaseUrl 返回，相对路径不带 `api/` 前缀） |
+| 登录端点 | `POST /ERPAPI/auth/login`（不再共用报表 base，代码里是独立的 AUTH_PATH 常量） |
+| 登录必填字段 | `COMPNO`, `USR`, `PWD`, `LANG_ID`, `SYS_TYPE`（COMPNO 不带 `/########` 后缀） |
+| Token 路径 | `response.data.TOKEN`（新接口响应 data 只有 TOKEN/EXPIRES_IN/EXPIRES_TIMESTAMP，无 USR/USR_NAME — 代码已用输入值兜底） |
 | 认证方式 | `Authorization: Bearer {TOKEN}` |
 | 成功判断 | `response.code === 0` |
 | 报表请求体结构 | `{ PGM, SEARCH_INFO: [...], DISPLAY_FIELDS }` — SEARCH_INFO 按索引 [0]~[9] 固定顺序 |
+| 收款/付款明细表特殊要求 | monAA/monBA fixCondition 必带 `DEP_ORG_PAY_TYPE: "1"`（2026-09-16 服务方修复要求；缺省新站点报 10001 字典缺键） |
+| 旧站点 | `http://localhost/SUNFUSION/API`（过渡期仍存活，2026-09-16 实测；用户存旧地址会被 normalizeHost 自动清洗） |
 
 ---
 
@@ -128,6 +131,7 @@
 | 总账报表调用方法.md | 总账 5 只报表即拿即用 API 速查（标准版+Online 版双路径整并：端点/参数/依赖清单/SSE 解析/陷阱/降级实现映射，2026-08-28 生成、2026-08-31 整并 Online 文档） |
 | Online总账报表-查询制表.md | 总账 5 只「Online 空白纸打印」版 API 原始文档（RPTACCBlank 等 5 端点；内容已整并至 总账报表调用方法.md 第六章，本文件保留作溯源/完整行数据示例） |
 | API服务调用说明文档.md | Login + 报表 API 实测文档（curl + 字段 + 错误码） |
+| API调整说明文档.md | API 服务方迁移规范（SunFusion站点 → ERPAPI站点：登录 /ERPAPI/auth/login、报表 /ERPAPI/api/...、COMPNO 去后缀；Round 62 切换依据） |
 | 需求架构文档.md | 项目需求和技术架构 |
 | 对话记录.md | 每轮对话的流水账记录 |
 | 进度追踪表.md | 任务进度和风险追踪 |

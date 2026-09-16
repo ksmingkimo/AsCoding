@@ -62,11 +62,10 @@ function Test-Python {
 }
 
 function Test-ERPConnection {
-    param($url)
+    param($loginUrl)
     try {
         $body = '{"COMPNO":"AT01","USR":"SAN","PWD":"","LANG_ID":"zh-cn","SYS_TYPE":"ERP"}'
-        $apiUrl = "$url/user/login"
-        $r = Invoke-WebRequest -Uri $apiUrl -Method POST -Body $body -ContentType "application/json" -TimeoutSec 5 -UseBasicParsing
+        $r = Invoke-WebRequest -Uri $loginUrl -Method POST -Body $body -ContentType "application/json" -TimeoutSec 5 -UseBasicParsing
         $data = $r.Content | ConvertFrom-Json
         if ($data.code -eq 0) {
             return $true
@@ -74,7 +73,7 @@ function Test-ERPConnection {
         Write-WARN "ERP API returned code=$($data.code), msg=$($data.message)"
         return $false
     } catch {
-        Write-WARN "Cannot reach ERP API at $url"
+        Write-WARN "Cannot reach ERP API at $loginUrl"
         Write-TIP "Error: $($_.Exception.Message)"
         return $false
     }
@@ -119,20 +118,21 @@ function Start-QuickMode {
     # -- ERP Connection Check --
     Write-Step 3 "Checking ERP API connection..."
 
-    $settings = @{}
+    # 登录接口路径直接从 js\api.js 解析（AUTH_PATH 常量），与前端保持同步
+    $authPath = "/ERPAPI/auth/login"
     try {
-        $raw = Get-Content (Join-Path $ScriptDir "js\settings-store.js") -Raw
-    } catch { $raw = "" }
+        $raw = Get-Content (Join-Path $ScriptDir "js\api.js") -Raw
+        if ($raw -match "AUTH_PATH\s*=\s*'([^']+)'") { $authPath = $matches[1] }
+    } catch { }
 
-    # Default ERP server from settings-store.js
-    $serverUrl = "http://localhost/SUNFUSION/API"
-    Write-TIP "Testing: $serverUrl"
+    $loginUrl = "http://localhost" + $authPath
+    Write-TIP "Testing: $loginUrl"
 
-    $erpOk = Test-ERPConnection $serverUrl
+    $erpOk = Test-ERPConnection $loginUrl
     if ($erpOk) {
         Write-OK "ERP API is reachable!"
     } else {
-        Write-WARN "ERP API not reachable at default (http://localhost)"
+        Write-WARN "ERP API not reachable at default (http://localhost/ERPAPI)"
         Write-TIP "The app can still start. Configure the correct server address in the Settings panel after login."
         Write-TIP "Settings icon (gear) is in the top-right corner after login."
     }
@@ -218,16 +218,27 @@ function Start-IISMode {
     $existingSite = Get-IISSite -Name $SiteName -ErrorAction SilentlyContinue
     $existingAppPool = Get-IISAppPool -Name $SiteName -ErrorAction SilentlyContinue
 
+    # 兼容回退：老版 IISAdministration 模块（如 1.1.0.0）缺 New-IISAppPool / New-IISSite -ApplicationPool，
+    # 自动改用 WebAdministration 模块的等价命令
+    $iisAppPoolCmd = Get-Command New-IISAppPool -ErrorAction SilentlyContinue
+    $useWebAdmin = $null -eq $iisAppPoolCmd
+    if ($useWebAdmin) {
+        Import-Module WebAdministration -ErrorAction SilentlyContinue
+        Write-TIP "IIS PowerShell module is old, using WebAdministration fallback"
+    }
+
     if ($existingSite) {
         Write-WARN "IIS Site '$SiteName' already exists. Removing..."
         Remove-IISSite -Name $SiteName -Confirm:$false
     }
     if ($existingAppPool) {
-        Remove-IISAppPool -Name $SiteName -Confirm:$false
+        if ($useWebAdmin) { Remove-WebAppPool -Name $SiteName -Confirm:$false }
+        else { Remove-IISAppPool -Name $SiteName -Confirm:$false }
     }
 
     # Create App Pool
-    New-IISAppPool -Name $SiteName | Out-Null
+    if ($useWebAdmin) { New-WebAppPool -Name $SiteName | Out-Null }
+    else { New-IISAppPool -Name $SiteName | Out-Null }
     Write-OK "App Pool '$SiteName' created"
 
     # Check if port 8080 is in use
@@ -243,7 +254,11 @@ function Start-IISMode {
     }
 
     # Create Site
-    New-IISSite -Name $SiteName -PhysicalPath $targetDir -BindingInformation "*:$($Port):" -ApplicationPool $SiteName | Out-Null
+    if ($useWebAdmin) {
+        New-Website -Name $SiteName -PhysicalPath $targetDir -Port $Port -ApplicationPool $SiteName | Out-Null
+    } else {
+        New-IISSite -Name $SiteName -PhysicalPath $targetDir -BindingInformation "*:$($Port):" -ApplicationPool $SiteName | Out-Null
+    }
     Write-OK "IIS Site '$SiteName' created on port $Port"
 
     # Start site

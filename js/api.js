@@ -7,20 +7,56 @@
 var Api = (function() {
   'use strict';
 
-  var API_PATH = '/SUNFUSION/API';
+  var API_PATH = '/ERPAPI/api';           // 报表接口基路径（相对 host，即文档 URL 的 /api/ 段）
+  var AUTH_PATH = '/ERPAPI/auth/login';   // 登录接口完整路径（相对 host）
 
   /**
-   * 获取 Base URL
+   * 清洗服务器地址为裸 host（去尾斜杠、剥掉已含的站点/路径后缀）
+   * 兼容：旧值 /SUNFUSION/API、新值 /ERPAPI、/ERPAPI/api、/ERPAPI/auth/login
+   * @param {string} raw 用户保存或输入的地址
+   * @returns {string} 裸 host（如 http://192.168.2.167:8080）
+   */
+  function normalizeHost(raw) {
+    var base = String(raw || '').trim();
+    if (!base) return 'http://localhost';
+    return base
+      .replace(/\/(?:SUNFUSION(?:\/API)?|ERPAPI(?:\/api|\/auth\/login)?)\/?$/i, '')
+      .replace(/\/+$/, '');
+  }
+
+  /**
+   * 获取报表接口 Base URL（host + /ERPAPI/api）
    * @returns {string}
    */
   function getBaseUrl() {
     try {
       var settings = JSON.parse(localStorage.getItem('sunlike_settings')) || {};
-      var raw = (settings.serverUrl || 'http://localhost').replace(/\/+$/, '').replace(/\/SUNFUSION\/API$/i, '');
-      return raw.replace(/\/+$/, '') + API_PATH;
+      return normalizeHost(settings.serverUrl) + API_PATH;
     } catch(e) {
       return 'http://localhost' + API_PATH;
     }
+  }
+
+  /**
+   * 获取登录接口完整 URL（读已保存的服务器地址）
+   * @returns {string}
+   */
+  function getLoginUrl() {
+    try {
+      var settings = JSON.parse(localStorage.getItem('sunlike_settings')) || {};
+      return normalizeHost(settings.serverUrl) + AUTH_PATH;
+    } catch(e) {
+      return 'http://localhost' + AUTH_PATH;
+    }
+  }
+
+  /**
+   * 用显式传入的地址构造登录接口完整 URL（设置面板「验证连接」用输入框值，不读已保存设置）
+   * @param {string} host 用户当前输入的服务器地址
+   * @returns {string}
+   */
+  function buildLoginUrl(host) {
+    return normalizeHost(host) + AUTH_PATH;
   }
 
   /**
@@ -89,9 +125,9 @@ var Api = (function() {
    *   3) text/event-stream → 逐行解析 `data: {JSON}` 消息（跨 chunk 行缓冲）
    * 每条消息 { CODE, PERCENT, TITLE, ERR, DATA }：ERR 非空即抛错；
    * PERCENT 驱动进度回调（100.0 结束消息实测存在）；DATA[dataKey] 累积数据行（默认 REPORT__TAB）。
-   * @param {string} path 相对 /SUNFUSION/API 的路径（如 "accGeneralLedger/GetReportStream"。
-   *                      ⚠️ 原文档 URL 里的 /api/ 段就是 /SUNFUSION/API 本身，不要再带 api/ 前缀，
-   *                      否则拼成 /API/api/... → 404。同 getReport 的历史教训）
+   * @param {string} path 相对 /ERPAPI/api 的路径（如 "accGeneralLedger/GetReportStream"。
+   *                      ⚠️ 原文档 URL 里的 /api/ 段就是 /ERPAPI/api 本身，不要再带 api/ 前缀，
+   *                      否则拼成 /ERPAPI/api/api/... → 404。同 getReport 的历史教训）
    * @param {object} body 请求体
    * @param {object} callbacks { onProgress(percent, title), onData(data), dataKey }
    *          dataKey：DATA 内的数据表键名（标准版 REPORT__TAB；
@@ -183,7 +219,7 @@ var Api = (function() {
    * @returns {Promise<{ok: boolean, message: string}>}
    */
   function validateServer(serverUrl) {
-    var url = serverUrl.replace(/\/+$/, '') + '/user/login';
+    var url = buildLoginUrl(serverUrl);
     return fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -215,6 +251,9 @@ var Api = (function() {
 
   return {
     getBaseUrl: getBaseUrl,
+    getLoginUrl: getLoginUrl,
+    buildLoginUrl: buildLoginUrl,
+    normalizeHost: normalizeHost,
     fetch: fetchApi,
     post: post,
     getReport: getReport,
