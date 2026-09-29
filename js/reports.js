@@ -870,7 +870,8 @@ var ReportEngine = (function() {
       pgm: 'REP_BXLIST',
       dateField: 'BX_DD',
       filterLayout: 'financeBase',
-      dateFilter: { operator: 'last_year', fieldDisabled: true },
+      // Round 65（报表调整2026-10.md）：last_year 写死上年 → range 走页面日期（改日期不生效修复）
+      dateFilter: { operator: 'range', fieldDisabled: true },
       fixCondition: { SHOW_LSIT: '1', REPORT_DD_FIELD: 'BX_DD' },
       displayFields: ['USR_NO','USRBX_NAME','BX_DD','BX_NO','PAY_ID','FEE_ID','FEE_NAME','AMTN','AMTN_CHK','AMTN_CJK','AMTN_SH','AMTN_UNSH','SAL_NO','SAL_NAME','INV_NO','REM_B','REM_A'],
       filters: [
@@ -889,7 +890,8 @@ var ReportEngine = (function() {
       dateField: 'JK_DD',
       showBody: 'T',
       filterLayout: 'monjk',
-      dateFilter: { operator: 'this_year', fieldDisabled: false },
+      // Round 65（报表调整2026-10.md）：this_year 写死今年 → range 走页面日期
+      dateFilter: { operator: 'range', fieldDisabled: false },
       fixCondition: { REPORT_DD_FIELD: 'JK_DD' },
       displayFields: ['REPORT_DD','JK_DD','JK_NO','SAL_NO','SAL_NAME','REASON','CUR_ID','CUR_NAME','EXC_RTO','AMT','AMTN','AMT_BACK','AMTN_BACK','FEE_ID','FEE_NAME','CAS_NO','CAS_NAME','TASK_ID','BACC_NO','BACC_NAME','BIL_NO','BB_NO','EST_DD','DEP','DEP_NAME','SAL_NO1','SAL_NAME1','VOH_ID','VOH_NO','CHK_NO','BOX_CHK_NO','CHK_STA_NUM','CHK_END_NUM','CHK_KND','CHK_KND_NAME','END_DD','BIL_TYPE','BIL_TYPE_NAME','SYS_DATE','CLS_DATE','USR_NAME','CHK_MAN','CHK_MAN_NAME','CHK_STATUS','CLS_ID','REM','MODIFY_DD','MODIFY_MAN','MODIFY_MAN_NAME'],
       filters: [
@@ -906,7 +908,8 @@ var ReportEngine = (function() {
       pgm: 'REP_CALIST',
       dateField: 'RCV_DD',
       filterLayout: 'monCA',
-      dateFilter: { operator: 'last_year', fieldDisabled: true },
+      // Round 65（报表调整2026-10.md）：last_year 写死上年 → range 走页面日期
+      dateFilter: { operator: 'range', fieldDisabled: true },
       fixCondition: { REPORT_DD_FIELD: 'RCV_DD', END_DD: '', INT_STS_LST: '0' },
       displayFields: ['CHK_NO','RCV_DD','CHK_KND_NAME','CHK_STS','AMT','AMTN','END_DD','CAH_DD','BACC_NO','BACC_NAME','BACC_ID_CODE','RP_NO','CUS_NO','CUS_NAME','SAL_NO','SAL_NAME','REM'],
       filters: [
@@ -924,7 +927,8 @@ var ReportEngine = (function() {
       pgm: 'REP_CBLIST',
       dateField: 'RCV_DD',
       filterLayout: 'monCA',
-      dateFilter: { operator: 'last_year', fieldDisabled: true },
+      // Round 65（报表调整2026-10.md）：last_year 写死上年 → range 走页面日期
+      dateFilter: { operator: 'range', fieldDisabled: true },
       fixCondition: { REPORT_DD_FIELD: 'RCV_DD', END_DD: '', INT_STS_LST: '0' },
       displayFields: ['CHK_NO','RCV_DD','CHK_KND_NAME','CHK_STS','AMT','AMTN','END_DD','CAH_DD','BACC_NO','BACC_NAME','BACC_ID_CODE','RP_NO','CUS_NO','CUS_NAME','SAL_NO','SAL_NAME','REM'],
       filters: [
@@ -1005,7 +1009,8 @@ var ReportEngine = (function() {
       pgm: 'DRPIC_REP',
       dateField: 'IC_DD',
       filterLayout: 'docDate',
-      dateFilter: { operator: 'today', fieldDisabled: true },
+      // Round 65（报表调整2026-10.md）：today 写死当天 → range 走页面日期
+      dateFilter: { operator: 'range', fieldDisabled: true },
       fixCondition: { REPORT_DD_FIELD: 'IC_DD' },
       displayFields: ['IC_DD','IC_NO','IDX_NAME','PRD_NO','PRD_NAME','SPC','WH1','WH1_NAME','WH2','WH2_NAME','UNIT_NAME','QTY','QTY_ID','QTY_DIV','QTY_CFM','QTY_LOST','REM','M_REM'],
       filters: [
@@ -1044,7 +1049,8 @@ var ReportEngine = (function() {
       dateField: 'TI_DD',
       showBody: 'T',
       filterLayout: 'docDate',
-      dateFilter: { operator: 'this_year', fieldDisabled: true },
+      // Round 65（报表调整2026-10.md）：this_year 写死今年 → range 走页面日期
+      dateFilter: { operator: 'range', fieldDisabled: true },
       fixCondition: { REPORT_DD_FIELD: 'TI_DD' },
       displayFields: ['REPORT_DD','TI_DD','TI_NO','CUS_NO','CUS_SNM','CUS_NAME','OS_ID','OS_NO','BAT_NO','BAT_NAME','BIL_ID','BIL_NO','CHK_STATUS','CHK_MAN','CHK_MAN_NAME','CANCEL_ID','FREE_ID','CLS_DATE','REM_H','MODIFY_DD','MODIFY_MAN','MODIFY_MAN_NAME','CLOSE_ID','SL_NO','CUS_OS_NO','ITM','PRD_NO','PRD_NAME','BAT_NO_B','BAT_NAME_B','WH','WH_NAME','UNIT_NAME','QTY','QTY1','QTY_RTN','QTY_RTN_UNSH','QTY_UNPS','QTY_PS','QTY_PS_UNSH','QTY_RCK','QTY_RCK_UNSH','QTY_CUS','CHKTY_ID','B_DD','E_DD','NAME_ENG','REM','CUS_OS_NO_B','SAL_NO','SAL_NAME','PRD_MARK','A001','SPC','DEP','DEP_NAME','BIL_TYPE','BIL_TYPE_NAME','ID_NO','VALID_DD','CNT_NEED','CNT_FLAG','CAS_NO','CAS_NAME'],
       filters: [
@@ -1062,7 +1068,8 @@ var ReportEngine = (function() {
       dateField: 'OS_DD',
       showBody: 'T',
       filterLayout: 'docDate',
-      dateFilter: { operator: 'last_week', fieldDisabled: true },
+      // Round 65（报表调整2026-10.md）：last_week 写死近一周 → range 走页面日期
+      dateFilter: { operator: 'range', fieldDisabled: true },
       fixCondition: { SH_TYPE: 'T' },
       displayFields: ['REPORT_DD','OS_DD','OS_NO','CUS_NO','CUS_NAME','SNM','CLS_STATUS','PRD_NO','PRD_NAME','NAME_ENG','SPC','IDX1','QTY','QTY1','UNIT','UP','UP_QTY1','BAT_NO','EST_DD','QTY_RK','QTY_PENDING_QC','QTY_NOT_QC','QTY_QC_OK','QTY_QC_FAILING','QTY_QC_BACK','QTY_IN','QTY_QC_NOT_IN','QTY_BACK','QTY_LATER','QTY_AHEAD','QTY_PRE','QTY_NOT_COME','SUP_PRD_NO','MRP_NOS','MRP_NAME','MRP_SPC','MARK_NAME','QT_NO','REM','CUS_OS_NO'],
       filters: [
