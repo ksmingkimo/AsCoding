@@ -8,7 +8,7 @@ var SettingsStore = (function() {
   'use strict';
 
   var LS_KEY = 'sunlike_settings';
-  var API_PATH = '/ERPAPI/api';
+  var API_PATH = '/SunReport/api';
 
   /**
    * 获取所有设置
@@ -100,14 +100,14 @@ var SettingsStore = (function() {
   // ── Server ──────────────────────────────────────────
 
   /**
-   * 获取完整的报表 API 服务器 URL（自动追加 /ERPAPI/api）
-   * 向后兼容：如果用户之前存了完整 URL（旧 /SUNFUSION/API 或新 /ERPAPI 系列），自动清洗
+   * 获取完整的报表 API 服务器 URL（自动追加 /SunReport/api）
+   * 向后兼容：如果用户之前存了完整 URL（旧 /SUNFUSION/API、/ERPAPI 系列或新 /SunReport 系列），自动清洗
    * @returns {string}
    */
   function getServerUrl() {
     var raw = (getSettings().serverUrl || 'http://localhost');
     raw = raw
-      .replace(/\/(?:SUNFUSION(?:\/API)?|ERPAPI(?:\/api|\/auth\/login)?)\/?$/i, '')
+      .replace(/\/(?:SUNFUSION(?:\/API)?|ERPAPI(?:\/api|\/auth\/login)?|SunReport(?:\/api|\/auth\/login)?)\/?$/i, '')
       .replace(/\/+$/, '');
     return raw + API_PATH;
   }

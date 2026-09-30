@@ -1,4 +1,4 @@
-"""
+﻿"""
 build_drawio.py — 将流程图.md 中的 9 个 Mermaid 图转为 Draw.io .drawio 文件
 用法: python scripts/build_drawio.py
 输出: 流程图/*.drawio (9 个文件)
@@ -165,7 +165,7 @@ def diagram_01_system_overview():
     start = b.start_end("打开应用", cx - 80, 70)
     d1 = b.decision("已登录?", cx - 80, 150)
     login = b.node("登录页面", cx - 240, 270)
-    api_login = b.api_node("POST /ERPAPI/auth/login", cx - 240, 350)
+    api_login = b.api_node("POST /SunReport/auth/login", cx - 240, 350)
     d2 = b.decision("code === 0?", cx - 240, 440)
     err = b.failure_node("显示错误", cx - 400, 440)
     store = b.success_node("存储 TOKEN", cx - 80, 440)
@@ -332,7 +332,7 @@ def diagram_04_auth():
     clear = b.failure_node("清除过期 TOKEN", cx, 270)
     goto_login = b.node("跳转登录页", cx - 130, 270)
     form = b.node("填写登录表单", cx - 130, 350)
-    api = b.api_node("POST /ERPAPI/auth/login", cx - 130, 430)
+    api = b.api_node("POST /SunReport/auth/login", cx - 130, 430)
     d_code = b.decision("code === 0?", cx - 130, 520)
     err = b.failure_node("显示错误", cx - 320, 520)
     store = b.success_node("存 TOKEN 到 localStorage", cx - 130, 610)

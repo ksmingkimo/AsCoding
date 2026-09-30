@@ -119,7 +119,7 @@ function Start-QuickMode {
     Write-Step 3 "Checking ERP API connection..."
 
     # 登录接口路径直接从 js\api.js 解析（AUTH_PATH 常量），与前端保持同步
-    $authPath = "/ERPAPI/auth/login"
+    $authPath = "/SunReport/auth/login"
     try {
         $raw = Get-Content (Join-Path $ScriptDir "js\api.js") -Raw
         if ($raw -match "AUTH_PATH\s*=\s*'([^']+)'") { $authPath = $matches[1] }
@@ -132,7 +132,7 @@ function Start-QuickMode {
     if ($erpOk) {
         Write-OK "ERP API is reachable!"
     } else {
-        Write-WARN "ERP API not reachable at default (http://localhost/ERPAPI)"
+        Write-WARN "ERP API not reachable at default (http://localhost/SunReport)"
         Write-TIP "The app can still start. Configure the correct server address in the Settings panel after login."
         Write-TIP "Settings icon (gear) is in the top-right corner after login."
     }

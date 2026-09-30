@@ -12,7 +12,8 @@ var ReportMenu = (function() {
      即：新增报表只需在 REPORT_CONFIG 加一条含 group/icon/pinyin 的配置。 */
   var MENU_GROUPS = ['总账报表','进销存报表','财务管理','库存管理','采购与价格','生产制造','人力资源','固定资产'];
   // v5 API5（2026-08-19）：accgl 排总账组首位，4 总账随后；生产 4 只排生产制造组末尾
-  var MENU_ORDER = ['accgl','accBalTable','accZcfzb','accLrb','accXjllb','invpo','invpc','invSO','invSa','monAA','monBA','accabgt','rptsarp','monbx','monjk',
+  // Round 66：accabgt 移入总账组（原财务管理）；旧系统账套隐藏 accabgt/mrpct 由 _orderedKeys 过滤
+  var MENU_ORDER = ['accgl','accBalTable','accZcfzb','accLrb','accXjllb','accabgt','invpo','invpc','invSO','invSa','monAA','monBA','rptsarp','monbx','monjk',
     'monCA','monCB','rptinvdo','rptinvdl','rptinvswa','invic','invij','scmdrpti','invpopc','invtwpc',
     'invhp','invhs','mrpPK','mrpPS','mrppu','mrpag','mrpcf','wagCG3','rptwagyg0','rptwagyg','fixaa',
     'mrpcu','mrpct','mrpcx','mrpce'];
@@ -31,7 +32,9 @@ var ReportMenu = (function() {
     return (window.AppState && window.AppState.currentReport) || '';
   }
 
-  /** 菜单排序后的 key 列表：MENU_ORDER 优先，未收录的新 key 兜底追加 */
+  /** 菜单排序后的 key 列表：MENU_ORDER 优先，未收录的新 key 兜底追加
+      Round 66：旧系统账套隐藏的报表（ReportEngine.isReportHidden）在此统一过滤，
+      分组视图/搜索/折叠平铺/收藏区全部经由本函数，单点过滤即全覆盖 */
   function _orderedKeys() {
     var keys = [];
     if (typeof ReportEngine !== 'undefined' && typeof ReportEngine.getReportKeys === 'function') {
@@ -45,7 +48,10 @@ var ReportMenu = (function() {
     keys.forEach(function(k) {
       if (!seen[k]) { seen[k] = true; ordered.push(k); }
     });
-    return ordered;
+    // Round 66 旧系统隐藏过滤（isReportHidden 仅在该报表被隐藏时 true）
+    return ordered.filter(function(k) {
+      return !(ReportEngine && ReportEngine.isReportHidden && ReportEngine.isReportHidden(k));
+    });
   }
 
   /** 全部分组：MENU_GROUPS + 配置里出现的新分组（兜底追加到底部） */
@@ -130,7 +136,7 @@ var ReportMenu = (function() {
   function _renderCollapsed() {
     var html = '';
     var favs = ReportMenuStore.getFavorites().filter(function(k) {
-      return !!ReportEngine.getConfig(k);
+      return !!ReportEngine.getConfig(k) && !ReportEngine.isReportHidden(k);
     });
     var favSet = {};
     favs.forEach(function(k) { favSet[k] = true; });
@@ -159,7 +165,7 @@ var ReportMenu = (function() {
     if (_isSidebarCollapsed()) return _renderCollapsed();
     var html = '';
     var favs = ReportMenuStore.getFavorites().filter(function(k) {
-      return !!ReportEngine.getConfig(k);
+      return !!ReportEngine.getConfig(k) && !ReportEngine.isReportHidden(k);
     });
     if (favs.length > 0) {
       html += '<div class="nav-section nav-fav-header">★ ' + I18n.t('收藏') + '</div>';

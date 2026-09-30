@@ -1,5 +1,7 @@
 # API 接口调整说明文档
 
+> **Round 66 注记（2026-09-30）**：服务方已再次迁移——`API站点` 由 ERPAPI 改为 **SunReport**（`http://主机名/SunReport`）。本文是 Round 62 迁移时的服务方原文，**保留原文作溯源**；最新站点信息以 [CLAUDE.md](CLAUDE.md)「三、本项目 API 基础信息」与 [API服务调用说明文档.md](API服务调用说明文档.md) 为准（登录 `/SunReport/auth/login`、报表 `/SunReport/api/...`）。
+
 ## 术语说明
 
 - `SunFusion站点`：SunFusion ERP 站点地址，格式为 `http://主机名/SunFusion`，例如 `http://192.168.2.167/SunFusion`。

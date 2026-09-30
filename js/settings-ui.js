@@ -46,7 +46,7 @@ var SettingsUI = (function() {
     // 更新 placeholder / label
     updateKeyHint(provider);
 
-    // 服务器地址（回显裸 host，剥掉旧 /SUNFUSION/API 或新 /ERPAPI 后缀）
+    // 服务器地址（回显裸 host，剥掉旧 /SUNFUSION/API、/ERPAPI 或新 /SunReport 后缀）
     if (serverUrlEl) {
       var host = Api.normalizeHost(settings.serverUrl || 'http://localhost');
       serverUrlEl.value = host;

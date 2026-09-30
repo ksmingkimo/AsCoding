@@ -317,7 +317,8 @@ var ReportEngine = (function() {
 
     accabgt: {
       name: '科目预算报表',
-      group: '财务管理',
+      // Round 66：科目预算归集总账报表组（原财务管理）
+      group: '总账报表',
       icon: '📒',
       pinyin: 'kmysbb',
       apiPath: 'ACCABGT/GetReport',
@@ -340,7 +341,7 @@ var ReportEngine = (function() {
       group: '总账报表',
       icon: '📗',
       pinyin: 'zflz',
-      apiPath: 'accGeneralLedger/GetReportStream',   // 相对 /ERPAPI/api（URL 里的 api 段就是 /ERPAPI/api 本身）
+      apiPath: 'accGeneralLedger/GetReportStream',   // 相对 /SunReport/api（URL 里的 api 段就是 /SunReport/api 本身）
       apiMethod: 'getReportStream',
       pgm: 'ACCRPTGL',
       dateField: null,
@@ -410,7 +411,7 @@ var ReportEngine = (function() {
       group: '总账报表',
       icon: '📊',
       pinyin: 'kmyeb',
-      apiPath: 'accBalanceTable/GetReportStream',   // 相对 /ERPAPI/api，勿带 api/ 前缀
+      apiPath: 'accBalanceTable/GetReportStream',   // 相对 /SunReport/api，勿带 api/ 前缀
       apiMethod: 'getReportStream',
       pgm: 'ACCRPTABT',
       dateField: null,
@@ -1921,6 +1922,24 @@ var ReportEngine = (function() {
   var _isLoading = false;
   // Round 59：账簿清单 0 条 → 总账 5 只静默降级 Online 空白纸打印版端点（app.js openReport 置位）
   var _ledgerOnline = false;
+  // Round 66：方案表查询 ChkExistsSearchRptBs 判定——旧系统账套（data='F'）隐藏这两只报表
+  var _legacySystem = false;         // true = 旧系统（隐藏 HIDDEN_WHEN_LEGACY）；判定失败保持 false（显示全部，用户决策）
+  var HIDDEN_WHEN_LEGACY = ['accabgt', 'mrpct'];
+
+  /**
+   * 设置旧系统标志（登录/会话恢复后由 app.js 依 ChkExistsSearchRptBs 结果调用）
+   * @param {boolean} legacy data==='T' 传 false（新系统），否则传 true（旧系统）
+   */
+  function setLegacySystem(legacy) {
+    _legacySystem = !!legacy;
+  }
+
+  /**
+   * 该报表在当前系统下是否隐藏（旧系统账套隐藏 HIDDEN_WHEN_LEGACY）
+   */
+  function isReportHidden(reportKey) {
+    return _legacySystem && HIDDEN_WHEN_LEGACY.indexOf(reportKey) !== -1;
+  }
 
   /* ================================================================
      PUBLIC API
@@ -3034,7 +3053,9 @@ var ReportEngine = (function() {
     get isLoading()         { return _isLoading; },
     set isLoading(v)        { _isLoading = v; },
     get ledgerOnline()      { return _ledgerOnline; },
-    set ledgerOnline(v)     { _ledgerOnline = v; }
+    set ledgerOnline(v)     { _ledgerOnline = v; },
+    setLegacySystem:        setLegacySystem,
+    isReportHidden:         isReportHidden
   };
 
 })();

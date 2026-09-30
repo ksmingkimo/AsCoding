@@ -11,7 +11,7 @@ var Auth = (function() {
 
   // ── Private ──────────────────────────────────────
 
-  var AUTH_PATH = '/ERPAPI/auth/login';
+  var AUTH_PATH = '/SunReport/auth/login';
 
   function getLoginUrl() {
     // 从同级模块获取（或降级本地拼接）
@@ -21,7 +21,7 @@ var Auth = (function() {
     try {
       var settings = JSON.parse(localStorage.getItem('sunlike_settings')) || {};
       var raw = (settings.serverUrl || 'http://localhost')
-        .replace(/\/(?:SUNFUSION(?:\/API)?|ERPAPI(?:\/api|\/auth\/login)?)\/?$/i, '')
+        .replace(/\/(?:SUNFUSION(?:\/API)?|ERPAPI(?:\/api|\/auth\/login)?|SunReport(?:\/api|\/auth\/login)?)\/?$/i, '')
         .replace(/\/+$/, '');
       return raw + AUTH_PATH;
     } catch(e) {

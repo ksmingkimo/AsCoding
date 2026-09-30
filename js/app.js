@@ -482,6 +482,8 @@ var App = (function() {
   function openReport(reportKey) {
     var cfg = ReportEngine.getConfig(reportKey);
     if (!cfg) return;
+    // Round 66：旧系统账套隐藏的报表禁止打开（菜单已隐藏，此处防 hash/URL/收藏直达）
+    if (ReportEngine.isReportHidden && ReportEngine.isReportHidden(reportKey)) return;
     var mySeq = ++_openSeq;   // 本轮打开序号：异步回调完成时若序号已过期（用户切走）则放弃
 
     // 每次打开报表先复位 Online 降级标志（切报表/重开覆盖上一次状态；0 账簿分支下会重新置位）
@@ -907,6 +909,27 @@ var App = (function() {
     if (typeof ReportEngine !== 'undefined') ReportEngine.restoreOnlineRepnoInputs();
   }
 
+  /** Round 66：方案表查询 ChkExistsSearchRptBs 判定新旧系统。
+   *  data='T'=新系统（全显示）；data='F'=旧系统（隐藏 accabgt/mrpct 两只，见 ReportEngine.HIDDEN_WHEN_LEGACY）。
+   *  请求失败/超时/非预期响应：静默保持显示全部（用户决策，不因网络抖动误藏报表）。
+   *  登录成功与会话恢复两条路径各调一次；判定后重渲染菜单生效。 */
+  function applyLegacyCheck() {
+    if (typeof Api === 'undefined' || !Api.post || typeof ReportEngine === 'undefined') return;
+    Api.post('BillCommon/ChkExistsSearchRptBs', {}).then(function(res) {
+      if (res && res.code === 0 && res.data === 'T') {
+        ReportEngine.setLegacySystem(false);   // 新系统：全部显示
+      } else if (res && res.code === 0 && res.data === 'F') {
+        ReportEngine.setLegacySystem(true);    // 旧系统：隐藏 accabgt/mrpct
+      } else {
+        ReportEngine.setLegacySystem(false);   // 非预期响应：保持显示全部
+      }
+    }).catch(function() {
+      ReportEngine.setLegacySystem(false);     // 失败/超时：保持显示全部
+    }).then(function() {
+      if (typeof ReportMenu !== 'undefined') ReportMenu.render();
+    });
+  }
+
   function initAuth() {
     var loginPage = document.getElementById('loginPage');
     var dashboardPage = document.getElementById('dashboardPage');
@@ -968,6 +991,8 @@ var App = (function() {
             SettingsUI.checkFirstRun();
             // 后台预拉账簿清单（总分类账下拉），失败静默，不阻塞登录
             if (typeof BookStore !== 'undefined') BookStore.prefetch();
+            // Round 66：方案表查询判定新旧系统（失败静默；判定后重渲染菜单，旧系统隐藏 accabgt/mrpct）
+            applyLegacyCheck();
             // 报表样式清单按账簿获取（TYPE_NO 来自账簿行），登录时不预取——
             // 打开财务报表/切换账簿时由 loadRptStylesForBook 加载
           } else {
@@ -993,6 +1018,8 @@ var App = (function() {
         AppState.chatHistory = [];
         AppState.lastQueryData = null;
         resetLedgerBooksState();
+        // Round 66：登出复位旧系统标志（下次登录由 applyLegacyCheck 重新判定）
+        if (typeof ReportEngine !== 'undefined') ReportEngine.setLegacySystem(false);
         if (dashboardPage) dashboardPage.classList.remove('active');
         if (loginPage) loginPage.classList.remove('hidden');
         Utils.showToast(I18n.t('已退出登录'), 'success');
@@ -1131,6 +1158,8 @@ var App = (function() {
           SettingsUI.checkFirstRun();
           // 后台预拉账簿清单（总分类账下拉），失败静默，不阻塞登录
           if (typeof BookStore !== 'undefined') BookStore.prefetch();
+          // Round 66：会话恢复同样判定新旧系统（失败静默）
+          applyLegacyCheck();
         } else {
           if (loginPage) loginPage.classList.remove('hidden');
         }
